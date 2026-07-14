@@ -6,17 +6,20 @@ secret/
 *_spec.json
 *.pem
 *.key
+*.pub
 
-# === benchmark 数据与轨迹:含 ALE 题面/参考答案,不泄露红线 ===
-task-data/
-tasks/
+# === benchmark 数据与答案:复用 zmh 那份,不进本仓库(不泄露红线) ===
+# 锚定顶层,避免误伤框架目录 ale_run/tasks
+/task-data/
+/tasks/
 **/reference/
 data/samples/
 *.jsonl
 .logs/
 
-# === 第三方上游源码(pi 编码 agent,486M,有自己的仓库) ===
+# === 第三方上游源码 / 依赖 ===
 pi/
+.venv/
 
 # === 运行产物 ===
 __pycache__/
