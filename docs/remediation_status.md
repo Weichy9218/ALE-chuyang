@@ -1,53 +1,62 @@
 # system_issues 修复状态
 
-对照 `system_issues.md` 逐条给状态。分三类:
+对照 `system_issues.md` 逐条给状态。以**实测**为准（compile / 单测 / grep 核对），
+不写没验证过的结论。
 
-- **已修并验证**:本机能安全改、不碰同学(zmh)活跃仓库、不碰远程在跑评测的,已改并验证。
-- **待你操作**:涉及轮换凭据、改远程 sudo 密码的,只有你能做,我给清单。
-- **待与同学协调**:涉及改 zmh 仓库活跃代码或 task-data 的,那是同学的文件夹且有评测在跑,我不单方面改;补丁和方案已备好,协调后应用。
+前提变化（重要）：`ale_run/` 现在是 zmh 框架的**本地快照副本**（commit `1e99f3a` 导入本仓库），
+所以框架代码级修复直接改在 `/home/dataset-local/wcy/ALE-chuyang/ale_run/…`，不碰 zmh 的活跃目录、
+不动远程在跑评测、不复制 task-data（复用 zmh 那份）。上一版本文档把这些标成"待与同学协调"，已过时。
 
-诚实说明:高/中危里能由我在本机闭环的只有密钥文件权限、文档明文凭据、rsync 命令这几条。其余多数落在 zmh 的活跃代码/数据里,或需要你的账号轮换凭据。我没有擅自改动 zmh 的任何代码,也没登录远程机。
+## 已修并验证（本仓库，commit b3b912b 及更早）
 
-## 已修并验证(本机)
-
-| 编号 | 问题 | 修复 | 验证 |
+| 编号 | 问题 | 修复位置 | 验证方式 |
 |---|---|---|---|
-| 6.1 | `.env` 权限 644 | `chmod 600 .env` | `stat` 确认 644→600 |
-| 6.3 | env.md 明文 HF token | 改成"见 secret/.env 的 HF_TOKEN",删除明文值 | grep 确认 docs 下不再有 `hf_` 明文 |
-| 1.1 | rsync `--files-from` 丢内容 | env.md 命令改 `rsync -ar`,加 input 非空校验注释 | 本地复现:旧命令拷 0 文件,`-ar` 拷全 |
-| 7.2 | 镜像分发方案排序 | env.md 补 zstd+rsync `--partial` 可续传方案 | 文档已更新(方案性,无需运行验证) |
+| gitignore | `pi/` 误伤 `ale_run/agents/pi/`，deployer 修复无法入库 | `.gitignore` 改 `/pi/` 锚定根 | `git check-ignore` 确认 deployer 不再被忽略、顶层 `pi/` 仍忽略 |
+| 3.1 | pi --mode json 假零分 | `ale_run/agents/pi/deployer.py` `detect_llm_error_stop` | `tests/test_pi_deployer_bugfixes.py` 通过 |
+| 8.1 | splitlines 撕碎 Unicode 行界事件 | `deployer.py` parse 改 `split("\n")` | 同上测试（含 U+2028 用例） |
+| 6.2 | api_key 明文进 `_spec.json`（139 份落盘） | `_secrets.py`+`sandbox.py`+`docker.py`+两个 entry：密钥字段拆进 `_secrets.json` 侧车、entry 重新挂回 config | `tests/test_spec_keyless.py` 通过（spec 无明文、密钥经侧车往返、api_key_env 不误伤） |
+| 4.1 | ensure_node_npm sudo 卡死 180s | `_bootstrap.py` 加 `sudo -n true` 探测 + `sudo -n` 安装 | 实测探测命令 0.3s 返回、绝不挂起 |
+| 3.2 | 墙钟超时不杀进程，eval 与 agent 竞争 | `lifecycle.py` 外层 wait_for 加 600s 裕量 + `executor.force_kill()`；`docker.py` 硬删容器；base 加 no-op | compile + 代码走查（inner docker 清理 180s < 600s 裕量，先触发） |
+| 3.3 | failed 照评分写 0 分污染榜单 | `lifecycle.py` agent failed 跳过 evaluate、failed 置 score=None、run.json 加 `score_valid` | compile + 走查 |
+| 9.1 | 停机信号无人消费，容器泄漏 | `runner.py` gather 与 shutdown 事件竞速，触发即 cancel 各 unit 走 finally 清理 | `tests/test_runner_shutdown.py` 通过（部分结果 + 全部 finally 跑到 + 正常路径异常传播） |
+| 9.3 | detached eval 天花板 3300s < 声称 7200s | `tasks/driver.py` `_DETACHED_TIMEOUT_S` 7000 + 更正注释 | grep 确认 |
+| 6.1 | `.env` 权限 644 | `chmod 600` | `stat` 确认 |
+| 6.3 | env.md 明文 HF token | 改"见 secret/.env" | grep 确认 docs 无 `hf_` 明文 |
+| 1.1 | rsync `--files-from` 丢内容 | env.md 命令改 `rsync -ar` + 校验注释 | 本地复现：旧命令 0 文件、`-ar` 拷全 |
+| 7.2 | 镜像分发排序 | env.md 补 zstd+rsync 续传方案 | 文档（方案性） |
 
-## 待你操作(轮换凭据,我无法代做)
+说明：3.2/3.3 是编排层改动，只做了 compile + 逐行走查，**没有跑通 Docker 全链路集成测试**（那需要起容器、
+占 batchcom 资源）。真正上线前建议先 1 题冒烟验证这两条不破坏正常路径。
 
-这些是密钥已泄露的补救,必须由你在对应控制台吊销/换新。收紧权限和删明文我已做,但**旧凭据仍然有效,必须轮换**:
+## 待你操作（轮换凭据，我无法代做，你明确排除的部分）
 
-1. **两把网关 API key**:haoxiang gpt-5.6 网关 key、apihy qwen key。已随 139 份 `_spec.json` 落盘到 zmh 的 `.logs`(6.2),也在 `.env` 里。到网关控制台吊销换新。
-2. **两个 HF token**:env.md 里那个(6.3)、`download_ale_task_data_only.sh` 里那个。到 HuggingFace 设置吊销。
-3. **pgl 远程机 sudo 密码**:在 `.env` 里明文(6.1),且文档链路已 rsync 到远程。登录 pgl 换 ubuntu 的 sudo 密码。
-4. **清远程副本**:下次登 pgl 时,清理远程上 env.md、download 脚本里的明文 token(6.3 推断远程有副本,我未登远程核实)。
-5. **清 zmh 存量泄露**:zmh `.logs` 下 139 份 `_spec.json` 的 api_key 字段(6.2)。这是同学仓库的数据,建议和同学一起批量掩码。
+密钥已泄露的补救必须你在控制台吊销换新。收紧权限/删明文已做，但**旧凭据仍有效，必须轮换**：
 
-`.env` 里还有一批其他服务 key(JINA/SERPER/E2B/EXA/OPENROUTER 等),既然文件曾是 644 且在多用户机上,稳妥起见一并轮换。
+1. 两把网关 key（haoxiang gpt-5.6、apihy qwen）——已随 139 份 `_spec.json` 落 zmh `.logs`、也在 `.env`。
+   （6.2 的代码修复只堵住"以后不再泄"，**存量 139 份仍是明文**，需批量掩码 + 轮换。）
+2. 两个 HF token（env.md 的、download 脚本里的）。
+3. pgl 远程机 sudo 密码（`.env` 明文，且随文档 rsync 到远程）。
+4. 清远程副本：下次登 pgl 清 env.md / download 脚本的明文 token。
+5. `.env` 里其余服务 key（JINA/SERPER/E2B/EXA/OPENROUTER 等）稳妥起见一并轮换。
 
-## 待与同学协调(改 zmh 活跃代码/数据)
+## 不能在本仓库修（需 benchmark 参考数据，复用 zmh 那份、未复制）
 
-这些落在 `zmh/ALE_TEST/agents-last-exam` 的代码或 task-data 里,是同学的文件夹且有评测在跑。我准备了补丁和精确方案(见 system_issues.md 对应条目和 `harness/patches/`),但不单方面改,避免打断在跑的评测。按优先级:
-
-| 编号 | 问题 | 现成方案 |
+| 编号 | 问题 | 为什么本仓库改不了 |
 |---|---|---|
-| 3.1 | pi json 假零分 | `harness/patches/pi_deployer_false_zero_guard.py`,带 5 条自检,拷进 deployer 即可 |
-| 3.2 | 超时不杀进程,eval 与 agent 竞争 | lifecycle wait_for 加裕量 + 外层补 killpg 清理 |
-| 3.3 | failed 照评分 + 汇总重复计数 | status=failed 置 score null;汇总按最新时间戳去重、只统计 completed |
-| 2.1 | 未匹配模型静默兜底 | 去掉 generic_vlm 的 `.*` 注册改显式 opt-in + 前 3 轮无工具调用即判 failed |
-| 4.1 | ensure_node_npm sudo 卡死 180s | 安装前 `sudo -n true` 探测,不可用即 fail-fast;或改用户级 node 安装 |
-| 4.2 | 容器 python3 指向 3.14 venv | entrypoint.sh:15 去掉 venv bin 前缀重烤;或 vm 桥包 env PATH |
-| 5.2 | pcap 参考答案域名拼错 | 改该题 reference 的 5 处 tactlat→taktlat;管线加 reference 校验 |
-| 9.1 | 停机信号无人消费,容器泄漏 | Runner.run 消费 shutdown 事件,cancel gather 走 finally 清理 |
-| 8.1 | splitlines 撕碎含 Unicode 行界的事件 | parse_artifacts 改 `split("\n")` |
-| 其余中低危 | 1.2 / 3.4 / 4.3 / 5.3 / 6.4 / 7.1 / 7.3 / 8.2 / 9.2 / 9.3 / 10 | 见 system_issues.md 各条修复段 |
+| 5.2 | pcap reference 域名拼错 taktlat→tactlat | 改的是题目 `base/reference`，红线不进本仓库；需在 zmh task-data 里改 |
+| 5.3 | healthcare_bias input 预填答案 | 同上，属出题侧 task-data |
 
-补充:我的抽取脚本 `data/extract_pi_training_data.py` 逐行迭代读 transcript(Python universal newlines),不受 8.1 的 splitlines 问题影响;那条只影响 zmh 的 parse_artifacts。
+## 剩余代码修复（未做，中/低危，可后续在本仓库继续）
 
-## 文档一致性(10)
-
-wcy 侧文档引用的 `research_batch_p1.txt` 实际是 `research_batch_wcy.txt`,且该名对应两份不同内容的文件(docs/new_run 版 26 题、selected_tasks 版 36 题)。selected_tasks 在 zmh 仓库,重命名待同学;wcy docs 里的分析报告是历史快照,暂不改引用,在此备注。
+| 编号 | 问题 | 优先级 |
+|---|---|---|
+| 2.1 | 未匹配模型静默兜底（generic_vlm `.*` 注册 + 前 3 轮无工具调用判 failed 护栏） | 中高 |
+| 1.2 | stage_input 只校验目录存在、不校验非空 | 中 |
+| 3.4 | run.json 归因字段（超时误记 evaluation phase、缺 wall-budget 类目） | 中（score_valid 已挡住最伤的假零分部分） |
+| 4.2 | 容器内 python3 指向 3.14 venv（vm_mcp_server run_command 包 `env PATH=…`） | 中 |
+| 4.3 | install() key 断言不对症、check_status 返回值被丢 | 中 |
+| 6.4 | `pi_qwen35_apihy.yaml` 硬编码 key（删+改 `${env:}`）；key 以环境变量暴露给 agent | 中 |
+| 8.2/8.3 | parse_artifacts 丢超时最后一轮 / errorMessage 等解析缺口 | 中低 |
+| 9.2 | 容器就绪检测无并发感知、配额只下发不核算 | 中 |
+| 7.1/7.3 | 93G 单层镜像重分层 / 容器代理未清 | 高但需改构建/重烤镜像 |
+| 10 | 清单文件名不一致（research_batch_p1 vs _wcy，一名两文件） | 中低 |
