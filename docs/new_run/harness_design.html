@@ -1,0 +1,136 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>通用 harness 设计（待评审）</title><style>
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--pi:#2f6feb;--claw:#1a9c6b;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--pi:#6ea3ff;--claw:#3ecb93;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--pi:#2f6feb;--claw:#1a9c6b;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--pi:#6ea3ff;--claw:#3ecb93;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60}
+.wrap{max-width:1000px;margin:0 auto;padding:30px 20px 90px}h1{font-size:24px;margin:0 0 6px}h2{font-size:20px;margin:34px 0 10px}h3{font-size:16px;margin:20px 0 6px}.sub{color:var(--muted);font-size:14px}p{margin:9px 0}
+.red{border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:8px;padding:10px 16px;margin:16px 0;background:var(--card)}
+.note{border:1px solid var(--line);border-left:3px solid var(--pi);border-radius:8px;padding:10px 16px;margin:14px 0;background:var(--card)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0}table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:640px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{background:var(--card);font-weight:600;white-space:nowrap}tr:last-child td{border-bottom:none}
+code{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:13px;font-family:ui-monospace,Menlo,Consolas,monospace}
+pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+.mod{border:1px solid var(--line);border-radius:12px;padding:2px 18px;margin:16px 0}
+.mod h3{color:var(--pi)}
+dl.kv dt{font-weight:600;font-size:13px;margin-top:10px}dl.kv dd{margin:2px 0 8px;font-size:14px;color:var(--fg)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:20px}.p-pi{color:var(--pi);background:color-mix(in srgb,var(--pi) 15%,transparent)}.p-claw{color:var(--claw);background:color-mix(in srgb,var(--claw) 15%,transparent)}
+ul,ol{margin:8px 0;padding-left:22px}li{margin:6px 0}a{color:var(--pi)}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+.tag{font-size:11px;color:var(--muted);background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:16px;padding:1px 8px}
+</style></head><body><div class="wrap">
+<h1>通用 harness 设计（待你评审）</h1>
+<div class="sub">基于 <a href="case-study/index.html">26 题逐题轨迹分析</a> 的失败模式，设计一套通用、不泄露、pi 与 ale_claw 通用的 harness。本文是设计稿，先给你看清楚每个干预来自哪个失败、注入什么、为什么不泄露、怎么挂到两套 harness、怎么验证。评审通过再实现。</div>
+
+<div class="red"><b>不泄露红线（最高约束，先立在这里）。</b>harness 只能读三样东西：题目的输入文件（agent 自己也能看到的 input 和 software）、agent 自己的产出（output 目录、工具结果和观察）、以及步数和 token 计数。harness <b>绝不</b>读 reference 目录、绝不调用官方评测器、绝不接触任何隐藏答案。所有干预只注入两类内容：一是<b>客观事实</b>（文件缺哪个、当前指标是多少、这条命令第几步失败过），二是<b>控制信号</b>（停、拦、放行）。绝不注入答案、解法、领域提示。判断一个干预合不合规，就问一句：它注入的东西，agent 靠自己的输入和观察能不能推出来。能，才放行。</div>
+
+<h2>一、为什么要一致，怎么做到一致</h2>
+<p>要公平比较 pi 和 ale_claw，两套 harness 的干预必须完全相同，否则分数差里混进了 harness 差异。做法是把干预逻辑抽成一层<b>与框架无关的策略层</b>（一份代码），再写两个薄适配器把它挂到各自的钩子上。策略层是同一份，pi 和 ale_claw 跑的是同一套判断。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>介入时机</th><th>策略层接口</th><th>pi 挂点</th><th>ale_claw 挂点</th></tr></thead>
+<tbody>
+<tr><td>动作前拦截</td><td><code>before_tool(call, state)</code></td><td><code>beforeToolCall</code> 钩子</td><td>agent_loop 工具执行前</td></tr>
+<tr><td>动作后反射</td><td><code>after_tool(call, result, state)</code></td><td><code>afterToolCall</code> 钩子</td><td>agent_loop 工具结果回填前</td></tr>
+<tr><td>轮末与收尾</td><td><code>should_stop(state)</code></td><td><code>shouldStopAfterTurn</code> 钩子</td><td>agent_loop 的 DONE 判定处</td></tr>
+</tbody></table></div>
+<p>pi 的三个钩子见 <a href="../pi-agent.md">pi-agent.md 第 6 节</a>。ale_claw 的主循环是 <code>harness/agent_loop.py</code> 的 <code>while True</code>，它靠 DONE 信号结束、外加 max_steps 上限，在这三个位置注入等价调用即可。两套挂的是同一个 <code>HarnessPolicy</code> 实例。</p>
+
+<h2>二、四个干预模块</h2>
+<p>每个模块都标了它来自哪道题的失败，以及它注入的是事实还是控制。</p>
+
+<div class="mod"><h3>M1　预算护栏与无进展止损</h3>
+<dl class="kv">
+<dt>来自哪个失败</dt><dd>gpt_claw 被 30 轮上限卡住，在 agora、legal_ma、pe_screening 上没写出交付文件就被截断（空输出判 0）。反过来 pi 无上限，在 ct_geometry 上一直调参跑到超时，仍是 0，白烧算力。</dd>
+<dt>做什么</dt><dd>三件事。一，把交互上限从 30 提到 100（已改 ale_claw 配置）。二，无进展止损：连续 K 轮（初值 8）output 目录没有任何变化、且没有新的成功命令，就停，把预算让给别的题。三，预算提醒：用到 80% 轮次时，向 agent 反射一句「还剩 N 轮，确认交付文件已写出」。</dd>
+<dt>注入什么</dt><dd>控制（止损时停）＋事实（剩余轮次、output 已连续 K 轮无变化）。不含答案。</dd>
+<dt>不泄露论证</dt><dd>剩余轮次和 output 是否变化，都是 agent 自己能观察到的运行状态，不涉及题目答案。</dd>
+<dt>一致性</dt><dd>pi 和 ale_claw 用同一个 K、同一个 80% 阈值、同一句提醒文本。</dd>
+</dl></div>
+
+<div class="mod"><h3>M2　交付契约校验（核心模块）</h3>
+<dl class="kv">
+<dt>来自哪个失败</dt><dd>这是最高价值的干预。pe_screening 的 pi 写出了备忘但漏了模板必需的顶层标题，触发硬门槛判 0；legal_ma、agora 的 gpt_claw 根本没写出文件。这两类失分都是<b>结构性</b>的，不是内容错。</dd>
+<dt>做什么</dt><dd>在 agent 想收尾（发 DONE 或调用 shouldStopAfterTurn）时，用一个校验器检查交付物是否满足题目<b>自己声明</b>的结构契约：一，要求的输出文件存在且非空；二，结构元素齐全，比如 Markdown 模板要求的顶层标题、output_contract 要求的 CSV 列名和顺序、schema 要求的 JSON 键；三，题面明确要求的标记存在，比如 Go/No-Go/Hold 这一行结论。有缺口就<b>不放行收尾</b>，把缺口作为事实反射回去，例如「screening_memo.md 缺模板里列出的 Valuation 标题」。</dd>
+<dt>契约从哪来</dt><dd>只从 agent 自己看得到的输入来：<code>memo_template.md</code>、<code>output_contract.json</code>、<code>schema/*.json</code>、题面 prompt。这些本来就在 agent 手里。<b>绝不</b>从 reference 目录或评测器来。</dd>
+<dt>注入什么</dt><dd>控制（缺口未补就不许收尾）＋事实（缺哪个文件、缺哪个标题、缺哪列）。绝不检查数值对不对，只检查结构在不在。</dd>
+<dt>不泄露论证</dt><dd>校验器只核对「题目自己声明的结构」和「agent 自己的产出」之间的差，两头都是 agent 可见的，不碰隐藏答案。它说的每一句缺口，agent 把自己的模板和自己的产出对一遍也能得出。这是镜子，不是地图。</dd>
+<dt>一致性</dt><dd>同一套契约解析逻辑，同一个校验器，pi 和 ale_claw 收尾时都过这一关。</dd>
+</dl>
+<div class="note"><b>边界，避免越线。</b>M2 只做结构校验，不做数值校验。crf_sdtm 的映射内容错、healthcare_sap 的统计量错，这些是内容正确性，M2 不碰也碰不了——碰了就要读答案，越线。M2 能救的是空输出和漏结构（agora、legal_ma、pe_screening 这类），救不了内容错。</div>
+</div>
+
+<div class="mod"><h3>M3　事实反射（面向有量化目标的题）</h3>
+<dl class="kv">
+<dt>来自哪个失败</dt><dd>ct_geometry 要把重建图像的 SSIM 迭代到 ≥0.95，healthcare_sap 的统计量有明确容差。agent 需要在每轮迭代后看清自己离目标还差多少。</dd>
+<dt>做什么</dt><dd>当题目在 input 里 staged 了 agent 可自跑的自检、或目标阈值写在题面里时，agent 写出候选产出后，harness 重跑这个<b>agent 自己就能跑的</b>自检，把「当前值 vs 目标」附到观察里，例如「当前 SSIM=0.91，目标≥0.95」。</dd>
+<dt>注入什么</dt><dd>事实（当前指标、目标阈值）。目标阈值来自题面，当前值来自 agent 自己的产出跑 agent 自己可见的自检。</dd>
+<dt>不泄露论证</dt><dd>只重跑 agent 可见的自检，只用题面声明的阈值，绝不用隐藏 reference 的真值，绝不调官方评测器。agent 自己也能跑这个自检，harness 只是稳定地替它跑、替它记，省得它忘。</dd>
+<dt>一致性</dt><dd>同一个触发条件（题目有可见自检）、同一个反射格式。</dd>
+</dl></div>
+
+<div class="mod"><h3>M4　动作前守卫（去重与防打转）</h3>
+<dl class="kv">
+<dt>来自哪个失败</dt><dd>pi 在 pe_screening 上把同一批文件读了 20 次，属于过度读取。两套 harness 都出现过反复重跑同一条失败命令。</dd>
+<dt>做什么</dt><dd>两条。一，拦截对同一文件、其间没有写入的重复读取，返回「第 N 步已读过」。二，拦截字节完全相同、且最近 M 次（初值 2）失败过的命令，返回「同样的命令在第 N 步失败过，换个思路」。</dd>
+<dt>注入什么</dt><dd>控制（拦下重复动作）＋事实（这个动作在第几步做过、结果如何）。全是 agent 自己的历史。</dd>
+<dt>不泄露论证</dt><dd>只用 agent 自己的动作历史，不涉及答案。</dd>
+<dt>一致性</dt><dd>同一套去重和防打转逻辑。</dd>
+</dl></div>
+
+<h2>三、共享策略层接口</h2>
+<p>一份代码，两个适配器都调它。伪代码：</p>
+<pre>class HarnessPolicy:
+    def __init__(self, task_dir, budget_turns=100, no_progress_k=8, refail_m=2):
+        self.contract = parse_contract(task_dir)   # 只读 input 里的 template/schema/output_contract/prompt
+        self.selfcheck = find_selfcheck(task_dir)  # 只找 input 里 staged 的自检，找不到则 None
+        self.state = RunState()                    # 步数、读过的文件、失败命令、output 快照
+
+    def before_tool(self, call):                   # M4
+        if is_redundant_read(call, self.state):  return note("已读过，见第 N 步")
+        if is_refail(call, self.state):          return note("同命令第 N 步失败过，换思路")
+        return None
+
+    def after_tool(self, call, result):            # M3 + 记账
+        self.state.record(call, result)
+        if wrote_candidate_output(call) and self.selfcheck:
+            return f"自检：当前 {metric}={val}，目标 {self.contract.target}"
+        return None
+
+    def should_stop(self, wants_to_stop):          # M1 + M2
+        if self.state.no_progress() &gt;= self.no_progress_k:  return STOP, "连续 K 轮无进展，止损"
+        if self.state.turns &gt;= 0.8*self.budget_turns:       nudge("还剩 N 轮，确认交付已写")
+        if wants_to_stop:
+            gaps = self.contract.check(self.state.output_dir)   # 只查结构，不查数值
+            if gaps:  return DONT_STOP, f"收尾被拦：{gaps}"      # 反射缺口
+        return (STOP if wants_to_stop else CONTINUE), None</pre>
+<p><span class="pill p-pi">pi 适配器</span> 一个 extension，把 <code>beforeToolCall/afterToolCall/shouldStopAfterTurn</code> 三个钩子转发到上面三个方法。<span class="pill p-claw">ale_claw 适配器</span> 在 <code>agent_loop.py</code> 的工具执行前、结果回填前、DONE 判定处调同样三个方法。两边构造的是同一个 <code>HarnessPolicy</code>。</p>
+
+<h2>四、每个模块能救哪些题（预期）</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>模块</th><th>预期能改善的题</th><th>改善机制</th><th>救不了的</th></tr></thead>
+<tbody>
+<tr><td>M1 预算止损</td><td>ct_geometry（pi 超时）、批量题</td><td>省下无进展的算力，留给能做的题；提上限让批量题多覆盖</td><td>本身不提单题分</td></tr>
+<tr><td>M2 契约校验</td><td>agora、legal_ma、pe_screening</td><td>把空输出和漏结构挡在收尾前，逼 agent 补齐交付</td><td>内容错的题（crf_sdtm、sap）</td></tr>
+<tr><td>M3 事实反射</td><td>ct_geometry、healthcare_sap</td><td>让 agent 每轮看清离目标的差距</td><td>没有可见自检的题</td></tr>
+<tr><td>M4 动作前守卫</td><td>pe_screening（过度读取）及各题的打转</td><td>省步数，把预算花在有效动作上</td><td>不直接提分，靠省预算间接帮</td></tr>
+</tbody></table></div>
+
+<h2>五、怎么验证有没有用，怎么证明没泄露</h2>
+<ul>
+<li><b>消融</b>。同一批题，harness 关（现在的 baseline，已有分）对 harness 开，pi 和 ale_claw 各跑一遍。看每题增量，重点看三道空输出题（agora、legal_ma、pe_screening）是不是从「空输出 0」变成「有输出、拿到部分分」。</li>
+<li><b>归因</b>。分模块开关，确认提分来自 M2 而不是别的；确认 M1 减少了超时；确认 M4 减少了浪费步数。</li>
+<li><b>不泄露审计</b>。harness 每注入一条内容都记日志。跑完把日志过一遍，逐条确认注入的只有结构缺口、运行状态、动作历史，没有任何一条是 reference 里的真值。这条审计是硬性的，过不了就不算通过。</li>
+<li><b>公平性</b>。确认 pi 和 ale_claw 用的是同一个 policy 实例配置（同 K、同 M、同上限、同契约解析），分数差里不含 harness 差异。</li>
+</ul>
+
+<h2>六、故意不做的事</h2>
+<ul>
+<li>不读 reference 目录，不调官方评测器，不碰任何隐藏真值。</li>
+<li>不校验输出的<b>数值</b>正确性，只校验结构。数值对不对只能靠模型。</li>
+<li>不用报错数做干预信号。healthcare_variant 上 gpt_claw 报错 14 次仍拿满分，报错多不等于做得差。</li>
+<li>不注入领域知识、模板范文、解题步骤。harness 是镜子，把 agent 自己的状态照给它看，不给地图。</li>
+</ul>
+
+<footer>设计稿，基于 <a href="case-study/index.html">case-study</a> 的失败模式。评审通过后按共享策略层加两个适配器的方式实现，先在少量题上做消融和不泄露审计，再全量。2026-07-14。</footer>
+</div></body></html>

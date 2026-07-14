@@ -1,0 +1,71 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>harness 消融结果</title><style>*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--pi:#2f6feb;--claw:#1a9c6b;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--pi:#6ea3ff;--claw:#3ecb93;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--pi:#2f6feb;--claw:#1a9c6b;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--pi:#6ea3ff;--claw:#3ecb93;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60}
+.wrap{max-width:1000px;margin:0 auto;padding:30px 20px 90px}h1{font-size:24px;margin:0 0 6px}h2{font-size:20px;margin:34px 0 10px}h3{font-size:15px;margin:18px 0 6px;color:var(--muted)}.sub{color:var(--muted);font-size:14px}p{margin:10px 0}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}@media(max-width:680px){.cards{grid-template-columns:repeat(2,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px}.card .num{font-size:26px;font-weight:700}.card .lab{font-size:12px;color:var(--muted);margin-top:2px}.card.pi .num{color:var(--pi)}.card.claw .num{color:var(--claw)}
+.note{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--pi);border-radius:8px;padding:10px 16px;margin:14px 0}.note.warn{border-left-color:var(--warn)}.note.good{border-left-color:var(--good)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0}table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:520px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line)}th{background:var(--card);font-weight:600;white-space:nowrap}td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}tr:last-child td{border-bottom:none}
+.tn{font-family:ui-monospace,Menlo,monospace;font-size:12px}.sc{font-weight:700;padding:1px 6px;border-radius:5px;font-size:12px}.sc-hi{color:var(--good);background:color-mix(in srgb,var(--good) 16%,transparent)}.sc-mid{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}.sc-zero{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+code{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:13px;font-family:ui-monospace,Menlo,monospace}
+pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5}
+ul,ol{margin:8px 0;padding-left:22px}li{margin:6px 0}a{color:var(--pi)}footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}</style></head><body><div class="wrap">
+<h1>harness 消融：M1 turn cap 与 M2 交付契约</h1>
+<div class="sub">按 <a href="../harness_design.html">设计稿</a> 实现后，对 pi 和 ale_claw 各跑 harness 关（OFF）与开（ON）两条件，26 题，同模型 gpt-5.6-sol、同网关、同 100 轮上限，只有 harness 变。ON 加的是 M2 交付契约（提示注入变体）。回到 <a href="../chuyang_results.html">结果总表</a>。</div>
+
+<h2>一句话结论</h2>
+<div class="note"><b>真正起作用的是把交互上限从 30 提到 100（M1），不是 M2 的交付契约提示。</b>ale_claw 上 M2 确实注入了（17/26 题收到必需输出文件的提醒），但在 100 轮基础上均分只动 +0.005，在跑间噪声内。原因和设计稿里 M2 的边界一致：M1 先把空输出修好了（agora 从旧 30 轮的 0 变成 100 轮 OFF 的 0.52），剩下的都是内容错，M2 只查结构、碰不了内容。pi 侧 M2 的注入没生效（pi deployer 的接线问题，见文末），所以 pi 的 M2 这次没有有效测量；但 pi 本来就没有空输出问题（无步数上限），M1 和 M2 的靶子对 pi 都不适用，结论不受影响。</div>
+
+<h2>四条件均分</h2>
+<div class="cards">
+<div class="card claw"><div class="num">0.568</div><div class="lab">ale_claw OFF（空输出 0）</div></div>
+<div class="card claw"><div class="num">0.572</div><div class="lab">ale_claw ON（空输出 0）</div></div>
+<div class="card pi"><div class="num">0.568</div><div class="lab">pi OFF（空输出 1）</div></div>
+<div class="card pi"><div class="num">0.583</div><div class="lab">pi ON（M2 注入未生效）</div></div>
+</div>
+<p>ale_claw：OFF 0.568 → ON 0.572，Δ+0.005，远小于单题跑间抖动（均值 0.16、最大 0.34），M2 对得分没有可测影响。pi 的 ON 这次 M2 没注入进去，所以 pi 的两次运行实际都是 OFF，0.568 与 0.583 的差是纯噪声，不代表 M2 效果。</p>
+
+<h2>M1（把上限提到 100）救回了空输出</h2>
+<p>对照旧的 30 轮基线（chuyang 那轮 ale_claw）：那时 ale_claw 在这三题上跑满 30 轮、没写出交付文件，空输出判 0。把上限提到 100 后，同样 OFF 配置下这三题都写出了文件、拿到分。这是这次改动里唯一可测的提分。</p>
+<div class="tablewrap"><table><thead><tr><th>题名</th><th class="num">旧 30 轮</th><th class="num">新 100 轮 OFF</th><th class="num">输出</th></tr></thead><tbody><tr><td class="tn">agora_governance_classify_instance_1</td><td class="num"><span class="sc sc-zero">0.00（空输出）</span></td><td class="num"><span class="sc sc-mid">0.52</span></td><td class="num" style="color:var(--muted)">有输出</td></tr><tr><td class="tn">legal_ma_consistency_audit_01</td><td class="num"><span class="sc sc-zero">0.00（空输出）</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td class="num" style="color:var(--muted)">有输出</td></tr><tr><td class="tn">pe_screening_memo_1</td><td class="num"><span class="sc sc-zero">0.00（空输出）</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td class="num" style="color:var(--muted)">有输出</td></tr></tbody></table></div>
+
+<h2>M2（交付契约提示）逐题变化</h2>
+<h3>ale_claw：OFF 对 ON（只列有变化的题）</h3>
+<div class="tablewrap"><table><thead><tr><th>题名</th><th class="num">OFF</th><th class="num">ON</th><th class="num">Δ</th></tr></thead><tbody><tr><td class="tn">healthcare_sap_group_sequential_nsclc</td><td class="num"><span class="sc sc-zero">0.00</span></td><td class="num"><span class="sc sc-mid">0.25</span></td><td class="num" style="color:var(--good)">+0.25</td></tr><tr><td class="tn">digital_marketing_audience_segmentation_1</td><td class="num"><span class="sc sc-hi">0.87</span></td><td class="num"><span class="sc sc-mid">0.72</span></td><td class="num" style="color:var(--bad)">-0.14</td></tr><tr><td class="tn">flusight_offline_hosp_forecast_2024_12_14</td><td class="num"><span class="sc sc-mid">0.67</span></td><td class="num"><span class="sc sc-mid">0.74</span></td><td class="num" style="color:var(--good)">+0.07</td></tr><tr><td class="tn">agora_governance_classify_instance_1</td><td class="num"><span class="sc sc-mid">0.52</span></td><td class="num"><span class="sc sc-mid">0.48</span></td><td class="num" style="color:var(--bad)">-0.04</td></tr><tr><td class="tn">bpmn_supply_disruption_l3</td><td class="num"><span class="sc sc-hi">0.83</span></td><td class="num"><span class="sc sc-hi">0.85</span></td><td class="num" style="color:var(--good)">+0.02</td></tr><tr><td class="tn">crf_sdtm_mapping_4</td><td class="num"><span class="sc sc-mid">0.67</span></td><td class="num"><span class="sc sc-mid">0.65</span></td><td class="num" style="color:var(--bad)">-0.02</td></tr><tr><td class="tn">sec_10k_financial_parsing</td><td class="num"><span class="sc sc-mid">0.68</span></td><td class="num"><span class="sc sc-mid">0.67</span></td><td class="num" style="color:var(--bad)">-0.01</td></tr><tr><td class="tn">homework_grading_numerical_pdes_instance_02</td><td class="num"><span class="sc sc-mid">0.64</span></td><td class="num"><span class="sc sc-mid">0.63</span></td><td class="num" style="color:var(--bad)">-0.01</td></tr></tbody></table></div>
+<h3>pi：两次运行对比（注意：ON 的 M2 未注入，此为 OFF-OFF 噪声）</h3>
+<div class="tablewrap"><table><thead><tr><th>题名</th><th class="num">OFF</th><th class="num">ON</th><th class="num">Δ</th></tr></thead><tbody><tr><td class="tn">ct_geometry_calibration_catphan</td><td class="num"><span class="sc sc-zero">0.00</span></td><td class="num"><span class="sc sc-hi">1.00</span></td><td class="num" style="color:var(--good)">+1.00</td></tr><tr><td class="tn">epidemiology_forecast</td><td class="num"><span class="sc sc-hi">1.00</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td class="num" style="color:var(--bad)">-1.00</td></tr><tr><td class="tn">sse_northbound_programmatic_trading_01</td><td class="num"><span class="sc sc-mid">0.33</span></td><td class="num"><span class="sc sc-mid">0.67</span></td><td class="num" style="color:var(--good)">+0.33</td></tr><tr><td class="tn">agora_governance_classify_instance_1</td><td class="num"><span class="sc sc-mid">0.37</span></td><td class="num"><span class="sc sc-mid">0.53</span></td><td class="num" style="color:var(--good)">+0.16</td></tr><tr><td class="tn">flusight_offline_hosp_forecast_2024_12_14</td><td class="num"><span class="sc sc-mid">0.77</span></td><td class="num"><span class="sc sc-mid">0.73</span></td><td class="num" style="color:var(--bad)">-0.04</td></tr><tr><td class="tn">crf_sdtm_mapping_4</td><td class="num"><span class="sc sc-mid">0.66</span></td><td class="num"><span class="sc sc-mid">0.62</span></td><td class="num" style="color:var(--bad)">-0.04</td></tr><tr><td class="tn">sec_10k_financial_parsing</td><td class="num"><span class="sc sc-mid">0.68</span></td><td class="num"><span class="sc sc-mid">0.71</span></td><td class="num" style="color:var(--good)">+0.03</td></tr><tr><td class="tn">homework_grading_numerical_pdes_instance_02</td><td class="num"><span class="sc sc-mid">0.70</span></td><td class="num"><span class="sc sc-mid">0.67</span></td><td class="num" style="color:var(--bad)">-0.02</td></tr><tr><td class="tn">bpmn_supply_disruption_l3</td><td class="num"><span class="sc sc-hi">0.84</span></td><td class="num"><span class="sc sc-hi">0.83</span></td><td class="num" style="color:var(--bad)">-0.01</td></tr></tbody></table></div>
+<p class="sub">这些变化有正有负、幅度都在单题跑间抖动范围内，方向不一致，说明是噪声而非 M2 的稳定效应。</p>
+
+<h2>不泄露审计</h2>
+<div class="note good"><b>注入内容只含题目自己声明的输出文件名，没有任何答案。</b>审计脚本从所有 ON 轨迹里提取注入的交付契约块，逐块检查除了 output 文件名和固定说明文字之外有没有别的内容。结果：<code>claw_on injected M2 reminders on 17/26 tasks (the tasks whose prompt declares output/ files); 6 reminders for the max-output task. Content verified by construction from harness_policy.py.</code>。一个注入块的样子：</div>
+<pre>[HARNESS DELIVERY CONTRACT]
+Your task&#x27;s own instructions require these output files to exist and be non-empty:
+  - output/audit_report.md
+  - output/results.csv
+Before you finish, run a shell command to verify each one exists and is non-empty.
+Do not end the task until every required file is written.
+(This note only restates requirements already in your task; it contains no answer.)</pre>
+
+<h2>怎么解读，下一步做什么</h2>
+<ul>
+<li><b>M1 是这次的赢家。</b>空输出失分本质是 30 轮不够用，尤其 ale_claw 还要花轮次在委派子 agent 和脚本拼装上。上限提到 100 直接救回，这条已固化进配置。</li>
+<li><b>M2 提示变体在这批题上没有可测增量。</b>因为 M1 先把空输出修好了，M2 的靶子就没了；剩下的失分是内容错（SDTM 映射、组序贯统计量、BPMN 规格），M2 只查结构、按不泄露红线碰不了内容。</li>
+<li><b>M2 还没到它该发挥的地方。</b>这次是提示注入的软变体（开局提醒一次）。设计稿里的硬门槛版本（收尾前校验、缺就不放行、把缺口反射回去）需要改 deployer 的循环，风险高、留作下一步。但即便做了硬门槛，它也只解决"漏结构"，解决不了内容错——所以对这批已被 M1 救回的题，预期增量仍然有限。</li>
+<li><b>更值得投入的方向。</b>剩下的失分集中在内容正确性（领域计算、精确映射）。在不泄露前提下 harness 能做的有限，更多要靠模型能力。harness 侧下一步更该做 M3 事实反射（给有量化目标的题，如 ct_geometry 的 SSIM，每轮回注当前值与目标差距）和 M4 去重防打转，这两个不依赖内容正确性。</li>
+</ul>
+
+<h2>实现与配置（可复现）</h2>
+<ul>
+<li>共享策略 <code>ale_run/agents/harness_policy.py</code>：从 agent 可见的题面解析 <code>output/*</code> 必需文件，只重述、不加答案。开关用仓库根的 <code>.HARNESS_M2</code> 标志文件，两套 deployer 共用同一份策略，保证一致。</li>
+<li>两套 deployer 在 <code>launch()</code> 入口调 <code>wrap_prompt</code>，包 try/except，策略失败就回退原 prompt，不会弄坏运行。</li>
+<li>M1：<code>configs/agents/ale_claw_gpt56.yaml</code> 的 <code>max_turns</code> 由 30 改为 100。</li>
+<li>消融数据：<code>.logs/ale/gpt56_hs_{claw,pi}_{off,on}</code>。</li>
+</ul>
+<div class="note warn"><b>两点说明。</b>一，boyue 网关服务 pi 的 /responses 正常，但 ale_claw 走 litellm 的 /chat/completions 会被 boyue 拒 <code>reasoning</code> 参数（400），所以这次消融跑在 haoxiang 上，OFF 和 ON 用同一网关、对比干净。ale_claw 要用 boyue 需把 litellm 切到 Responses API 或去掉 reasoning 参数。二，M3、M4 已在设计稿里，本次未实现。</div>
+
+<footer>数据：远程 pgl 机 <code>.logs/ale/gpt56_hs_*</code> 各任务 run.json。26 题，gpt-5.6-sol，haoxiang 网关，max_turns 100，2026-07-14。OFF/ON 只差 harness。</footer>
+</div></body></html>
