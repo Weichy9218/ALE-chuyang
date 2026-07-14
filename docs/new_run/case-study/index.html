@@ -1,0 +1,35 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ALE 逐题轨迹分析（case study）</title><style>*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--pi:#2f6feb;--claw:#1a9c6b;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--pi:#6ea3ff;--claw:#3ecb93;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--pi:#2f6feb;--claw:#1a9c6b;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--pi:#6ea3ff;--claw:#3ecb93;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60}
+.wrap{max-width:1000px;margin:0 auto;padding:30px 20px 80px}h1{font-size:23px;margin:0 0 6px}h2{font-size:19px;margin:30px 0 8px}h3{font-size:14px;margin:14px 0 6px;color:var(--muted)}.sub{color:var(--muted);font-size:14px}p{margin:9px 0}
+.nav{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0}.nav a{font-size:12.5px;padding:4px 11px;border:1px solid var(--line);border-radius:16px;text-decoration:none;color:var(--muted);background:var(--card)}.nav a.here{color:var(--fg);border-color:var(--pi);font-weight:600}
+.spec{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:4px 16px;margin:12px 0}.spec dt{font-weight:600;font-size:13px;margin-top:10px;color:var(--fg)}.spec dd{margin:2px 0 8px;font-size:13.5px;color:var(--muted)}
+section{border-top:1px solid var(--line);padding-top:16px;margin-top:24px}
+.scr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0;font-size:13px}.scr .lab{color:var(--muted)}.scr .meta{color:var(--muted);font-size:12px;margin-right:10px}
+.sc{font-weight:700;padding:1px 7px;border-radius:5px;font-size:13px}.sc-hi{color:var(--good);background:color-mix(in srgb,var(--good) 16%,transparent)}.sc-mid{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}.sc-zero{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}.sc-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:6px 0}@media(max-width:680px){.two{grid-template-columns:1fr}}
+.hp{color:var(--pi)}.hc{color:var(--claw)}
+.steps{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.st{display:grid;grid-template-columns:24px 74px 1fr;border-bottom:1px solid var(--line)}.st:last-child{border-bottom:none}.st>span{padding:3px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.si{color:var(--muted);text-align:right}.sn{font-weight:600}.sa{color:var(--muted)}.st.err{background:color-mix(in srgb,var(--bad) 9%,transparent)}.st.err .sn{color:var(--bad)}
+.opt{border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:8px;padding:6px 16px;margin:12px 0;background:var(--card)}.opt li{margin:8px 0;font-size:14px}
+.banner{border:1px solid var(--line);border-left:3px solid var(--pi);border-radius:8px;padding:10px 16px;margin:14px 0;background:var(--card);font-size:13.5px}
+a{color:var(--pi)}footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+.dcard{display:block;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0;text-decoration:none;color:var(--fg);background:var(--card)}
+.dcard .dt{font-size:17px;font-weight:700}.dcard .dl{font-size:13px;color:var(--muted);margin-top:4px}</style></head><body><div class="wrap">
+<h1>ALE 逐题轨迹分析</h1>
+<div class="sub">从 pi 和 gpt_claw 的运行轨迹里挑有代表性的题，按领域分组，逐题讲清题目条件、给了什么、要求、如何评测，再看两套 harness 各自怎么做、为什么是这个分，最后给这一组题的 harness 优化方向。回到 <a href="../chuyang_results.html">结果总表</a>。</div>
+<div class="banner">这批运行时 gpt_claw 的交互轮数被限制在 30 轮，事后看太低也不公平：它的多数空输出失分直接来自这个上限，何况它还要花轮次在委派子 agent 和脚本拼装上。已把上限改到 100。之后的 ALE 任务模型走 boyue 网关（apirx.boyuerichdata.com）。本页分析基于 30 轮上限的运行结果。</div>
+<h2>四个领域</h2>
+<a class="dcard" href="d1-audit.html"><div class="dt">文档审计与分类</div><div class="dl">并购备案一致性审计、Zscaler 尽调筛选备忘、AI 治理文档分类</div></a><a class="dcard" href="d2-extract.html"><div class="dt">结构化财务抽取</div><div class="dl">苹果 FY2024 资产负债表重建、100 份 SEC 10-K 批量解析</div></a><a class="dcard" href="d3-clinical.html"><div class="dt">临床数据与生物统计</div><div class="dl">CRF 到 SDTM 字段映射、NSCLC 组序贯统计分析计划、临床变异注释流水线</div></a><a class="dcard" href="d4-numeric.html"><div class="dt">数值计算与复现</div><div class="dl">FluSight 流感预测评分卡复现、CT 几何参数标定</div></a>
+<h2>跨领域的三条 harness 结论</h2>
+<div class="opt"><ul>
+<li>30 轮上限太低。gpt_claw 的空输出失分（agora、legal_ma、pe_screening）几乎都来自这个上限，何况它还要花轮次在委派子 agent 和脚本拼装上。已改到 100。批量题（sec_10k）上 pi 无上限就比封 30 轮的 gpt_claw 高 0.09。</li>
+<li>不泄露前提下最有价值的干预是交付契约校验。很多题有纯结构性的硬门槛：必需文件、必需标题、必需结论、必需字段。harness 可以在 agent 收尾前核对交付物是否满足这些结构契约，把缺口作为客观事实反射回去，不碰答案。这能救回空输出和漏结构的失分。</li>
+<li>报错数不预测成败。healthcare_variant 上 gpt_claw 报错 14 次仍拿满分，pi 报错少反而因规则偏差扣分。harness 不要用报错次数做干预信号，要看最终产出对不对。</li>
+</ul></div>
+<footer>数据来自远程 pgl 机 <code>.logs/ale</code> 下 pi 与 gpt_claw 各任务的运行记录。2026-07-14。</footer>
+</div></body></html>
