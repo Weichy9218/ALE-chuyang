@@ -41,9 +41,11 @@ _CUA_SESSION_CLOSE_TIMEOUT_S = 10
 _DETACHED_POLL_BACKOFF_S = (1, 1, 2, 3, 5, 10, 15)
 _DETACHED_POLL_MAX_S = 30
 # Overall ceiling for the detached command. Kept just under the eval phase
-# wall-clock (lifecycle._EVAL_TIMEOUT_S = 3600) so the poll loop surfaces a
-# clean error before the phase-level wait_for fires.
-_DETACHED_TIMEOUT_S = 3300
+# wall-clock (lifecycle._EVAL_TIMEOUT_S = 7200) so the poll loop surfaces a
+# clean error before the phase-level wait_for fires. system_issues.md 9.3:
+# this was stale at 3300 (from when _EVAL_TIMEOUT_S was 3600), which silently
+# capped heavy evals at 3300s — well below the advertised 7200s.
+_DETACHED_TIMEOUT_S = 7000
 
 
 class _DetachedSetupError(Exception):

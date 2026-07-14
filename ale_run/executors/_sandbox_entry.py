@@ -47,9 +47,13 @@ def run(spec: dict, env: dict | None = None) -> dict:
     # Inject framework env vars so the deployer's spawned subprocess
     # inherits them. Fall back to a legacy in-spec env for forward/back
     # compatibility, but the writer no longer puts secrets in the spec.
+    # Config secrets (CFG_SECRET_PREFIX) are re-attached to the config below,
+    # NOT injected into os.environ, so the agent subprocess cannot read them.
+    from ale_run.executors._secrets import apply_config_secrets, strip_cfg_secrets
+
     if env is None:
         env = spec.get("env") or {}
-    for k, v in env.items():
+    for k, v in strip_cfg_secrets(env).items():
         os.environ[str(k)] = str(v)
 
     try:
@@ -67,6 +71,7 @@ def run(spec: dict, env: dict | None = None) -> dict:
         dep_cls = getattr(dep_mod, spec["deployer_class"])
 
         cfg = cfg_cls(**spec["config_kwargs"])
+        apply_config_secrets(cfg, env)
         sandbox = SandboxHandle(**spec["sandbox_kwargs"])
         # We are running INSIDE the sandbox: cua-server is co-located on
         # loopback at the image's declared port. The handle's ``endpoint`` was
@@ -78,7 +83,7 @@ def run(spec: dict, env: dict | None = None) -> dict:
             config=cfg,
             work_dir=spec["work_dir"],
             sandbox=sandbox,
-            env=env,
+            env=strip_cfg_secrets(env),
         )
         deployer = dep_cls(executor)
 

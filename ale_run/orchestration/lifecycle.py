@@ -56,6 +56,14 @@ _DEFAULT_TIMEOUT_S = 7200
 # (it would just time out again) — same semantics as an agent wall-clock timeout.
 _EVAL_TIMEOUT_S = 7200
 
+# system_issues.md 3.2: the OUTER host-side wall-clock guard around the agent
+# run must fire AFTER the executor's own in-sandbox timeout, so the executor's
+# graceful terminate/kill path runs first. If the outer guard used the same
+# value as the inner timeout it would pre-empt that path: the agent process is
+# never killed and evaluate() then races a still-running agent over the shared
+# workspace (unreproducible scores). Give the inner timeout this head-start.
+_AGENT_WALL_MARGIN_S = 600
+
 
 def _append_prompt_suffix(task_meta: dict[str, Any], prompt_suffix: str) -> None:
     """Append the experiment-wide ``prompt_suffix`` to the task description.
@@ -330,12 +338,26 @@ async def run_one_unit(
                         prompt=task_meta["description"],
                         timeout_s=float(timeout_s),
                     ),
-                    timeout=timeout_s,
+                    # Outer guard trips only if the executor's own timeout path
+                    # (which kills the agent) fails to return in time — 3.2.
+                    timeout=timeout_s + _AGENT_WALL_MARGIN_S,
                 )
             except asyncio.TimeoutError:
+                # Executor didn't self-terminate within the margin. Force a
+                # hard cleanup so evaluate() cannot race a still-live agent.
+                try:
+                    await executor.force_kill()
+                except Exception as _kill_exc:                      # noqa: BLE001
+                    logger.warning(
+                        "force_kill after outer timeout failed for %s: %s",
+                        unit.slug, _kill_exc,
+                    )
                 run_result = AgentRunResult(
                     status="timeout",
-                    error=f"agent wall-budget exceeded after {timeout_s}s",
+                    error=(
+                        f"agent wall-budget exceeded: executor did not return "
+                        f"within {timeout_s}s + {_AGENT_WALL_MARGIN_S}s margin"
+                    ),
                     duration_s=float(timeout_s),
                 )
             except asyncio.CancelledError:
@@ -425,41 +447,58 @@ async def run_one_unit(
             #     eval_result.json + run.json + trajectory.json — there is
             #     no debug/ folder in the new spec, so simprun's
             #     `debug/eval/result.json` raw dump has no destination here.
-            env.set_phase("evaluation")
-            eval_start = time.monotonic()
-            # End of the execution window (everything up to, but excluding, eval).
-            exec_ended = eval_start
-            try:
-                eval_out = await asyncio.wait_for(
-                    task_driver.evaluate(), timeout=_EVAL_TIMEOUT_S,
+            # system_issues.md 3.3: an agent-side FAILURE (infra — gateway
+            # error, crash, non-zero exit) makes evaluate() meaningless.
+            # Scoring a broken run writes a bogus 0.0 that is indistinguishable
+            # from a wrong answer, pollutes the leaderboard, and under --resume
+            # is taken as a final result. Skip eval for failed runs; score
+            # stays None and status is promoted to failed below. A timeout
+            # still evaluates (partial work may earn partial credit) but its
+            # score is flagged non-final via score_valid in run.json.
+            skip_eval = run_result is not None and run_result.status == "failed"
+            if skip_eval:
+                eval_status = "skipped_agent_failed"
+                exec_ended = time.monotonic()
+                logger.info(
+                    "evaluate skipped for %s: agent status=failed (score=null)",
+                    unit.slug,
                 )
-                eval_duration_s = round(time.monotonic() - eval_start, 4)
-                if eval_out is None or eval_out.get("error"):
-                    eval_status = "failed"
-                    eval_error = (
-                        {"type": "Exception", "message": str(eval_out.get("error")),
-                         "traceback": str(eval_out.get("error"))}
-                        if eval_out
-                        else None
+            else:
+                env.set_phase("evaluation")
+                eval_start = time.monotonic()
+                # End of the execution window (up to, but excluding, eval).
+                exec_ended = eval_start
+                try:
+                    eval_out = await asyncio.wait_for(
+                        task_driver.evaluate(), timeout=_EVAL_TIMEOUT_S,
                     )
-                else:
-                    eval_status = "success"
-                    score = _extract_score(eval_out)
-            except asyncio.TimeoutError:
-                eval_duration_s = round(time.monotonic() - eval_start, 4)
-                # Eval ran out of wall-clock — treat as a timeout (not a failure)
-                # so the unit status is "timeout" and resume skips it.
-                eval_status = "timeout"
-                eval_error = {
-                    "type": "TimeoutError",
-                    "message": f"evaluate() exceeded {_EVAL_TIMEOUT_S}s wall-clock",
-                }
-                logger.error("evaluate timed out after %ds for %s", _EVAL_TIMEOUT_S, unit.slug)
-            except Exception as e:
-                eval_duration_s = round(time.monotonic() - eval_start, 4)
-                eval_status = "failed"
-                eval_error = err_dict(e)
-                logger.exception("evaluate raised for %s", unit.slug)
+                    eval_duration_s = round(time.monotonic() - eval_start, 4)
+                    if eval_out is None or eval_out.get("error"):
+                        eval_status = "failed"
+                        eval_error = (
+                            {"type": "Exception", "message": str(eval_out.get("error")),
+                             "traceback": str(eval_out.get("error"))}
+                            if eval_out
+                            else None
+                        )
+                    else:
+                        eval_status = "success"
+                        score = _extract_score(eval_out)
+                except asyncio.TimeoutError:
+                    eval_duration_s = round(time.monotonic() - eval_start, 4)
+                    # Eval ran out of wall-clock — treat as a timeout (not a
+                    # failure) so the unit status is "timeout" and resume skips it.
+                    eval_status = "timeout"
+                    eval_error = {
+                        "type": "TimeoutError",
+                        "message": f"evaluate() exceeded {_EVAL_TIMEOUT_S}s wall-clock",
+                    }
+                    logger.error("evaluate timed out after %ds for %s", _EVAL_TIMEOUT_S, unit.slug)
+                except Exception as e:
+                    eval_duration_s = round(time.monotonic() - eval_start, 4)
+                    eval_status = "failed"
+                    eval_error = err_dict(e)
+                    logger.exception("evaluate raised for %s", unit.slug)
 
             # ============================================================
             # Trajectory finalize via deployer.parse_artifacts (LOG_SPEC §5)
@@ -523,6 +562,14 @@ async def run_one_unit(
                 error_obj = eval_error
             else:
                 status = "completed"
+
+            # 3.3: a failed unit must never carry a numeric score — it would be
+            # counted as a legitimate 0 in leaderboards. (Eval is already
+            # skipped for agent-failed runs, but an eval-phase failure lands
+            # here too.) Timeout keeps any partial score but score_valid (set
+            # in run.json) marks it non-final.
+            if status == "failed":
+                score = None
 
             phase = env.current_phase if status != "completed" else None
 
@@ -1027,6 +1074,11 @@ def _build_run_meta(
         },
         "status": status,
         "score": score,
+        # 3.3: only a completed run's score is a legitimate, comparable measure.
+        # Downstream summaries should count scores only where score_valid is
+        # true, so infra failures (score=null) and timeouts (partial score)
+        # don't silently pollute leaderboard averages.
+        "score_valid": status == "completed",
         "termination": {
             "reason": status if status != "completed" else "completed",
             "phase": phase,

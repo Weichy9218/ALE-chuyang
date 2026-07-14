@@ -46,6 +46,24 @@ async def _sh(cmd: str, timeout: int = 180) -> subprocess.CompletedProcess:
     )
 
 
+async def _can_sudo_noninteractive() -> bool:
+    """True if passwordless sudo works, without ever blocking on a prompt.
+
+    ``sudo -n`` refuses to prompt (exits non-zero if a password would be
+    needed); stdin is detached so even a broken sudo cannot hang. Any
+    failure — no sudo binary, needs password, timeout — returns False.
+    """
+    try:
+        proc = await asyncio.to_thread(
+            subprocess.run,
+            ["bash", "-c", "sudo -n true </dev/null"],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+    return proc.returncode == 0
+
+
 def _find_windows_node_dir() -> str | None:
     """Locate a portable Node.js install dir on the Windows VM.
 
@@ -144,10 +162,27 @@ async def ensure_node_npm() -> tuple[str, str]:
         except (ValueError, IndexError):
             pass
 
+    # Probe non-interactive sudo BEFORE attempting the install. Without this,
+    # `sudo` on a headless host prompts for a password on /dev/tty that no one
+    # can see (stdout/stderr are captured), so the process blocks until the
+    # 180s timeout and leaves a root grandchild we can't reap. Fail fast with
+    # an actionable message instead (system_issues.md 4.1).
+    if not await _can_sudo_noninteractive():
+        raise RuntimeError(
+            "bootstrap: host has no usable Node.js (>=16) and passwordless "
+            "sudo is unavailable, so Node cannot be installed non-interactively. "
+            "Fix by either (a) pre-installing Node >=16 on the host "
+            "(e.g. nvm / official tarball to ~/.local, no root), or "
+            "(b) granting passwordless sudo for apt. Refusing to hang on a "
+            "hidden password prompt."
+        )
+
     logger.info("bootstrap: installing Node.js %s via NodeSource ...", _NODE_MAJOR)
+    # Use `sudo -n` (never prompt) and detach stdin so a later prompt cannot
+    # block even if the credential expired between the probe and here.
     proc = await _sh(
-        f"curl -fsSL https://deb.nodesource.com/setup_{_NODE_MAJOR}.x | sudo -E bash - "
-        f"&& sudo apt-get install -y -qq nodejs 2>&1 | tail -10",
+        f"curl -fsSL https://deb.nodesource.com/setup_{_NODE_MAJOR}.x | sudo -n -E bash - "
+        f"&& sudo -n apt-get install -y -qq nodejs 2>&1 | tail -10",
         timeout=180,
     )
     if proc.returncode != 0:

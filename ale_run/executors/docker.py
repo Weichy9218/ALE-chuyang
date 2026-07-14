@@ -46,7 +46,12 @@ from ..base_interface import (
     RangeResult,
     SandboxHandle,
 )
-from ._secrets import SECRET_GATHER_EXCLUDES, SECRETS_FILE, write_secrets
+from ._secrets import (
+    SECRET_GATHER_EXCLUDES,
+    SECRETS_FILE,
+    split_config_secrets,
+    write_secrets,
+)
 
 if TYPE_CHECKING:
     from ..base_interface import AgentRunResult, BaseAgentDeployer
@@ -124,13 +129,20 @@ class DockerExecutor(BaseExecutor):
         #    work_dir IS the host log dir for docker runs, so _spec.json is a
         #    host log file and must stay keyless. The env goes in a separate
         #    _secrets.json that the entry reads once and deletes.
+        #    Any secret-valued config field (e.g. api_key resolved to plaintext
+        #    on the host) is split out of config_kwargs so the spec stays
+        #    keyless; the value rides the _secrets.json sidecar and the entry
+        #    re-attaches it to the reconstructed config.
+        config_kwargs, cfg_secrets = split_config_secrets(
+            _config_to_kwargs(self.config)
+        )
         spec = {
             "ale_src_root": "/ale_src",  # container view
             "deployer_module": deployer_cls.__module__,
             "deployer_class": deployer_cls.__name__,
             "config_module": self.config.__class__.__module__,
             "config_class": self.config.__class__.__name__,
-            "config_kwargs": _config_to_kwargs(self.config),
+            "config_kwargs": config_kwargs,
             "sandbox_kwargs": _sandbox_to_kwargs(self.sandbox),
             "work_dir": "/work",
             "secrets_file": SECRETS_FILE,
@@ -141,8 +153,9 @@ class DockerExecutor(BaseExecutor):
 
         # 1b. Write the read-once secrets sidecar into the bind mount. The
         #     in-container entry reads it then deletes it, so it does not
-        #     persist in the host log dir. chmod 600 while it lives.
-        write_secrets(host_work, dict(self.env or {}))
+        #     persist in the host log dir. chmod 600 while it lives. Carries
+        #     both the framework env and the config secrets split out above.
+        write_secrets(host_work, {**dict(self.env or {}), **cfg_secrets})
 
         # 2. Write env-file (keeps api keys off cmdline + docker inspect).
         #    Lives in a private tempdir OUTSIDE the bind-mounted work_dir so
@@ -177,6 +190,21 @@ class DockerExecutor(BaseExecutor):
             except OSError:
                 pass
 
+    async def force_kill(self) -> None:
+        """Hard-remove the tracked container (3.2). Never raises."""
+        name = getattr(self, "_active_container", None)
+        if not name:
+            return
+        try:
+            await asyncio.to_thread(
+                subprocess.run,
+                ["docker", "rm", "-f", name],
+                capture_output=True,
+            )
+            logger.warning("docker.force_kill: removed container %s", name)
+        except Exception as e:                                      # noqa: BLE001
+            logger.warning("docker.force_kill failed for %s: %s", name, e)
+
     async def _run_container(
         self,
         *,
@@ -189,6 +217,11 @@ class DockerExecutor(BaseExecutor):
 
         # 3. docker run argv
         container_name = f"ale-{deployer_cls.__name__.lower()}-{uuid.uuid4().hex[:8]}"
+        # Track for force_kill(): if the outer lifecycle guard trips before this
+        # method's own wall-budget teardown runs, force_kill docker-rm's this
+        # name. The container is ``--rm`` so a rm on an already-gone name is a
+        # harmless no-op; no need to clear it on the happy path (3.2).
+        self._active_container = container_name
         host_repo = _host_repo_root()
         docker_argv = [
             "docker", "run", "--rm",

@@ -43,7 +43,11 @@ from ..base_interface import (
     RangeResult,
     SandboxHandle,
 )
-from ._secrets import SECRET_GATHER_EXCLUDES, SECRETS_FILE
+from ._secrets import (
+    SECRET_GATHER_EXCLUDES,
+    SECRETS_FILE,
+    split_config_secrets,
+)
 
 if TYPE_CHECKING:
     from ..base_interface import AgentRunResult, BaseAgentDeployer
@@ -160,12 +164,19 @@ class SandboxExecutor(BaseExecutor):
         #    _spec.json is gathered back to host .logs and must stay keyless.
         #    The env goes in a separate _secrets.json that the entry reads
         #    once and deletes (see _secrets.py).
+        #    Any secret-valued config field (e.g. PiConfig.api_key resolved to
+        #    plaintext on the host) is split out of config_kwargs here so the
+        #    spec stays keyless; the value rides the _secrets.json sidecar and
+        #    the entry re-attaches it to the reconstructed config.
+        config_kwargs, cfg_secrets = split_config_secrets(
+            _config_to_kwargs(self.config)
+        )
         spec = {
             "deployer_module": deployer_cls.__module__,
             "deployer_class": deployer_cls.__name__,
             "config_module": self.config.__class__.__module__,
             "config_class": self.config.__class__.__name__,
-            "config_kwargs": _config_to_kwargs(self.config),
+            "config_kwargs": config_kwargs,
             "sandbox_kwargs": _sandbox_to_kwargs(self.sandbox),
             "work_dir": self.work_dir,
             "secrets_file": SECRETS_FILE,
@@ -175,8 +186,11 @@ class SandboxExecutor(BaseExecutor):
         await sb.write_file(spec_path, json.dumps(spec, indent=2))
 
         # 4b. Write the transient secrets sidecar (read-once + self-deleted
-        #     by the entry). Never gathered to host logs.
-        await sb.write_file(secrets_path, json.dumps(dict(self.env or {})))
+        #     by the entry). Never gathered to host logs. Carries both the
+        #     framework env (api keys) and any config secrets split out above.
+        await sb.write_file(
+            secrets_path, json.dumps({**dict(self.env or {}), **cfg_secrets})
+        )
 
         # 5. Write launcher script + fire it (short RPC: returns in seconds)
         launcher_body = _build_launcher(

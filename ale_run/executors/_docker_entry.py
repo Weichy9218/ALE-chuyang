@@ -38,9 +38,15 @@ async def _run() -> dict:
     # mount and delete it immediately so it never persists in the host
     # log dir (work_dir is bind-mounted = host log dir for docker runs).
     # Fall back to a legacy in-spec env if present (older host writers).
-    from ale_run.executors._secrets import read_and_delete_secrets
+    from ale_run.executors._secrets import (
+        apply_config_secrets,
+        read_and_delete_secrets,
+        strip_cfg_secrets,
+    )
     env = read_and_delete_secrets(SPEC_PATH.parent) or (spec.get("env") or {})
-    for k, v in env.items():
+    # Config secrets (CFG_SECRET_PREFIX) are re-attached to the config below,
+    # NOT injected into os.environ, so the agent subprocess cannot read them.
+    for k, v in strip_cfg_secrets(env).items():
         os.environ[str(k)] = str(v)
 
     # Make scp'd ale_run importable (DockerExecutor mounts ale_run at /ale_run
@@ -63,12 +69,13 @@ async def _run() -> dict:
     dep_cls = getattr(dep_mod, spec["deployer_class"])
 
     cfg = cfg_cls(**spec["config_kwargs"])
+    apply_config_secrets(cfg, env)
     sandbox = SandboxHandle(**spec["sandbox_kwargs"])
     executor = LocalExecutor(
         config=cfg,
         work_dir=spec["work_dir"],
         sandbox=sandbox,
-        env=env,
+        env=strip_cfg_secrets(env),
     )
     deployer = dep_cls(executor)
 

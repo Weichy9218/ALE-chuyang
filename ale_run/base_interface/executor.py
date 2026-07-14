@@ -199,6 +199,16 @@ class BaseExecutor(abc.ABC):
 
     # ──────── methods (lifecycle uses these) ────────
 
+    async def force_kill(self) -> None:
+        """Best-effort hard teardown of the agent process/container.
+
+        The lifecycle calls this ONLY when the outer wall-clock guard trips —
+        i.e. the executor's own timeout path failed to return in time — to make
+        sure a runaway agent is dead before evaluate() touches the shared
+        workspace (system_issues.md 3.2). Default is a no-op; substrates that
+        own a killable process/container override it. Must never raise."""
+        return None
+
     @abc.abstractmethod
     async def run_deployer(
         self,

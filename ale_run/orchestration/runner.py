@@ -71,7 +71,11 @@ class Runner:
 
         No aggregation, no summary — caller does whatever rollup it wants.
         """
-        from .lifecycle import install_signal_handlers, run_one_unit
+        from .lifecycle import (
+            get_shutdown_event,
+            install_signal_handlers,
+            run_one_unit,
+        )
 
         install_signal_handlers()
         unit_list = list(units) if units is not None else self.enumerate_units()
@@ -101,8 +105,54 @@ class Runner:
                         u.slug, result.status, result.score, result.duration_s or 0)
             return result
 
-        results = await asyncio.gather(
-            *(_drive(u) for u in unit_list),
-            return_exceptions=False,
-        )
-        return list(results)
+        # system_issues.md 9.1: the SIGINT/SIGTERM handler sets a shutdown
+        # event, but nothing consumed it — Ctrl-C left the gather running, so
+        # only kill -9 stopped a batch, which skips each unit's finally
+        # (env.close_async) and leaks its container (4-16 vCPU / 15-60GB),
+        # eroding capacity for the next batch. Race unit completion against the
+        # shutdown event; on shutdown, cancel in-flight units so each runs its
+        # finally teardown, then return whatever partial results completed.
+        tasks = [asyncio.ensure_future(_drive(u)) for u in unit_list]
+        shutdown = get_shutdown_event()
+        shutdown_wait = asyncio.ensure_future(shutdown.wait())
+        # return_exceptions=True: never raises, completes when all units are
+        # done; individual outcomes are read back from `tasks` below.
+        all_done = asyncio.gather(*tasks, return_exceptions=True)
+        try:
+            await asyncio.wait(
+                {all_done, shutdown_wait}, return_when=asyncio.FIRST_COMPLETED,
+            )
+            if shutdown.is_set() and not all_done.done():
+                pending = [t for t in tasks if not t.done()]
+                logger.warning(
+                    "runner: shutdown signal — cancelling %d in-flight unit(s) "
+                    "so each tears down its container", len(pending),
+                )
+                for t in pending:
+                    t.cancel()
+                # Let every cancelled unit run its finally (container cleanup).
+                await asyncio.gather(*tasks, return_exceptions=True)
+        finally:
+            if not shutdown_wait.done():
+                shutdown_wait.cancel()
+            if not all_done.done():
+                all_done.cancel()
+            try:
+                await all_done
+            except asyncio.CancelledError:
+                pass
+
+        # Collect per-unit results. On the normal path an unexpected unit
+        # exception propagates (preserving the old return_exceptions=False
+        # contract); during shutdown, cancelled/errored units are skipped.
+        results: list[UnitResult] = []
+        for t in tasks:
+            if t.cancelled():
+                continue
+            exc = t.exception()
+            if exc is not None:
+                if shutdown.is_set():
+                    continue
+                raise exc
+            results.append(t.result())
+        return results
