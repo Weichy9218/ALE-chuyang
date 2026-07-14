@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ALE 题目盘点与选题：pi × gpt_claw 研究批次</title>
+<style>
+  :root{
+    --bg:#fff; --fg:#1a1c1f; --muted:#5b6570; --line:#e3e7ec; --card:#f6f8fa;
+    --pi:#2f6feb; --claw:#1a9c6b; --a1:#2f6feb; --a2:#1a9c6b; --a3:#c98a1a; --a4:#8a94a0;
+    --good:#1a9c6b; --bad:#c8443a; --warn:#c98a1a; --accent:#2f6feb; --bar:#c9d3de;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0f1216; --fg:#e6e9ee; --muted:#9aa4b0; --line:#242a31; --card:#161b21;
+      --pi:#6ea3ff; --claw:#3ecb93; --a1:#6ea3ff; --a2:#3ecb93; --a3:#e6b23c; --a4:#6b7580;
+      --good:#3ecb93; --bad:#ff6b60; --warn:#e6b23c; --accent:#6ea3ff; --bar:#2b333c; }
+  }
+  :root[data-theme="light"]{ --bg:#fff; --fg:#1a1c1f; --muted:#5b6570; --line:#e3e7ec; --card:#f6f8fa;
+    --pi:#2f6feb; --claw:#1a9c6b; --a1:#2f6feb; --a2:#1a9c6b; --a3:#c98a1a; --a4:#8a94a0;
+    --good:#1a9c6b; --bad:#c8443a; --warn:#c98a1a; --accent:#2f6feb; --bar:#c9d3de; }
+  :root[data-theme="dark"]{ --bg:#0f1216; --fg:#e6e9ee; --muted:#9aa4b0; --line:#242a31; --card:#161b21;
+    --pi:#6ea3ff; --claw:#3ecb93; --a1:#6ea3ff; --a2:#3ecb93; --a3:#e6b23c; --a4:#6b7580;
+    --good:#3ecb93; --bad:#ff6b60; --warn:#e6b23c; --accent:#6ea3ff; --bar:#2b333c; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1000px;margin:0 auto;padding:32px 20px 80px}
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:24px}
+  h1{font-size:26px;line-height:1.3;margin:0 0 6px}
+  h2{font-size:20px;margin:42px 0 12px}
+  h3{font-size:16px;margin:22px 0 8px}
+  p{margin:10px 0}
+  .sub{color:var(--muted);font-size:14px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;font-size:13px;color:var(--muted)}
+  .meta b{color:var(--fg);font-weight:600}
+  .nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;font-size:13px}
+  .nav a{display:inline-block;padding:5px 12px;border:1px solid var(--line);border-radius:20px;
+    text-decoration:none;color:var(--muted);background:var(--card)}
+  .nav a.here{color:var(--fg);border-color:var(--accent);font-weight:600}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}
+  @media(max-width:680px){.cards{grid-template-columns:repeat(2,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .card .num{font-size:30px;font-weight:700;letter-spacing:-.5px}
+  .card .lab{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .note{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:12px 16px;margin:16px 0}
+  .note.good{border-left-color:var(--good)} .note.warn{border-left-color:var(--warn)}
+  .summary{background:color-mix(in srgb,var(--accent) 6%,var(--card));border:1px solid var(--line);
+    border-radius:12px;padding:8px 22px;margin:18px 0}
+  .summary li{margin:9px 0}
+  .qlead{color:var(--accent);font-weight:700}
+  code{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:13px;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;word-break:break-word}
+  ul,ol{margin:10px 0;padding-left:22px} li{margin:6px 0}
+  a{color:var(--accent)}
+  /* bar chart */
+  .chart{margin:16px 0;border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:var(--card)}
+  .chart h3{margin:0 0 12px}
+  .row{display:grid;grid-template-columns:190px 1fr 46px;align-items:center;gap:10px;margin:7px 0;font-size:13px}
+  @media(max-width:560px){.row{grid-template-columns:130px 1fr 38px}}
+  .row .rl{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .rv{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+  .track{background:color-mix(in srgb,var(--bar) 45%,transparent);border-radius:6px;height:18px;overflow:hidden}
+  .fill{height:100%;border-radius:6px}
+  /* funnel */
+  .funnel{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+  .fstep{display:flex;align-items:center;gap:12px}
+  .fbar{height:38px;border-radius:8px;display:flex;align-items:center;padding:0 14px;color:#fff;font-weight:700;
+    font-size:14px;white-space:nowrap}
+  .fmeta{font-size:13px;color:var(--muted)}
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:640px}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--card);font-weight:600;white-space:nowrap}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:none}
+  .badge{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:20px;white-space:nowrap}
+  .b-a1{color:var(--a1);background:color-mix(in srgb,var(--a1) 15%,transparent)}
+  .b-a2{color:var(--a2);background:color-mix(in srgb,var(--a2) 15%,transparent)}
+  .b-a3{color:var(--a3);background:color-mix(in srgb,var(--a3) 15%,transparent)}
+  .b-a4{color:var(--a4);background:color-mix(in srgb,var(--a4) 22%,transparent)}
+  .pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:6px}
+  .p-hi{color:var(--good);background:color-mix(in srgb,var(--good) 16%,transparent)}
+  .p-mid{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
+  .p-lo{color:var(--bad);background:color-mix(in srgb,var(--bad) 16%,transparent)}
+  .tname{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;word-break:break-all}
+  footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="nav">
+  <a href="index.html">① pi 与 gpt_claw 对比</a>
+  <a class="here" href="task_selection.html">② 选题与下一步跑什么（本页）</a>
+  <a href="cybersecurity_solve/index.html">③ 网络安全 4 题</a>
+</nav>
+<header>
+  <h1>ALE 题目盘点与选题：pi × gpt_claw 研究批次</h1>
+  <div class="sub">先把 ALE 全量题库数清楚，按约束筛出能在本地跑的题，再挑出适合做 harness 研究和攒训练数据的批次，最后用已有的 25 题结果对新批次做预判。</div>
+  <div class="meta">
+    <span><b>题库来源</b> agents-last-exam（ALE）</span>
+    <span><b>模型</b> gpt-5.6-sol</span>
+    <span><b>harness</b> pi 与 gpt_claw</span>
+    <span><b>日期</b> 2026-07-13</span>
+  </div>
+</header>
+
+<div class="note">
+<b>题目来源已核对。</b>全部题目爬自 ALE 官方题库，GitHub 源仓库 <code>git@github.com:rdi-berkeley/agents-last-exam.git</code>（本地 <code>origin</code> 远端就是它），以及 HuggingFace 数据集族 <a href="https://huggingface.co/agents-last-exam">huggingface.co/agents-last-exam</a>（题卡、输入文件、参考答案三个配套数据集）。本地仓库的任务卡、输入、参考答案与这两处一致。
+</div>
+
+<div class="note good">
+<b>两套 harness 是什么，一句话区分。</b><span style="color:var(--pi);font-weight:700">pi</span> 是约 700 行的薄包装，把 agent 主循环交给外部 pi 编码 CLI，只在 Linux 容器里用 bash 和读写文件这几个工具，不带图形界面，薄而快、轨迹干净，适合产训练数据。<span style="color:var(--claw);font-weight:700">gpt_claw</span> 是仓库自带的重型框架（从 OpenClaw 改写）跑 gpt-5.6-sol，本轮起<b>关掉全部图形界面工具</b>，只留 <code>exec/read/write/edit</code>，和 pi 站在同一条无界面起跑线上比；它多带记忆、子 agent、上下文压缩，但无界面题上这些用不上。
+</div>
+
+<h2>一分钟结论</h2>
+<div class="summary">
+<ul>
+  <li><span class="qlead">全量多少题？</span> ALE 已发布 <b>165 道</b>。按运行环境分，<b>109 道</b>能在本地 Linux Docker 跑（cpu-free-ubuntu），其余要 Windows 桌面、GPU 或授权软件。</li>
+  <li><span class="qlead">按你的约束能挑多少？</span> 从 109 道 Linux 题里去掉整个 computing_math、去掉需要图形界面软件的题，剩 <b>77 道</b>合格题，覆盖 10 个类别。这就是选题的池子。</li>
+  <li><span class="qlead">推荐哪些？</span> 从 77 道里挑出 <b>36 道 P1 研究批次</b>，按三种研究价值分组：确定性解析审计、CLI 工具链流水线、调试修复。这三类的判分都可精确验证、轨迹干净、有提分空间，正好服务于攒数据、积累 harness、刷分。剩下 41 道归为 P2 覆盖池。</li>
+  <li><span class="qlead">大概能拿多少分？</span> 用已跑完的 25 题结果外推：确定性解析审计类多半中到高分（刷分和数据产出最好），调试修复类低到中分（harness 钩子提升空间最大），重型仿真复现类大概率 0 分（卡在环境和算力，不是 harness）。</li>
+</ul>
+</div>
+
+<h2>一、全量题库盘点（165 道）</h2>
+<div class="cards">
+  <div class="card"><div class="num">165</div><div class="lab">ALE 已发布题目</div></div>
+  <div class="card"><div class="num" style="color:var(--claw)">109</div><div class="lab">本地 Docker 可跑（Linux）</div></div>
+  <div class="card"><div class="num" style="color:var(--accent)">77</div><div class="lab">合格选题池（去 GUI、去 computing_math）</div></div>
+  <div class="card"><div class="num" style="color:var(--a3)">36</div><div class="lab">P1 推荐研究批次</div></div>
+</div>
+
+<div class="chart">
+  <h3>按运行环境分（快照类型，共 165 道）</h3>
+  <div class="row"><span class="rl">cpu-free-ubuntu（Linux）</span><span class="track"><span class="fill" style="width:100%;background:var(--claw)"></span></span><span class="rv">109</span></div>
+  <div class="row"><span class="rl">cpu-free（多为 Windows）</span><span class="track"><span class="fill" style="width:35.8%;background:var(--a4)"></span></span><span class="rv">39</span></div>
+  <div class="row"><span class="rl">gpu-license</span><span class="track"><span class="fill" style="width:8.3%;background:var(--a4)"></span></span><span class="rv">9</span></div>
+  <div class="row"><span class="rl">gpu-free</span><span class="track"><span class="fill" style="width:4.6%;background:var(--a4)"></span></span><span class="rv">5</span></div>
+  <div class="row"><span class="rl">cpu-license</span><span class="track"><span class="fill" style="width:2.8%;background:var(--a4)"></span></span><span class="rv">3</span></div>
+  <p class="sub" style="margin-top:10px">只有 cpu-free-ubuntu 这 109 道能在本机的 <code>ale-ubuntu22-docker</code> 镜像里无界面跑。cpu-free 里含那 4 道网络安全题在内的 Windows 桌面题，本地起不了；gpu 档需要显卡，本机也没有。</p>
+</div>
+
+<h2>二、按约束筛选（165 → 77）</h2>
+<div class="funnel">
+  <div class="fstep"><div class="fbar" style="width:100%;background:var(--a4)">165 道　全量已发布</div></div>
+  <div class="fstep"><div class="fbar" style="width:66%;background:var(--claw)">109 道　Linux Docker 可跑</div><span class="fmeta">去掉 Windows / GPU / 授权环境 56 道</span></div>
+  <div class="fstep"><div class="fbar" style="width:47%;background:var(--accent)">77 道　合格选题池</div><span class="fmeta">再去掉 computing_math 19 道、GUI 软件题 13 道</span></div>
+</div>
+<p class="sub">筛选规则三步：只保留能在本地 Linux Docker 跑的 cpu-free-ubuntu 题；去掉整个 computing_math 类别（上一轮 25 题已覆盖）；去掉软件字段命中图形界面软件表的题（Chrome、LibreOffice、Ghidra、Wireshark、CellProfiler、matRad、POINTS、UCSC 浏览器、VLC 等）。每道保留的题都核对过存在任务卡且软件字段不含表内 GUI 软件。</p>
+
+<div class="chart">
+  <h3>合格选题池按类别分（共 77 道）</h3>
+  <div class="row"><span class="rl">health_medicine</span><span class="track"><span class="fill" style="width:100%;background:var(--accent)"></span></span><span class="rv">21</span></div>
+  <div class="row"><span class="rl">life_sciences</span><span class="track"><span class="fill" style="width:76%;background:var(--accent)"></span></span><span class="rv">16</span></div>
+  <div class="row"><span class="rl">business_finance</span><span class="track"><span class="fill" style="width:57%;background:var(--accent)"></span></span><span class="rv">12</span></div>
+  <div class="row"><span class="rl">physical_sciences</span><span class="track"><span class="fill" style="width:52%;background:var(--accent)"></span></span><span class="rv">11</span></div>
+  <div class="row"><span class="rl">engineering</span><span class="track"><span class="fill" style="width:38%;background:var(--accent)"></span></span><span class="rv">8</span></div>
+  <div class="row"><span class="rl">education_info</span><span class="track"><span class="fill" style="width:14%;background:var(--accent)"></span></span><span class="rv">3</span></div>
+  <div class="row"><span class="rl">legal</span><span class="track"><span class="fill" style="width:9.5%;background:var(--accent)"></span></span><span class="rv">2</span></div>
+  <div class="row"><span class="rl">transport_safety</span><span class="track"><span class="fill" style="width:9.5%;background:var(--accent)"></span></span><span class="rv">2</span></div>
+  <div class="row"><span class="rl">psychology_neuro</span><span class="track"><span class="fill" style="width:4.8%;background:var(--accent)"></span></span><span class="rv">1</span></div>
+  <div class="row"><span class="rl">social_sciences</span><span class="track"><span class="fill" style="width:4.8%;background:var(--accent)"></span></span><span class="rv">1</span></div>
+</div>
+<div class="note warn">
+<b>关于「网络安全」。</b>ALE 里狭义的 infosec 题（逆向、破解、抓包取证）一共 4 道，全部是 Windows 桌面题，本地跑不了官方评测，也不在这 77 道里。合格池里没有纯 infosec 题。所以下面 P1 里最接近安全的是审计、合规、尽调、偏见审计这类<b>安全相邻</b>题（含一道 Zscaler 尽调、一道 GPT Actions 隐私政策审计），加上文本取证、EDA 形式验证这类带逆向和取证味道的 CLI 题。要跑狭义 infosec，只能另配一台 Windows 桌面 VM 用带图形界面的 gpt_claw。
+</div>
+
+<h2>三、推荐研究批次（P1，36 道）</h2>
+<p>按对研究的价值分三组。共同前提：判分可精确验证（适合做可验证奖励和 SFT/RL 数据）、以命令行文件操作为主（轨迹干净好解析）、有提分空间（不是天花板也不是不可能）。</p>
+<div class="chart">
+  <h3>P1 三组构成（共 36 道）</h3>
+  <div class="row"><span class="rl">A1 确定性解析/审计</span><span class="track"><span class="fill" style="width:100%;background:var(--a1)"></span></span><span class="rv">14</span></div>
+  <div class="row"><span class="rl">A2 CLI 工具链流水线</span><span class="track"><span class="fill" style="width:93%;background:var(--a2)"></span></span><span class="rv">13</span></div>
+  <div class="row"><span class="rl">A3 调试/修复/对账</span><span class="track"><span class="fill" style="width:64%;background:var(--a3)"></span></span><span class="rv">9</span></div>
+</div>
+
+<h3><span class="badge b-a1">A1</span> 确定性解析 / 审计 / 分类（14 道，刷分与数据产出最佳）</h3>
+<p class="sub">输出是结构化 JSON/CSV，判分器逐字段比对，短到中程，答案客观。这类最接近上一轮拿高分的 data_pipeline、k8s_payment、cost_optimization。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>题目</th><th>做什么</th></tr></thead>
+<tbody>
+<tr><td class="tname">business_finance/financial_stmt_reconstruction_aapl_fy2024</td><td>用 pdftotext+grep 从 Apple 10-K 抽取合并资产负债表</td></tr>
+<tr><td class="tname">business_finance/sec_10k_financial_parsing</td><td>把 100 份 SEC 10-K 解析成规范化财务 JSON</td></tr>
+<tr><td class="tname">business_finance/llm_ecosystem_privacy_audit_realdata_1</td><td>2253 个真实 GPT Actions 对 OpenAI 政策做隐私合规审计</td></tr>
+<tr><td class="tname">business_finance/legal_ma_consistency_audit_01</td><td>四份监管备案交叉核对一致性，出审计结论</td></tr>
+<tr><td class="tname">business_finance/pe_screening_memo_1</td><td>读 Zscaler 尽调包，写结构化 PE 筛选备忘</td></tr>
+<tr><td class="tname">business_finance/internal_employee_agent_instance_1</td><td>读 HR/IT 支持对话，产出确定性 results.json</td></tr>
+<tr><td class="tname">business_finance/sse_northbound_programmatic_trading_01</td><td>闭卷回答三道上交所监管报送问题</td></tr>
+<tr><td class="tname">legal/legal_dr_fees_01</td><td>按规则算北京仲裁委机构费与仲裁员报酬</td></tr>
+<tr><td class="tname">legal/agora_governance_classify_instance_1</td><td>把三份 AI 治理文档按立法状态和技术范围分类</td></tr>
+<tr><td class="tname">health_medicine/obermeyer_bias_reproduction</td><td>复现 Obermeyer 医疗风险分偏见审计</td></tr>
+<tr><td class="tname">health_medicine/healthcare_bias_audit_27a_public_replication_v1</td><td>复现公开合成版 Obermeyer 公平性审计流程</td></tr>
+<tr><td class="tname">health_medicine/healthcare_variant_annotation_pipeline</td><td>解析 50 变异 VEP 快照，还原基因/后果/频率字段</td></tr>
+<tr><td class="tname">physical_sciences/molecular_structure_plausibility</td><td>检查 XYZ 分子文件，挑出物理上不合理的结构</td></tr>
+<tr><td class="tname">education_info/homework_grading_numerical_pdes_instance_02</td><td>给五份数值 PDE 作业按规则打分</td></tr>
+</tbody></table></div>
+
+<h3><span class="badge b-a2">A2</span> CLI 工具链 / 流水线（13 道，轨迹干净）</h3>
+<p class="sub">用命令行工具（BEDTools、RGI、InterProScan、OpenROAD、Amber）或纯算法脚本完成，工具交互密集，轨迹适合做数据。纯算法题接近上一轮满分的 branch_bound、ising、k3。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>题目</th><th>做什么</th></tr></thead>
+<tbody>
+<tr><td class="tname">life_sciences/genomic_interval_processing_1</td><td>用 BEDTools 把三个 CTCF narrowPeak 处理成并集峰</td></tr>
+<tr><td class="tname">life_sciences/rgi_mcr1_colistin_v2</td><td>用 CARD RGI 注释抗药基因，报 best-hit ARO</td></tr>
+<tr><td class="tname">life_sciences/protein_function_annotation_instance_1</td><td>用 InterProScan 注释一个酵母蛋白，出 GO/InterPro TSV</td></tr>
+<tr><td class="tname">life_sciences/WGS_Variant_Calling</td><td>跑一条种系全基因组变异检测流程并汇总</td></tr>
+<tr><td class="tname">life_sciences/amber_minimization_script_prep_instance_1</td><td>为蛋白复合物写三份 Amber/SLURM 工作流文件</td></tr>
+<tr><td class="tname">life_sciences/zdock_hiv_dimer_interface_scoring_v1</td><td>为十个 HIV 蛋白酶对接位姿算界面重叠打分</td></tr>
+<tr><td class="tname">engineering/openroad_sky130_ibex_pnr_signoff</td><td>调 OpenROAD SKY130 配置，重跑 Docker 流签核</td></tr>
+<tr><td class="tname">physical_sciences/exact_diag_heisenberg_j1j2</td><td>对 4x4 J1-J2 海森堡模型做精确对角化</td></tr>
+<tr><td class="tname">physical_sciences/gillespie_gene_regulatory_network</td><td>用 NumPy 实现 Gillespie 精确随机模拟和 tau-leaping</td></tr>
+<tr><td class="tname">physical_sciences/adapt_vqe_molecular_energy</td><td>只用 NumPy/SciPy 做 VQE 解三个分子哈密顿量</td></tr>
+<tr><td class="tname">physical_sciences/phonon_dispersion_thermodynamics</td><td>构造二维六角格动力学矩阵，算声子色散与热力学量</td></tr>
+<tr><td class="tname">transport_safety/capacitated_vehicle_routing_problems</td><td>为三个 CVRP 基准算近最优 VRPLIB 解</td></tr>
+<tr><td class="tname">business_finance/american_option_pricing_ls</td><td>实现三档蒙特卡洛期权定价基准</td></tr>
+</tbody></table></div>
+
+<h3><span class="badge b-a3">A3</span> 调试 / 修复 / 对账（9 道，harness 钩子提升空间最大）</h3>
+<p class="sub">给一个坏掉或不完整的项目，要定位问题并修好。这类最能体现 harness 干预的价值：pi 的三个循环钩子（预算止损、动作前拦截、把客观指标反射回观察）正好用在这里。接近上一轮的 recsys、ranking_node、sumo。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>题目</th><th>做什么</th></tr></thead>
+<tbody>
+<tr><td class="tname">education_info/moodle_gradebook_closeout_reconciliation</td><td>修坏掉的 Moodle 备份，重建成绩册和 OneRoster 结转</td></tr>
+<tr><td class="tname">education_info/marc_remediation_folio_overlay</td><td>补全 Python 起步项目，修复遗留 MARC 编目批次</td></tr>
+<tr><td class="tname">life_sciences/hg002_chr22_germline_variant_pipeline</td><td>修坏掉的 chr22 种系变异检测流水线，出过滤后结果</td></tr>
+<tr><td class="tname">health_medicine/crf_sdtm_mapping_1</td><td>从临床 CRF 和 define.xml 建字段级 SDTM 映射 CSV</td></tr>
+<tr><td class="tname">health_medicine/crf_sdtm_mapping_4</td><td>同上，映射到 SDTM AE/SU 域</td></tr>
+<tr><td class="tname">physical_sciences/glm_lake_calibration</td><td>只改一个 namelist 文件标定 GLM 湖泊模型温度剖面</td></tr>
+<tr><td class="tname">business_finance/bpmn_supply_disruption_l3</td><td>用 Flowable BPMN + Docker 重构生产调度工作流</td></tr>
+<tr><td class="tname">business_finance/digital_marketing_ab_test_analysis_1</td><td>设计并分析带排除处理和分层校验的营销 A/B 测试</td></tr>
+<tr><td class="tname">physical_sciences/hst_acs_wfc_visit_reduction</td><td>实现可复现的 HST ACS/WFC 成像归约流程</td></tr>
+</tbody></table></div>
+
+<p class="sub">清单文件：<code>selected_tasks/research_batch_p1.txt</code>（36 道）。另有 41 道 P2 覆盖池（<code>77 − 36</code>），集中在 health_medicine（16）、life_sciences（9）、engineering（7）等，多为重型仿真、因果推断 R 流水线、影像重建、GW/BSE 物理，做压力测试和覆盖用，不作首批刷分目标。</p>
+
+<h2>四、基于已有结果的预判</h2>
+<p>上一轮 25 题（computing_math + engineering，pi 均分 0.404、gpt_claw 均分 0.399，详见 <a href="index.html">对比页</a>）给了一个可外推的规律：<b>分数由题型决定，不由 harness 决定</b>。有确定性算法、依赖能装上、判分明确的题拿高分；要跑重型仿真栈或从图像重建结构的题几乎全 0。据此对新批次预判如下。</p>
+<div class="tablewrap"><table>
+<thead><tr><th>组</th><th>对标的已测题（得分）</th><th>预判分档</th><th>研究价值</th></tr></thead>
+<tbody>
+<tr><td><span class="badge b-a1">A1 解析/审计</span></td><td>k8s_payment 0.90、data_pipeline 0.83、cost_opt 0.86、paper_repro 0.80</td><td><span class="pill p-hi">中到高 0.5–0.9</span></td><td>刷分和高质量轨迹产出最好，优先跑</td></tr>
+<tr><td><span class="badge b-a2">A2 工具链</span></td><td>纯算法：branch_bound/ising/k3 均 1.0；重工具链偏低</td><td><span class="pill p-mid">分化：算法高、大流水线中低</span></td><td>纯算法题稳拿分，大工具链题考验依赖和长程</td></tr>
+<tr><td><span class="badge b-a3">A3 调试/修复</span></td><td>recsys 0.50、synthetic_causal 0.28、ranking_node 0、sumo 0</td><td><span class="pill p-mid">低到中 0–0.5</span></td><td>harness 钩子提升空间最大，是 harness 研究主战场</td></tr>
+<tr><td><span class="badge b-a4">P2 重型仿真</span></td><td>对标 10 道全 0 题（particle_filter、humanoid、mpc、sumo 等）</td><td><span class="pill p-lo">多为 0</span></td><td>卡环境和算力，先修环境再谈 harness</td></tr>
+</tbody></table></div>
+<div class="note">
+<b>怎么把预判用起来。</b>想快速看到分数和攒可用轨迹，先跑 A1；想验证 harness 干预有没有用，重点跑 A3，因为那里基线低、头顶空间大，pi 的预算止损和事实反射钩子最可能把分数从 0 抬到正数；A2 的纯算法题用来确认接线正常（应该稳定高分）。跑一轮先不加钩子拿基线，再加钩子看每题增量，才能把「harness 起没起作用」和「题本身能不能做」分开。这一点在上一轮已经吃过亏：曾把并发和容器修复的收益误记成关图形界面工具的功劳。
+</div>
+
+<h2>五、怎么跑</h2>
+<p>gpt_claw（无图形界面）跑 P1 批次，配置沿用上一轮全量跑那套已修好、零框架失败的无界面配置：</p>
+<pre style="background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px">cd /home/dataset-local/zmh/ALE_TEST/agents-last-exam
+# 把实验 yaml 的 tasks 指向 selected_tasks/research_batch_p1.txt
+.venv/bin/python -m ale_run run &lt;experiment&gt;.yaml            # gpt_claw
+# 对跑：agent 换成 configs/agents/pi_gpt56.yaml，任务集不变，再跑一遍   # pi</pre>
+<p class="sub">并发 4、每题墙钟上限 2400 秒。36 道一轮是数小时量级的 Docker 评测，建议先跑 A1 的 14 道看基线，再决定是否全量。</p>
+
+<footer>
+  题库来源 <a href="https://github.com/rdi-berkeley/agents-last-exam">github.com/rdi-berkeley/agents-last-exam</a> 与 <a href="https://huggingface.co/agents-last-exam">huggingface.co/agents-last-exam</a>。计数取自本地 <code>tasks/*/*/task_card.json</code> 的 <code>vm.snapshot</code> 与 <code>software</code> 字段（165 道，2026-07-13）。预判依据见同目录 <a href="index.html">pi × gpt_claw 对比页</a>。P1 清单：<code>selected_tasks/research_batch_p1.txt</code>。
+</footer>
+</div>
+</body>
+</html>

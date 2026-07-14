@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pi 与 gpt_claw 对比：用 gpt-5.6-sol 跑 ALE 25 题（Linux 无界面）</title>
+<style>
+  :root{
+    --bg:#ffffff; --fg:#1a1c1f; --muted:#5b6570; --line:#e3e7ec; --card:#f6f8fa;
+    --pi:#2f6feb; --claw:#1a9c6b; --good:#1a9c6b; --bad:#c8443a; --warn:#c98a1a; --info:#7048c4;
+    --accent:#2f6feb; --tie:#9aa4b0; --tie2:#c3ccd6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0f1216; --fg:#e6e9ee; --muted:#9aa4b0; --line:#242a31; --card:#161b21;
+      --pi:#6ea3ff; --claw:#3ecb93; --good:#3ecb93; --bad:#ff6b60; --warn:#e6b23c; --info:#b498ff; --accent:#6ea3ff;
+      --tie:#5b6570; --tie2:#39424c; }
+  }
+  :root[data-theme="light"]{ --bg:#ffffff; --fg:#1a1c1f; --muted:#5b6570; --line:#e3e7ec; --card:#f6f8fa;
+    --pi:#2f6feb; --claw:#1a9c6b; --good:#1a9c6b; --bad:#c8443a; --warn:#c98a1a; --info:#7048c4; --accent:#2f6feb; --tie:#9aa4b0; --tie2:#c3ccd6; }
+  :root[data-theme="dark"]{ --bg:#0f1216; --fg:#e6e9ee; --muted:#9aa4b0; --line:#242a31; --card:#161b21;
+    --pi:#6ea3ff; --claw:#3ecb93; --good:#3ecb93; --bad:#ff6b60; --warn:#e6b23c; --info:#b498ff; --accent:#6ea3ff; --tie:#5b6570; --tie2:#39424c; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1000px;margin:0 auto;padding:28px 20px 80px}
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:20px}
+  h1{font-size:26px;line-height:1.3;margin:0 0 6px}
+  h2{font-size:20px;margin:40px 0 12px;padding-top:8px}
+  h3{font-size:16px;margin:22px 0 8px}
+  p{margin:10px 0}
+  .sub{color:var(--muted);font-size:14px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;font-size:13px;color:var(--muted)}
+  .meta b{color:var(--fg);font-weight:600}
+  .nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;font-size:13px}
+  .nav a{display:inline-block;padding:5px 12px;border:1px solid var(--line);border-radius:20px;
+    text-decoration:none;color:var(--muted);background:var(--card)}
+  .nav a.here{color:var(--fg);border-color:var(--accent);font-weight:600}
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:18px 0;max-width:560px}
+  @media(max-width:620px){.cards{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+  .card .num{font-size:32px;font-weight:700;letter-spacing:-.5px}
+  .card .lab{font-size:13px;color:var(--muted);margin-top:2px}
+  .card .delta{font-size:12px;font-weight:600;margin-top:6px}
+  .pi .num{color:var(--pi)} .claw .num{color:var(--claw)}
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0}
+  table{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
+  th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--card);font-weight:600;white-space:nowrap}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:none}
+  tr.tot td{font-weight:700;background:var(--card)}
+  .badge{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:20px;white-space:nowrap}
+  .b-good{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+  .b-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 15%,transparent)}
+  .b-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+  .note{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:8px;padding:12px 16px;margin:16px 0}
+  .note.bad{border-left-color:var(--bad)} .note.good{border-left-color:var(--good)} .note.warn{border-left-color:var(--warn)}
+  code{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:13px;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;word-break:break-word}
+  pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+  ul,ol{margin:10px 0;padding-left:22px} li{margin:6px 0}
+  a{color:var(--accent)}
+  .summary{background:color-mix(in srgb,var(--accent) 6%,var(--card));border:1px solid var(--line);
+    border-radius:12px;padding:8px 22px;margin:18px 0}
+  .summary li{margin:9px 0}
+  .summary b{color:var(--fg)}
+  .qlead{color:var(--accent);font-weight:700}
+  /* charts */
+  .chart{margin:16px 0;border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:var(--card)}
+  .chart h3{margin:0 0 4px}
+  .chart .cap{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--muted);margin-top:12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .sw.dash{width:16px;height:0;border-top:2px dashed var(--muted);border-radius:0}
+  .stack{display:flex;height:34px;border-radius:8px;overflow:hidden;gap:2px;margin:6px 0 4px}
+  .seg{display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;min-width:22px}
+  .grp{display:grid;grid-template-columns:96px 1fr;gap:6px 12px;align-items:center;margin:9px 0;font-size:13px}
+  .grp .gl{color:var(--muted);white-space:nowrap}
+  .gbars{display:flex;flex-direction:column;gap:4px}
+  .gb{display:flex;align-items:center;gap:8px}
+  .gb .track{flex:1;background:color-mix(in srgb,var(--tie) 26%,transparent);border-radius:5px;height:15px;overflow:hidden}
+  .gb .fill{height:100%;border-radius:5px}
+  .gb .gv{width:52px;font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted)}
+  .fill.pi{background:var(--pi)} .fill.claw{background:var(--claw)}
+  svg .lbl{font:11px ui-monospace,Menlo,Consolas,monospace;fill:var(--muted)}
+  svg .val{font:11px -apple-system,"Noto Sans CJK SC",sans-serif;fill:var(--muted)}
+  svg .ax{font:10px ui-monospace,monospace;fill:var(--muted)}
+  svg .bar-pi{fill:var(--pi)} svg .bar-claw{fill:var(--claw)}
+  svg .noise{stroke:var(--bad);stroke-width:1.5;stroke-dasharray:4 3}
+  svg .grid{stroke:var(--line);stroke-width:1}
+  /* per-task table */
+  table.tasks{min-width:720px} table.tasks td{font-size:13.5px;line-height:1.55}
+  .tname{font-weight:600;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;word-break:break-all}
+  .dchip{font-size:11px;padding:0 7px;border-radius:20px;background:color-mix(in srgb,var(--muted) 18%,transparent)}
+  .sc{font-weight:700;font-variant-numeric:tabular-nums;padding:0 6px;border-radius:5px;font-size:12.5px;display:inline-block}
+  .sc-hi{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+  .sc-mid{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+  .sc-lo{color:var(--bad);background:color-mix(in srgb,var(--bad) 15%,transparent)}
+  .sc-zero{color:var(--muted);background:color-mix(in srgb,var(--muted) 12%,transparent)}
+  details{margin:14px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:2px 14px}
+  summary{cursor:pointer;font-weight:600;padding:10px 0}
+  .give{border:1px solid var(--line);border-radius:12px;padding:2px 18px;margin:14px 0;background:var(--card)}
+  .give h3{color:var(--accent)}
+  footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="nav">
+  <a class="here" href="index.html">① pi 与 gpt_claw 对比（本页）</a>
+  <a href="task_selection.html">② 选题与下一步跑什么</a>
+  <a href="cybersecurity_solve/index.html">③ 网络安全 4 题</a>
+</nav>
+<header>
+  <h1>pi 与 gpt_claw 对比：用 gpt-5.6-sol 跑 ALE 25 题（Linux 无界面）</h1>
+  <div class="sub">同一个模型、同一批题、同一套环境，两套 agent harness 全量对跑，25 道 Linux 无界面题（18 计算 + 7 工程）。本页先给结论，再给可复核的原始数据和取数脚本。</div>
+  <div class="meta">
+    <span><b>模型</b> gpt-5.6-sol</span>
+    <span><b>环境</b> 本地 Docker（ale-ubuntu22-docker）</span>
+    <span><b>题目</b> 25 道 computing_math + engineering</span>
+    <span><b>数据日期</b> 2026-07-12</span>
+  </div>
+</header>
+
+<div class="note good">
+<b>两套 harness，一句话分清。</b><span style="color:var(--pi);font-weight:700">pi</span> 是约 700 行的薄包装，把 agent 主循环交给外部 pi 编码 CLI，只在 Linux 容器里用 bash 和读写文件，不带图形界面。<span style="color:var(--claw);font-weight:700">gpt_claw</span> 是仓库自带的重型框架（从 OpenClaw 改写）跑 gpt-5.6-sol，本轮起在无界面题上关掉全部图形界面工具，只留 <code>exec/read/write/edit</code>，和 pi 站同一条起跑线。pi 薄、快、可复现；gpt_claw 重、带记忆和子 agent，但这些在无界面题上用不上。
+</div>
+
+<h2>一分钟结论</h2>
+<div class="summary">
+<ul>
+  <li><span class="qlead">差距大不大？</span> 得分分不出高下。pi 均分 <b>0.404</b>，gpt_claw 均分 <b>0.399</b>，只差 0.005。而 gpt_claw 把同一批题重复跑，单题得分能差到 0.34。0.005 远小于这个跑间抖动，谁的解题能力更强这批数据回答不了。</li>
+  <li><span class="qlead">分数由什么决定？</span> 由题目决定，不由 harness 决定。25 题里 18 题两者得分完全相同（10 题都 0，8 题同分），只有 7 题分高低，pi 赢 4、gpt_claw 赢 3，接近抛硬币。</li>
+  <li><span class="qlead">两者什么特点？</span> pi 输入 token 少、跑得快，但有 5 道题超时；gpt_claw token 和步数更重，但 25 题全部跑完不超时。</li>
+  <li><span class="qlead">测了多少题、怎么分布？</span> 25 道，18 计算 + 7 工程，全是 Linux 无界面题。两套跑里都有 <b>10 道全 0</b>，卡在环境和难度；有 4 道被跑出满分。</li>
+  <li><span class="qlead">结论靠谱吗？</span> 成本结论靠谱（pi 更省更快，可复现）；能力排名不靠谱（题只有 25 道，pi 只跑一次，单题方差盖过均分差）。</li>
+  <li><span class="qlead">下一步和怎么协作？</span> 选题和预判见<a href="task_selection.html">选题页</a>；哪些东西你能直接拿去用、哪些需要你搭把手，见本页<a href="#collab">给队友和老师</a>。</li>
+</ul>
+</div>
+
+<h2>术语速查</h2>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>词</th><th>指什么</th></tr></thead>
+  <tbody>
+    <tr><td><b>ALE</b></td><td>这套评测框架和它的题库（agents-last-exam）。每题给一个任务和一个自动判分器，agent 在容器里做题，判分器给 0 到 1 的分。</td></tr>
+    <tr><td><b style="color:var(--pi)">pi</b></td><td>一套 agent harness。约 700 行 Python 薄包装，把主循环交给外部 pi 编码 CLI（<code>@earendil-works/pi-coding-agent</code>），在容器里跑 <code>bash/read/edit/write</code>，没有图形界面能力。</td></tr>
+    <tr><td><b style="color:var(--claw)">gpt_claw</b></td><td>另一套 agent harness 跑 gpt-5.6-sol。仓库自带的完整 Python 框架，60 多个文件，从 OpenClaw 改写，带记忆、上下文压缩、子 agent。原本能操作图形桌面，本轮在无界面题上一律关掉图形界面工具（<code>computer</code>、<code>analyze_image</code>）。</td></tr>
+    <tr><td><b>CUA</b></td><td>Computer-Using Agent，用图形桌面（鼠标、键盘、截图）操作电脑。这 25 道题都不需要，只有 4 道 network security 题需要。</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>差距有多大</h2>
+<div class="cards">
+  <div class="card pi">
+    <div class="num">0.404</div>
+    <div class="lab">pi 均分（单次全量跑）</div>
+    <div class="delta" style="color:var(--muted)">25 题算术平均</div>
+  </div>
+  <div class="card claw">
+    <div class="num">0.399</div>
+    <div class="lab">gpt_claw 均分（无图形界面工具）</div>
+    <div class="delta" style="color:var(--muted)">与 pi 差 0.005</div>
+  </div>
+</div>
+
+<div class="chart">
+  <h3>25 题里，两者的胜负构成</h3>
+  <p class="cap">18 题结果一样（灰色），只有 7 题分出高低（蓝/绿）。</p>
+  <div class="stack">
+    <div class="seg" style="flex:10;background:var(--tie2);color:var(--fg)">10</div>
+    <div class="seg" style="flex:8;background:var(--tie);color:var(--fg)">8</div>
+    <div class="seg" style="flex:4;background:var(--pi);color:var(--bg)">4</div>
+    <div class="seg" style="flex:3;background:var(--claw);color:var(--bg)">3</div>
+  </div>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--tie2)"></span>两边都 0 分（10）</span>
+    <span><span class="sw" style="background:var(--tie)"></span>两边同分非零（8）</span>
+    <span><span class="sw" style="background:var(--pi)"></span>pi 更高（4）</span>
+    <span><span class="sw" style="background:var(--claw)"></span>gpt_claw 更高（3）</span>
+  </div>
+</div>
+
+<div class="chart">
+  <h3>那 7 道分高低的题，差距有多大</h3>
+  <p class="cap">每条是一道题上 pi 与 gpt_claw 的分差。红色虚线是 gpt_claw 自己把同一批题重复跑时的最大单题抖动（0.34）。7 条全部落在虚线左侧，也就是全在噪声范围内。</p>
+  <svg viewBox="0 0 480 232" width="100%" role="img" aria-label="7 道差异题的分差条形图，全部不超过 0.34 的跑间抖动线">
+    <!-- gridlines + axis 0..0.40 over x=150..450 -->
+    <g class="grid">
+      <line x1="150" y1="30" x2="150" y2="200"/>
+      <line x1="225" y1="30" x2="225" y2="200"/>
+      <line x1="300" y1="30" x2="300" y2="200"/>
+      <line x1="375" y1="30" x2="375" y2="200"/>
+      <line x1="450" y1="30" x2="450" y2="200"/>
+    </g>
+    <g class="ax" text-anchor="middle">
+      <text x="150" y="216">0</text><text x="225" y="216">0.1</text>
+      <text x="300" y="216">0.2</text><text x="375" y="216">0.3</text><text x="450" y="216">0.4</text>
+    </g>
+    <!-- noise line at 0.34 -> x=150+0.34*750=405 -->
+    <line class="noise" x1="405" y1="26" x2="405" y2="200"/>
+    <text class="ax" x="405" y="20" text-anchor="middle" style="fill:var(--bad)">0.34 抖动线</text>
+    <!-- rows: y start 36, height 24, bar height 13 -->
+    <!-- cfr pi +0.34 -> w=255 -->
+    <text class="lbl" x="144" y="47" text-anchor="end">cfr_game_theory</text>
+    <rect class="bar-pi" x="150" y="38" width="255" height="13" rx="3"/>
+    <text class="val" x="410" y="48">pi +0.34</text>
+    <!-- cp_test_gen pi +0.30 -> w=225 -->
+    <text class="lbl" x="144" y="71" text-anchor="end">cp_test_gen</text>
+    <rect class="bar-pi" x="150" y="62" width="225" height="13" rx="3"/>
+    <text class="val" x="380" y="72">pi +0.30</text>
+    <!-- abb claw +0.23 -> w=169 -->
+    <text class="lbl" x="144" y="95" text-anchor="end">abb_irb6700_urdf</text>
+    <rect class="bar-claw" x="150" y="86" width="169" height="13" rx="3"/>
+    <text class="val" x="324" y="96">gpt_claw +0.23</text>
+    <!-- cost claw +0.17 -> w=125 -->
+    <text class="lbl" x="144" y="119" text-anchor="end">cost_optimization</text>
+    <rect class="bar-claw" x="150" y="110" width="125" height="13" rx="3"/>
+    <text class="val" x="280" y="120">gpt_claw +0.17</text>
+    <!-- recsys claw +0.17 -> w=125 -->
+    <text class="lbl" x="144" y="143" text-anchor="end">recsys_cold_start</text>
+    <rect class="bar-claw" x="150" y="134" width="125" height="13" rx="3"/>
+    <text class="val" x="280" y="144">gpt_claw +0.17</text>
+    <!-- synthetic pi +0.03 -> w=24 -->
+    <text class="lbl" x="144" y="167" text-anchor="end">synthetic_causal</text>
+    <rect class="bar-pi" x="150" y="158" width="24" height="13" rx="3"/>
+    <text class="val" x="179" y="168">pi +0.03</text>
+    <!-- power pi +0.00 -> w=3 -->
+    <text class="lbl" x="144" y="191" text-anchor="end">power_10kv</text>
+    <rect class="bar-pi" x="150" y="182" width="3" height="13" rx="1.5"/>
+    <text class="val" x="158" y="192">pi +0.00</text>
+  </svg>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--pi)"></span>pi 更高</span>
+    <span><span class="sw" style="background:var(--claw)"></span>gpt_claw 更高</span>
+    <span><span class="sw dash"></span>跑间抖动上限 0.34</span>
+  </div>
+</div>
+<p class="sub">全 25 题上，pi 与 gpt_claw 的单题得分之差平均只有 0.049。pi 赢的两道大项（cfr、cp_test_gen）恰好也是 gpt_claw 自己重复跑就抖 0.30 以上的题，所以这里的胜负多半是抖动，不是能力差。</p>
+
+<h2>两者的特点</h2>
+<p>下表把架构差异和实测指标放在一起。架构信息来自代码走读，指标是 25 题的中位数。</p>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>维度</th><th class="num">pi</th><th class="num">gpt_claw</th></tr></thead>
+  <tbody>
+    <tr><td>本质</td><td>约 700 行薄包装</td><td>60+ 文件完整框架</td></tr>
+    <tr><td>怎么执行命令</td><td>直接在任务容器里跑 bash</td><td>经 cua-server 桥进容器</td></tr>
+    <tr><td>图形界面能力</td><td>无</td><td>有，无界面题上已关</td></tr>
+    <tr><td>额外能力</td><td>无</td><td>记忆、子 agent、上下文压缩、多模型分工</td></tr>
+    <tr><td>输入 token（中位）</td><td class="num">22.6k</td><td class="num">86.8k</td></tr>
+    <tr><td>缓存读取 token（中位）</td><td class="num">135k</td><td class="num">61k</td></tr>
+    <tr><td>墙钟用时（中位）</td><td class="num">503 s</td><td class="num">687 s</td></tr>
+    <tr><td>步数（中位）</td><td class="num">30</td><td class="num">20</td></tr>
+    <tr><td>25 题里超时数</td><td class="num">5</td><td class="num">0</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="note">
+<b>「pi 输入 token 少 4 倍」这个说法要小心。</b>pi 的新输入 token 中位只有 22.6k，但它靠大量 prompt 缓存，缓存读取中位 135k，是 gpt_claw（61k）的两倍多。把上下文挪进缓存桶不等于不处理它，两者每题处理的总 token 量其实接近。pi 真正省在缓存 token 更便宜、墙钟更快（503 秒对 687 秒），不是发得少。另一面，pi 有 5 道题跑到超时被判 0，gpt_claw 这 25 题全部在时限内跑完。
+</div>
+<div class="note good">
+<b>gpt_claw 为什么之后一律不带图形工具。</b>核对轨迹后，图形界面工具在无界面题上 25 题里总共只调用 7 次，集中在 3 道题，其中两道无论关不关都是 0 分。它们对无界面题基本是死重量，每次请求还多占约 2.5KB 的工具说明，关掉后输入 token 降约 9%、对得分没有可测影响。真正带来稳定性的是并发从 6 降到 4、以及提高容器就绪超时加重试，这让 25 题从「首轮 5 道崩在容器启动」变成零崩溃、零超时，跟图形工具无关。
+</div>
+
+<h2>题目与分布</h2>
+<div class="chart">
+  <h3>25 题的得分分档：pi 对 gpt_claw</h3>
+  <p class="cap">四个分档里两者的题数几乎重合，整条分布形状一样。条长按题数占比（满格 = 10 题）。</p>
+  <div class="grp">
+    <span class="gl">满分 1.0</span>
+    <div class="gbars">
+      <div class="gb"><span class="track"><span class="fill pi" style="width:40%"></span></span><span class="gv">pi 4</span></div>
+      <div class="gb"><span class="track"><span class="fill claw" style="width:40%"></span></span><span class="gv">claw 4</span></div>
+    </div>
+  </div>
+  <div class="grp">
+    <span class="gl">0.5 到 0.99</span>
+    <div class="gbars">
+      <div class="gb"><span class="track"><span class="fill pi" style="width:70%"></span></span><span class="gv">pi 7</span></div>
+      <div class="gb"><span class="track"><span class="fill claw" style="width:60%"></span></span><span class="gv">claw 6</span></div>
+    </div>
+  </div>
+  <div class="grp">
+    <span class="gl">0 到 0.5</span>
+    <div class="gbars">
+      <div class="gb"><span class="track"><span class="fill pi" style="width:40%"></span></span><span class="gv">pi 4</span></div>
+      <div class="gb"><span class="track"><span class="fill claw" style="width:50%"></span></span><span class="gv">claw 5</span></div>
+    </div>
+  </div>
+  <div class="grp">
+    <span class="gl">0 分</span>
+    <div class="gbars">
+      <div class="gb"><span class="track"><span class="fill pi" style="width:100%"></span></span><span class="gv">pi 10</span></div>
+      <div class="gb"><span class="track"><span class="fill claw" style="width:100%"></span></span><span class="gv">claw 10</span></div>
+    </div>
+  </div>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--pi)"></span>pi</span>
+    <span><span class="sw" style="background:var(--claw)"></span>gpt_claw</span>
+  </div>
+</div>
+<p>按域看均分，两个 harness 都是计算题明显强于工程题，工程题几乎全军覆没。</p>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>域</th><th class="num">题数</th><th class="num">pi 均分</th><th class="num">gpt_claw 均分</th></tr></thead>
+  <tbody>
+    <tr><td>computing_math</td><td class="num">18</td><td class="num">0.512</td><td class="num">0.493</td></tr>
+    <tr><td>engineering</td><td class="num">7</td><td class="num">0.126</td><td class="num">0.157</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="note bad">
+<b>两个极端各自说明一件事。</b>被跑出满分的 4 道（branch_bound、ising、k3、os_log）共同点是有确定性算法、依赖能装上、判分明确。另有 <b>10 道题在两套 harness 上都 0 分</b>：clustered_cyclic、dit_pipeline、go_game、mp_checkpoint、particle_filter、ranking_node、aerospace、humanoid_wbc、mpc_control、sumo。它们要么要跑重型仿真栈（mjlab、EnergyPlus、SUMO、量子纠错），要么要从图像重建结构（围棋），要么容器里缺库（dit_pipeline 缺 <code>DiTTransformer2DModel</code>）。这 10 道是环境和题目本身的门槛，换哪个 harness 都过不去。
+</div>
+
+<h2>结论的可靠性与局限</h2>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>结论</th><th>可靠性</th><th>为什么</th></tr></thead>
+  <tbody>
+    <tr><td>无界面 Linux 上 pi 与 gpt_claw 得分打平</td><td><span class="badge b-good">较可靠</span></td><td>18/25 题结果相同，均分差 0.005 远小于 0.16 的跑间抖动均值。</td></tr>
+    <tr><td>pi 更省、更快</td><td><span class="badge b-good">较可靠</span></td><td>墙钟、步数、token 三个独立指标一致，不受单次得分抖动影响。</td></tr>
+    <tr><td>某个 harness 解题能力更强</td><td><span class="badge b-bad">不可得</span></td><td>题只有 25 道，pi 只跑 1 次，单题方差最大 0.34，样本量和重复数都不够支撑排名。</td></tr>
+    <tr><td>关图形界面工具提升了得分</td><td><span class="badge b-bad">不成立</span></td><td>图形界面工具全程只调用 7 次，关掉只省 token、不改分数。</td></tr>
+  </tbody>
+</table>
+</div>
+<p>两处不对称，读数时要记住。一是 pi 只做了一次全量跑，gpt_claw 有 5 道题崩在容器启动后补跑过，所以偏差方向是低估 pi。二是 pi 那 5 道超时题没有第二次机会，gpt_claw 的失败题有。两点都不改变「打平」的结论，只说明这份数据对 pi 略微不利，不是有利。</p>
+
+<h2 id="collab">给队友和老师</h2>
+<p>这份对比、<a href="task_selection.html">选题页</a>和<a href="cybersecurity_solve/index.html">网络安全页</a>是一组，目的是让别人能快速跟上，也把能复用的东西和需要搭手的地方摊开。</p>
+
+<div class="give">
+<h3>可以直接拿去用的</h3>
+<ul>
+  <li><b>一份跑通、零框架失败的无界面配置。</b>gpt_claw 关掉图形界面工具、并发 4、提高容器就绪超时加重试，25 题零崩溃零超时。要跑新批次直接沿用这套，不用再踩容器启动的坑。</li>
+  <li><b>一行模型路由修复。</b>gpt-5.6-sol 接 gpt_claw 最初 6 题全 0，根因是掉进给 Qwen 写的兜底循环。修复在 <code>harness/model/unified_loop.py:529</code> 的注册正则加 <code>.*gpt-5\.6.*</code>。接新模型前先确认它匹配到对的循环，别把接线 bug 当成能力差。</li>
+  <li><b>25 题基线数据和取数脚本。</b>原始 <code>run.json</code> / <code>trajectory.json</code> 路径和一段能复算本页所有数字的脚本见<a href="#verify">如何自己复核</a>，可以直接拿去比对或接着算。</li>
+  <li><b>下一批的选题清单和预判。</b>从 165 道里筛出的 77 道合格题、36 道 P1 研究批次和分组预判在<a href="task_selection.html">选题页</a>，清单文件 <code>selected_tasks/research_batch_p1.txt</code>。</li>
+  <li><b>4 道 network security 题的手工解答。</b>脱壳、已知明文攻击、TEA 逆向、pcap 取证的完整思路和产物在<a href="cybersecurity_solve/index.html">网络安全页</a>，可作为参考答案的交叉核对。</li>
+</ul>
+</div>
+
+<div class="give">
+<h3>需要搭把手的</h3>
+<ul>
+  <li><b>一台带 <code>/dev/kvm</code> 的机器跑 Windows VM。</b>那 4 道 network security 题的官方评测要 Windows 桌面（Ghidra、Wireshark），本地 Docker 起不了。谁有带 KVM 的机器，可以配 Windows VM 加带图形界面的 gpt_claw 跑出官方分数，我这边算法和答案已经现成。</li>
+  <li><b>算力或人手把每题重复跑几次。</b>现在单题方差到 0.34，单次跑的均分差被淹没。要真比出 harness 高下，得每题重复 3 到 5 次取均值。谁能分担几轮重复跑，就能把「差异」从「噪声」里分出来。</li>
+  <li><b>修那 10 道全 0 题的环境。</b>先从可修的入手，比如 dit_pipeline 是容器缺 <code>DiTTransformer2DModel</code>。补齐环境比调 harness 更能抬整体分数。谁熟某个仿真栈（EnergyPlus、SUMO、mjlab、量子纠错），欢迎认领对应的题。</li>
+  <li><b>一起看 harness 干预有没有用。</b>P1 里的 A3 调试修复类基线低、头顶空间大，最适合验证 harness 钩子。跑法建议先不加钩子拿基线、再加钩子看每题增量，才能把 harness 的作用和题本身的难度分开（<a href="task_selection.html">选题页</a>第四节有展开）。</li>
+</ul>
+</div>
+
+<h2>逐题附录</h2>
+<p>25 题按 pi 得分从高到低排，同时列 pi 和 gpt_claw 两个分数，方便自己看每题差异；「gpt_claw 怎么做的」摘自它轨迹里实际调用的工具和命令。默认收起。</p>
+<details>
+<summary>展开 25 题逐题得分与解法（pi / gpt_claw）</summary>
+<div class="tablewrap">
+<table class="tasks">
+  <thead><tr><th>题目 / 域</th><th class="num">pi</th><th class="num">gpt_claw</th><th>这是什么题，gpt_claw 怎么做的</th></tr></thead>
+  <tbody>
+    <tr><td><div class="tname">branch_bound_atsp</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-hi">1.00</span></td><td class="num"><span class="sc sc-hi">1.00</span></td><td>为非对称旅行商问题实现分支定界求解器。写 solver.py，pip 装 scipy/numpy，后台跑并轮询 results.json 直到三个难度 tier 都出解。</td></tr>
+    <tr><td><div class="tname">ising_post_measurement_1</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-hi">1.00</span></td><td class="num"><span class="sc sc-hi">1.00</span></td><td>算 N=10 临界 Ising 链后测量态的关联函数。写 solve.py 用 scipy 稀疏矩阵求基态，试多个 python 运行时解决依赖后跑通。</td></tr>
+    <tr><td><div class="tname">k3_abelian_extensions</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-hi">1.00</span></td><td class="num"><span class="sc sc-hi">1.00</span></td><td>分类阿贝尔群 (Z/4)^3 的群扩张。写 solve.py 用 sympy 的 Smith 标准型计算，输出 results.json。</td></tr>
+    <tr><td><div class="tname">os_log_permission_guard_v1</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-hi">1.00</span></td><td class="num"><span class="sc sc-hi">1.00</span></td><td>按规则加固一批日志文件权限。跑 setup 铺沙盒，python 按 csv 规则 chmod，find 校验权限位。和安全沾边的一道。</td></tr>
+    <tr><td><div class="tname">k8s_payment_api_root_cause_analysis</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-hi">0.90</span></td><td class="num"><span class="sc sc-hi">0.90</span></td><td>当值 SRE，从崩溃 pod 日志和集群状态做一次 K8s 事故根因分析。read 四个输入后一次 python 产出结构化根因 JSON，8 步。</td></tr>
+    <tr><td><div class="tname">cost_optimization_1</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-mid">0.70</span></td><td class="num"><span class="sc sc-hi">0.86</span></td><td>扮演 AWS 成本优化分析师，从用量表和定价表算优化后成本。read 输入，两段 python 算总额与节省，写 optimization_report.json。</td></tr>
+    <tr><td><div class="tname">data_pipeline_etl_instance_1</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-hi">0.83</span></td><td class="num"><span class="sc sc-hi">0.83</span></td><td>从多格式脏零售源文件建一个清洗后的 SQLite 数仓。写 build.py 用 sqlite3 建库，一次重写修正字段映射。</td></tr>
+    <tr><td><div class="tname">paper_reproduction_instance_1</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-hi">0.80</span></td><td class="num"><span class="sc sc-hi">0.80</span></td><td>复现 ICML 2024 论文 LCA-on-the-Line 的 Table 2。pdftotext 读表、unzip 代码、torch.load 预算统计、算相关系数写结果。</td></tr>
+    <tr><td><div class="tname">cfr_game_theory_equilibrium</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-mid">0.67</span></td><td class="num"><span class="sc sc-lo">0.33</span></td><td>为三个递进难度的两人零和博弈实现均衡求解器。写 solve.py 用 scipy 线性规划求最优策略。简单博弈对了、难的没求对。pi 0.67、gpt_claw 0.33，是同一题的跑间抖动。</td></tr>
+    <tr><td><div class="tname">cp_test_gen_1</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-mid">0.70</span></td><td class="num"><span class="sc sc-lo">0.40</span></td><td>写竞赛题的测试数据生成器 gen.cpp，按 seed 产出能压垮不同算法的测试。pdftotext 读题面、openpyxl 读提交列表，推理边界写 gen.cpp。</td></tr>
+    <tr><td><div class="tname">recsys_cold_start_instance_1</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-lo">0.33</span></td><td class="num"><span class="sc sc-mid">0.50</span></td><td>建一个处理冷启动的混合推荐系统。读 interactions/metadata/embeddings，写 build_recsys.py 用 sklearn，修 import 重跑。</td></tr>
+    <tr><td><div class="tname">synthetic_causal_structure_inference</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-lo">0.28</span></td><td class="num"><span class="sc sc-lo">0.25</span></td><td>从多个数据集推断因果结构。写 solve.py 用 ExtraTrees 加 spearman，多次修依赖和 API，31 步。</td></tr>
+    <tr><td><div class="tname">abb_irb6700_asset_to_urdf_instance_1</div><span class="dchip">工程</span></td><td class="num"><span class="sc sc-mid">0.64</span></td><td class="num"><span class="sc sc-hi">0.87</span></td><td>从网格 asset 和元数据重建 ABB IRB6700 机器人的 URDF。git clone ros-industrial 参考、trimesh 分析网格、写 make.py 生成 URDF XML。工程题里最高分。</td></tr>
+    <tr><td><div class="tname">chisel_verilog_alignment_seq_1</div><span class="dchip">工程</span></td><td class="num"><span class="sc sc-lo">0.20</span></td><td class="num"><span class="sc sc-lo">0.20</span></td><td>把优化后 SystemVerilog 的子表达式对齐回 Chisel 源码的确切行列。读源码，grep firtool，重跑 firtool 出未优化版做对比。</td></tr>
+    <tr><td><div class="tname">power_10kv_feeder_reliability_001</div><span class="dchip">工程</span></td><td class="num"><span class="sc sc-lo">0.04</span></td><td class="num"><span class="sc sc-lo">0.03</span></td><td>算 10kV 配电馈线的供电可靠性指标（读 CIM/RDF XML 和 SVG 拓扑）。解析 XML 拓扑写 solve.py 算指标。拓扑重建几乎没对上。</td></tr>
+    <tr><td><div class="tname">clustered_cyclic_code_circuit_level_simulation</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td>对量子纠错码做电路级 memory 仿真。装 stim/ldpc/quits、clone 仓库、甚至去 arxiv 拉论文源码，但没在时限内算出正确错误率。pi 这题超时。</td></tr>
+    <tr><td><div class="tname">dit_pipeline_cfg_alignment_fid_256_001</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td>修一个 DiT 采样管线的 bug。容器里 diffusers 缺 <code>DiTTransformer2DModel</code>，两个 harness 都做不了，是题目环境降级。</td></tr>
+    <tr><td><div class="tname">go_game_reconstruction_1</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td>根据终局棋盘图逐手重建一盘 168 手围棋并导出 SGF。纯命令行从一张图重建整盘围棋太难，官方本是图形界面题。</td></tr>
+    <tr><td><div class="tname">mp_checkpoint_consolidation_v2</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td>把模型并行的 checkpoint 分片合并成完整权重。torch.load 分片，写 convert.py 用 safetensors 保存。分片重排没完全对。</td></tr>
+    <tr><td><div class="tname">particle_filter_nonlinear_tracking</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td>为非线性跟踪实现粒子滤波器。写 pf_solver.py，反复调依赖跑并检查。精度没达标，pi 这题超时。</td></tr>
+    <tr><td><div class="tname">ranking_node_feature_parity_recovery_instance_1</div><span class="dchip">计算</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td>当值 ML 平台工程师修一个排序服务节点并过 pytest。写 safe_recover.py 跑 pytest 和 service，自检没全过。</td></tr>
+    <tr><td><div class="tname">aerospace_low_thrust_trajectory</div><span class="dchip">工程</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td>求解低推力航天轨迹优化。读 spec 写 make.py，反复 uv sync 装依赖没搞定。</td></tr>
+    <tr><td><div class="tname">humanoid_wbc_policy_evaluation</div><span class="dchip">工程</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td>在 mjlab 里评估人形机器人全身控制策略。解压 mjlab、uv run play 跑仿真，反复调运行时，仿真环境没跑起来。pi 这题超时。</td></tr>
+    <tr><td><div class="tname">mpc_control_building_v1</div><span class="dchip">工程</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td>为住宅制冷系统开发 MPC 控制（EnergyPlus 模型）。改 IDF 跑 EnergyPlus，pandas 读输出，MPC 全流程没跑通。pi 这题超时。</td></tr>
+    <tr><td><div class="tname">sumo_urban_am_peak_calibration</div><span class="dchip">工程</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td class="num"><span class="sc sc-zero">0.00</span></td><td>建一个标定的 SUMO 早高峰交通仿真。bootstrap uv 环境，分析路网与路由，标定流程没完成。pi 这题超时。</td></tr>
+  </tbody>
+</table>
+</div>
+</details>
+
+<details>
+<summary>插曲：gpt_claw 最初 6 题全 0，是一行接线 bug（修复细节）</summary>
+<p>最早 gpt_claw 6 题全 0，每题 30 轮只发 0 到 1 次工具调用，不停说要做然后道歉。根因是模型循环路由：<code>gpt-5.6-sol</code> 匹配不到专用循环，掉进兜底的 <code>generic_vlm</code>（为 Qwen3-VL 写的循环），该循环把工具塞进 Qwen 的 <code>&lt;tools&gt;</code> XML 而不是发原生 <code>tools</code> 数组，而 gpt-5.6-sol 只会读 <code>tool_calls</code>，于是空说话、不调工具。修复是在 <code>harness/model/unified_loop.py:529</code> 的注册正则里加上 <code>.*gpt-5\.6.*</code>，一行改完它才成了 pi 的正经对手。记这条是因为它说明：评估两套 harness，先排除模型和 harness 的工程性不兼容，否则会把接线 bug 误判成能力差距。</p>
+</details>
+
+<h2 id="verify">如何自己复核</h2>
+<p>本页每个数字都来自下面两个目录里各任务的 <code>run.json</code>（得分、状态、token、用时）和 <code>trajectory.json</code>（工具调用），直接读这些文件即可验证。</p>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>本页里的名字</th><th>原始日志目录（相对 <code>.logs/ale/</code>）</th></tr></thead>
+  <tbody>
+    <tr><td><b style="color:var(--pi)">pi</b></td><td><code>gpt56_full_pi/pi/gpt-5-6-sol/</code></td></tr>
+    <tr><td><b style="color:var(--claw)">gpt_claw</b></td><td><code>gpt56_full_aleclaw_v2/ale_claw/openai-gpt-5-6-sol/</code>（无图形界面工具那次）</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="sub">日志根目录 <code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/.logs/ale/</code>。每题路径形如 <code>&lt;域__题名&gt;/v0/&lt;时间戳&gt;/run.json</code>，取最新时间戳那次。下面这段能复算本页所有均分、中位数和逐题得分。</p>
+<pre>import json, glob, statistics, os
+BASE = "/home/dataset-local/zmh/ALE_TEST/agents-last-exam/.logs/ale"
+def latest(root, t):
+    c = sorted(glob.glob(f"{root}/{t}/v0/*/run.json")); return c[-1] if c else None
+def load(root):
+    out = {}
+    for td in glob.glob(root + "/*"):
+        if not os.path.isdir(td): continue
+        rj = latest(root, os.path.basename(td))
+        if rj:
+            d = json.load(open(rj)); u = d.get("usage", {})
+            out[os.path.basename(td)] = {"score": d.get("score"), "status": d.get("status"),
+                "in": u.get("total_input_tokens", 0), "dur": d.get("timings", {}).get("duration_s", 0)}
+    return out
+pi = load(BASE + "/gpt56_full_pi/pi/gpt-5-6-sol")
+gpt_claw = load(BASE + "/gpt56_full_aleclaw_v2/ale_claw/openai-gpt-5-6-sol")
+print("pi mean", statistics.mean(r["score"] for r in pi.values()))
+print("gpt_claw mean", statistics.mean(r["score"] for r in gpt_claw.values()))
+for t in sorted(pi):
+    print(t, pi[t]["score"], gpt_claw[t]["score"])</pre>
+
+<footer>
+  数据来自 <code>.logs/ale</code> 下 <code>gpt56_full_pi</code>（pi）与 <code>gpt56_full_aleclaw_v2</code>（gpt_claw，无图形界面工具）各任务的 <code>run.json</code> 与 <code>trajectory.json</code>。全量 25 题，gpt-5.6-sol，本地 Docker，数据日期 2026-07-12。逐题描述摘自 gpt_claw 轨迹。题库来源 <a href="https://github.com/rdi-berkeley/agents-last-exam">github.com/rdi-berkeley/agents-last-exam</a> 与 <a href="https://huggingface.co/agents-last-exam">huggingface.co/agents-last-exam</a>。
+</footer>
+</div>
+</body>
+</html>

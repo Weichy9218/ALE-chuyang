@@ -1,0 +1,20 @@
+tris_crackme — solution (algorithm recovered from the challenge)
+
+RegCode == generate_password(RegName), where:
+  tmp = concat( str(ord(ch)*(idx+1)+idx) for idx,ch in enumerate(RegName) )
+  n = len(RegName); start = max(0, n-7); end = max(start+6, n-1)
+  RegCode = tmp[start:end]
+
+To make the program show as registered (persists across restart), set in the Windows registry:
+  HKCU\Software\Classes\VirtualStore\MACHINE\SOFTWARE\WOW6432Node\Stefan Pettersson\YourTris
+    RegName = <any name>
+    RegCode = generate_password(<name>)
+
+Examples:
+  RegName="agent"        RegCode="972073"
+  RegName="ALE"          RegCode="651532"
+  RegName="Christopher"  RegCode="934442"
+
+Scoring (Windows only): evaluate() reads the registry via PowerShell and passes when
+RegCode == generate_password(RegName). The analysis above is complete; only the final
+registry write + score check require a Windows desktop.

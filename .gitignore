@@ -1,0 +1,27 @@
+# === 凭据:绝不入库 ===
+.env
+*.env
+secret/
+**/models.json
+*_spec.json
+*.pem
+*.key
+
+# === benchmark 数据与轨迹:含 ALE 题面/参考答案,不泄露红线 ===
+task-data/
+tasks/
+**/reference/
+data/samples/
+*.jsonl
+.logs/
+
+# === 第三方上游源码(pi 编码 agent,486M,有自己的仓库) ===
+pi/
+
+# === 运行产物 ===
+__pycache__/
+*.pyc
+node_modules/
+*.log
+.claude/
+/tmp/

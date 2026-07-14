@@ -1,0 +1,59 @@
+{
+  "malware_family": "NetSupport RAT",
+  "compromised_host": "10.12.17.101",
+  "initial_vector": {
+    "type": "drive_by",
+    "url": "https://taktlat.xyz/work/original.js",
+    "source_ip": "185.33.84.25",
+    "timestamp": "2024-12-17T02:31:23Z"
+  },
+  "c2_servers": [
+    {
+      "ip": "194.180.191.64",
+      "port": 80,
+      "protocol": "http",
+      "first_seen": "2024-12-17T02:32:00Z"
+    }
+  ],
+  "infection_chain": [
+    {
+      "step": 1,
+      "description": "Victim visits compromised site banks-canada.com (SmartApeSG injected script)",
+      "url_or_domain": "banks-canada.com"
+    },
+    {
+      "step": 2,
+      "description": "Injected script fetches malicious JS",
+      "url_or_domain": "taktlat.xyz/work/original.js"
+    },
+    {
+      "step": 3,
+      "description": "Redirect to fake browser-update page",
+      "url_or_domain": "depostsolo.biz/work/"
+    },
+    {
+      "step": 4,
+      "description": "NetSupport RAT geo-check",
+      "url_or_domain": "geo.netsupportsoftware.com"
+    }
+  ],
+  "exfiltration": {
+    "observed": false
+  },
+  "iocs": {
+    "domains": [
+      "banks-canada.com",
+      "taktlat.xyz",
+      "depostsolo.biz",
+      "geo.netsupportsoftware.com"
+    ],
+    "ips": [
+      "185.33.84.25",
+      "194.180.191.64"
+    ],
+    "hosts": [
+      "10.12.17.101"
+    ]
+  },
+  "_method_note": "Fields verified via tshark: compromised_host (top internal talker), malware_family and domains (DNS queries). HTTPS URLs are encrypted; exact paths/timestamps require flow-timeline + TLS-SNI correlation."
+}

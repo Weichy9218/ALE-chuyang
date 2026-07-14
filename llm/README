@@ -1,0 +1,158 @@
+core/llm — LLM Client Module
+=============================
+
+Unified LLM client layer for the galaxy-selfevolve pipeline.
+All agent-side and tool-side model calls route through this module.
+
+
+## Architecture
+
+### Inheritance hierarchy
+
+```
+BaseLLMClient (ABC)  ← base.py
+└── OpenAISDKClient  ← base.py  (SDK bootstrap; Chat Completions helpers; shared extraction)
+    ├── OpenAIClient             ← openai_client.py      (Responses API)
+    │   ├── BoyueAPIClient       ← boyueapi_client.py    (apirx.boyuerichdata.com — DEFAULT for GPT)
+    │   └── GPTSub2APIClient     ← gpt_sub2api_client.py (haoxiang.ai gateway — fallback / extra concurrency)
+    └── OpenRouterNewAPIClient   ← openrouter_newapi_client.py  (Chat Completions)
+        └── OpenRouterTestClient ← openrouter_test_client.py    (cheap smoke-test preset)
+```
+
+### Wire API split
+
+| Branch | API route | SDK call | Reasoning summaries |
+|--------|-----------|----------|---------------------|
+| `OpenAIClient` | Responses API | `client.responses.create()` | Yes — `output[].type="reasoning"` items |
+| `OpenRouterNewAPIClient` | Chat Completions | `client.chat.completions.create()` | Best-effort from `message.reasoning_summary` |
+
+Use **Responses API** (OpenAIClient branch) when the gateway exposes it and
+reasoning summaries are required. Use **Chat Completions** for OpenRouter and
+apihy.com, which do not expose the Responses API route.
+
+
+## Files
+
+```
+base.py                  BaseLLMClient, OpenAISDKClient, LLMResponse, registry
+env_utils.py             load_env(), resolve_client_setting() — shared .env helpers
+openai_client.py         OpenAIClient  (Responses API, tool calling, web search)
+boyueapi_client.py       BoyueAPIClient  (apirx.boyuerichdata.com Responses API — default GPT route)
+gpt_sub2api_client.py    GPTSub2APIClient  (haoxiang.ai Responses API + secondary key fallback)
+openrouter_newapi_client.py  OpenRouterNewAPIClient  (Chat Completions; OpenRouter / apihy.com)
+openrouter_test_client.py    OpenRouterTestClient  (cheap preset for manual smoke tests)
+tool_client_factory.py   Route-aware factory for tool-side LLM calls
+list_models.py           CLI: list available models from any OpenAI-compatible endpoint
+__init__.py              Public exports
+```
+
+
+## Client registry
+
+Clients are registered by name via `@register_llm_client("name")`:
+
+| Registry name     | Class                    | Wire API          |
+|-------------------|--------------------------|-------------------|
+| `openai`          | OpenAIClient             | Responses API     |
+| `boyue_api`       | BoyueAPIClient           | Responses API     |
+| `gpt_sub2api`     | GPTSub2APIClient         | Responses API     |
+| `openrouter_newapi` | OpenRouterNewAPIClient | Chat Completions  |
+| `openrouter_test` | OpenRouterTestClient     | Chat Completions  |
+
+`boyue_api` also answers to the aliases `boyue`, `boyueapi`, `BoyueAPI`, `ale`.
+
+Resolve by name with `get_llm_client_class(name)` or instantiate directly with
+`instantiate_llm_client(name, kwargs)`.
+
+
+## GPT routing policy (ALE runs)
+
+When an ALE run calls a GPT-series model:
+
+- **Default:** `boyue_api` (apirx.boyuerichdata.com, `ale_url` / `ale_api_key`),
+  default model **`gpt-5.6-sol`**.
+- **Fallback / extra concurrency:** `gpt_sub2api` (haoxiang.ai,
+  `GPT_sub2api_URL` / `GPT_sub2api_apikey`). Route overflow traffic here to
+  parallelize across both gateways, or fail over when boyue is unavailable.
+
+Both are Responses API clients, so reasoning summaries work on either.
+
+Notes:
+
+- A model appearing in a gateway's `/v1/models` list does NOT guarantee it is
+  callable — verify with a real request. Example: `gpt-5.2` is listed by
+  haoxiang.ai but returns `400` ("not supported when using Codex with a ChatGPT
+  account"); boyue serves the gpt-5.6-* family instead.
+- `ale_url` in .env omits the `/v1` suffix; BoyueAPIClient normalizes it
+  automatically, so no manual fixup is needed.
+
+
+## Credential resolution
+
+Each client reads credentials from environment variables (via `.env`).
+Priority: explicit constructor arg → `*_env` kwarg → module-level defaults.
+
+Key env vars:
+
+| Client | API key env | Base URL env |
+|--------|-------------|--------------|
+| BoyueAPIClient | `ale_api_key` | `ale_url` |
+| GPTSub2APIClient | `GPT_sub2api_apikey` | `GPT_sub2api_URL` |
+| GPTSub2APIClient (fallback) | `GPT_sub2api_apikey_2` | same |
+| OpenRouterNewAPIClient | `apihy_API_KEY_qwen` / `OPENROUTER_API_KEY` | `apihy_BASE_URL` / `OPENROUTER_BASE_URL` |
+| OpenAIClient | `OPENAI_API_KEY` | `OPENAI_BASE_URL` |
+
+`env_utils.resolve_client_setting()` is the shared primitive for this pattern.
+
+
+## Tool-side routing
+
+`tool_client_factory.py` owns the mapping from tool workflow names ("routes")
+to concrete clients and models. Call sites use route names, not client names:
+
+```python
+from core.llm.tool_client_factory import build_tool_llm_client
+
+client = build_tool_llm_client(route_name="search_summary")
+client = build_tool_llm_client(route_name="read_image")
+```
+
+Defined routes: `search_summary`, `webpage_summary`, `llm_inference`,
+`ranking_extractor`, `read_image`.
+
+Routes can be overridden at runtime via:
+- `config/agent/llm/*.yaml` (Hydra config, takes highest priority)
+- `TOOL_TEXT_LLM_CLIENT` / `TOOL_TEXT_MODEL` env vars
+- `TOOL_VISION_LLM_CLIENT` / `TOOL_VISION_MODEL` env vars
+
+
+## LLM YAML configs
+
+`config/agent/llm/*.yaml` — one file per named LLM profile, loaded by Hydra.
+Each file specifies `client`, `model`, `max_tokens`, `reasoning_effort`, and
+credential env var names. These are the profiles referenced in agent configs
+via `llm: gpt_sub2api` etc.
+
+
+## Reasoning summaries
+
+Reasoning summaries require the Responses API (OpenAIClient branch) with
+`reasoning_effort` set. The model decides when to reason based on question
+complexity — simple inputs produce `reasoning_tokens=0` and no summary even
+with effort set. When the model does reason, `LLMResponse.reasoning_summary`
+contains the extracted summary texts.
+
+`ASSISTANT_MESSAGE_EXTRA_FIELDS` (base.py) lists fields agents attach to
+assistant message dicts that Chat Completions APIs will reject. Both the agent
+layer (writer) and Chat Completions clients (stripper) reference this constant.
+
+
+## list_models.py
+
+CLI for discovering available model names at any endpoint:
+
+    python -m core.llm.list_models [--api-key-env ENV] [--base-url-env ENV]
+
+Without flags, resolves credentials from the first populated profile in
+`DEFAULT_CREDENTIAL_PROFILES`. Override with `LIST_MODELS_API_KEY_ENV` /
+`LIST_MODELS_BASE_URL_ENV` env vars.

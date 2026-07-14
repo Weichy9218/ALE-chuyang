@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ALE 测试报告：Qwen3.5-397B × pi-agent</title>
+<style>
+:root{
+  --plane:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --blue:#2a78d6; --blue-soft:#9ec5f4; --aqua:#1baf7a; --violet:#4a3aa7;
+  --good:#0ca30c; --warning:#eda100; --serious:#ec835a; --critical:#d03b3b;
+  --radius:10px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --plane:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+    --blue:#3987e5; --blue-soft:#184f95; --aqua:#199e70; --violet:#9085e9;
+    --good:#0ca30c; --warning:#c98500; --serious:#ec835a; --critical:#e66767;
+  }
+}
+:root[data-theme="dark"]{
+  --plane:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+  --blue:#3987e5; --blue-soft:#184f95; --aqua:#199e70; --violet:#9085e9;
+  --warning:#c98500; --critical:#e66767;
+}
+:root[data-theme="light"]{
+  --plane:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --blue:#2a78d6; --blue-soft:#9ec5f4; --warning:#eda100; --critical:#d03b3b;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--plane);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:920px;margin:0 auto;padding:0 22px 80px}
+header{padding:56px 0 30px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.eyebrow{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+h1{font-size:30px;line-height:1.25;margin:0 0 14px;font-weight:700}
+.lede{font-size:17px;color:var(--ink2);margin:0;max-width:720px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:22px;font-size:13.5px;color:var(--muted)}
+.meta b{color:var(--ink2);font-weight:600}
+h2{font-size:22px;margin:52px 0 6px;font-weight:700;scroll-margin-top:20px}
+h2 .num{color:var(--blue);font-variant-numeric:tabular-nums;margin-right:10px}
+h3{font-size:16.5px;margin:30px 0 6px;font-weight:650}
+p{margin:12px 0}
+.section-note{color:var(--ink2);font-size:15px;margin-top:2px}
+a{color:var(--blue);text-decoration:none}
+code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.88em;
+  background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:1px 5px}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:26px 0 6px}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 18px 16px}
+.tile .k{font-size:12.5px;color:var(--muted);margin:0 0 8px;letter-spacing:.02em}
+.tile .v{font-size:30px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.tile .v small{font-size:15px;font-weight:600;color:var(--ink2);margin-left:3px}
+.tile .sub{font-size:12.5px;color:var(--ink2);margin:8px 0 0}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px 22px 20px;margin:22px 0}
+.card h3{margin-top:0}
+.chart-title{font-size:14.5px;font-weight:650;margin:0 0 2px}
+.chart-sub{font-size:12.5px;color:var(--muted);margin:0 0 18px}
+
+.bars{display:flex;flex-direction:column;gap:11px}
+.bar-row{display:grid;grid-template-columns:150px 1fr 64px;align-items:center;gap:12px}
+.bar-label{font-size:13.5px;color:var(--ink2);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{position:relative;height:20px;background:var(--grid);border-radius:5px;overflow:hidden}
+.bar-fill{position:absolute;left:0;top:0;height:100%;border-radius:5px;min-width:2px}
+.bar-val{font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums;font-weight:600}
+.bar-val .n{color:var(--muted);font-weight:400;font-size:11.5px;margin-left:1px}
+.axis-row{display:grid;grid-template-columns:150px 1fr 64px;gap:12px;margin-top:8px}
+.axis-scale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+.stack{display:flex;height:34px;border-radius:7px;overflow:hidden;gap:2px;background:transparent;margin:4px 0 16px}
+.stack > span{display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:650;min-width:30px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px;color:var(--ink2)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.dot{width:11px;height:11px;border-radius:3px;flex:none}
+
+.callout{border:1px solid var(--border);border-left:3px solid var(--warning);
+  background:var(--surface);border-radius:8px;padding:15px 18px;margin:20px 0;font-size:14.5px}
+.callout b{color:var(--ink)}
+.callout.crit{border-left-color:var(--critical)}
+.callout.good{border-left-color:var(--good)}
+
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border)}
+th{font-size:12.5px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr:last-child td{border-bottom:none}
+#taskTable th{white-space:nowrap}
+#taskTable td,#taskTable th{padding:6px 9px}
+#taskTable td.tid{max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,Menlo,monospace;font-size:11px}
+#taskTable td.tdom{color:var(--ink2);font-size:11px;white-space:nowrap}
+#taskTable tbody tr:hover{background:var(--plane)}
+
+/* trajectory timeline */
+.traj{position:relative;margin:18px 0 4px;padding-left:26px}
+.traj::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--grid)}
+.step{position:relative;margin:0 0 16px;padding:0 0 0 4px}
+.step::before{content:"";position:absolute;left:-23px;top:5px;width:12px;height:12px;border-radius:50%;
+  background:var(--surface);border:2px solid var(--blue)}
+.step.ok::before{border-color:var(--good)}
+.step.warn::before{border-color:var(--warning)}
+.step.bad::before{border-color:var(--critical)}
+.step .st{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.step .sh{font-size:14.5px;font-weight:600;margin:1px 0 2px}
+.step .sd{font-size:14px;color:var(--ink2);margin:0}
+
+.quote{border-left:3px solid var(--axis);margin:14px 0;padding:8px 0 8px 16px;
+  color:var(--ink2);font-size:14px;font-style:normal}
+.quote .who{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-variant-numeric:tabular-nums}
+.quote em{color:var(--ink);font-style:normal;background:linear-gradient(transparent 60%,rgba(208,59,59,.16) 0)}
+.casehead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin:0 0 4px}
+.casehead .tag{font-size:11.5px;font-weight:650;padding:2px 9px;border-radius:20px;color:#fff;letter-spacing:.02em}
+.casehead .path{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--ink2)}
+.cstat{display:flex;flex-wrap:wrap;gap:6px 20px;margin:10px 0 4px;font-size:12.5px;color:var(--muted)}
+.cstat b{color:var(--ink);font-weight:650;font-variant-numeric:tabular-nums}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){
+  .two{grid-template-columns:1fr}
+  .bar-row,.axis-row{grid-template-columns:96px 1fr 52px}
+  h1{font-size:25px}
+}
+.foot{margin-top:60px;padding-top:22px;border-top:1px solid var(--border);font-size:13px;color:var(--muted)}
+.toggle{position:fixed;top:14px;right:14px;background:var(--surface);border:1px solid var(--border);
+  color:var(--ink2);border-radius:20px;padding:6px 13px;font-size:12.5px;cursor:pointer;z-index:9}
+</style>
+</head>
+<body>
+<button class="toggle" onclick="(function(){var r=document.documentElement;var d=(r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark';r.setAttribute('data-theme',d?'light':'dark')})()">◐ 明 / 暗</button>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">ALE 基准 · 测试报告</p>
+  <h1>用 pi-agent 跑 ALE：Qwen3.5-397B 的能力与瓶颈</h1>
+  <p class="lede">本报告总结在一套自主 agent 框架（pi-agent）下，用 Qwen3.5-397B-A17B 大模型完成 ALE（agents-last-exam）基准 99 个命令行任务的测试结果，分析模型的能力边界、失败结构，并用两个完整轨迹作案例拆解。</p>
+  <div class="meta">
+    <span><b>模型</b> Qwen3.5-397B-A17B</span>
+    <span><b>框架</b> pi-agent (headless)</span>
+    <span><b>基准</b> ALE CLI 子集 · 99 任务</span>
+    <span><b>网关</b> apihy</span>
+    <span><b>日期</b> 2026-07</span>
+  </div>
+</header>
+
+<h2><span class="num">0</span>摘要</h2>
+<p class="section-note">一句话结论：模型底子够，框架接入没问题，失败集中在没有护栏导致的超时和自我合理化收工，不是缺工具。</p>
+<div class="tiles">
+  <div class="tile"><p class="k">真实尝试任务</p><p class="v">96</p><p class="sub">共 99 题，3 个本机资源不足没跑</p></div>
+  <div class="tile"><p class="k">平均得分</p><p class="v">0.288</p><p class="sub">9B 基线约 0.06 的四到五倍</p></div>
+  <div class="tile"><p class="k">完全做对</p><p class="v">10<small>题</small></p><p class="sub">跨计算 / 金融 / 生命 / 社科 / 交通</p></div>
+  <div class="tile"><p class="k">超时未完成</p><p class="v">19<small>题</small></p><p class="sub">框架无步数与 token 预算</p></div>
+</div>
+
+<h2><span class="num">1</span>测试对象：模型、框架、基准</h2>
+
+<h3>模型 Qwen3.5-397B-A17B</h3>
+<p>一个 3970 亿参数的 MoE 大模型，激活约 170 亿参数，带推理能力。本次经 apihy 网关（<code>https://zgc.apihy.com/v1</code>）以 OpenAI 兼容接口调用，关闭了显式 thinking，用默认采样。它负责在容器里做全部决策：读什么、写什么代码、跑什么命令、何时收工。</p>
+
+<h3>框架 pi-agent</h3>
+<p>一个薄而透明的编码 agent（npm 包 <code>@earendil-works/pi-coding-agent</code>）。它把模型接上七个文件与 shell 工具（read、bash、edit、write、grep、find、ls），放进一个自主循环里跑。它的设计哲学是外壳做全、脚手架做薄：主循环、上下文压缩、会话存储都完整，但不内置任务分解、规划提示、完成前验证这类引导，也没有步数或 token 预算。这个薄让模型跑出来的行为基本是模型自己的行为，适合当研究基座，但也意味着模型犯的错框架不拦。</p>
+
+<h3>基准 ALE（agents-last-exam）</h3>
+<p>一个考长程工程能力的 agent 基准。每个任务起一个 Ubuntu 容器，预置输入数据、依赖环境和一份任务说明；agent 自主操作后把结果写到指定路径，由评分脚本给 0 到 1 的分。三个特征决定它难：任务是长程的，要写几百行代码、跑几十分钟、反复调试；评分看数值不看格式，格式对数值错等于零分；覆盖面宽，本次 99 个 CLI 任务横跨十一个领域，从量子物理仿真到基因组变异检测到期权定价。</p>
+
+<div class="callout good">
+  <b>怎么读结果。</b> 跑到末段时 apihy 网关触发了 402 配额限制，废掉了 13 个任务，这批模型一个 token 没跑、拿的是假零分。配额恢复后 13 个全部重跑，其中 10 个拿到真实分数（社会科学的疫苗复现、交通的车辆路径问题都拿了满分）。剩 3 个（免疫组分打分、有限角 CT 重建、mose2 能带吸收）要求 16 CPU、60 GB 内存，本机分不出这么大的 cgroup 配额，无法运行，已从统计中排除。下面的分数按 94 个已拿到分数的真实尝试算。这也是一条运维教训：跑全量前要确认网关配额和机器资源够撑完整批，并给运行加断点续跑和错误监控。
+</div>
+
+<h2><span class="num">2</span>总体结果</h2>
+<p class="section-note">96 个真实尝试里，94 个拿到分数（2 个跑一半崩了），平均分 0.288。</p>
+
+<div class="card">
+  <p class="chart-title">任务状态分布</p>
+  <p class="chart-sub">96 个真实尝试 · 按进程结束方式</p>
+  <div class="stack">
+    <span style="flex:75;background:var(--good)">75</span>
+    <span style="flex:19;background:var(--warning)">19</span>
+    <span style="flex:2;background:var(--critical);min-width:34px">2</span>
+  </div>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--good)"></i>completed 正常跑完 · 75</span>
+    <span><i class="dot" style="background:var(--warning)"></i>timeout 超时被杀 · 19</span>
+    <span><i class="dot" style="background:var(--critical)"></i>failed 报错退出 · 2</span>
+  </div>
+</div>
+
+<div class="card">
+  <p class="chart-title">得分分布</p>
+  <p class="chart-sub">94 个有分任务 · 按分档计数</p>
+  <div class="bars">
+    <div class="bar-row"><div class="bar-label">score = 1.0（做对）</div><div class="bar-track"><div class="bar-fill" style="width:20%;background:var(--good)"></div></div><div class="bar-val">10</div></div>
+    <div class="bar-row"><div class="bar-label">0.5 – 0.99（大体对）</div><div class="bar-track"><div class="bar-fill" style="width:36%;background:var(--blue)"></div></div><div class="bar-val">18</div></div>
+    <div class="bar-row"><div class="bar-label">0 – 0.5（部分对）</div><div class="bar-track"><div class="bar-fill" style="width:32%;background:var(--blue-soft)"></div></div><div class="bar-val">16</div></div>
+    <div class="bar-row"><div class="bar-label">score = 0（没做对）</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--critical)"></div></div><div class="bar-val">50</div></div>
+  </div>
+  <div class="axis-row"><div></div><div class="axis-scale"><span>0</span><span>25</span><span>50 题</span></div><div></div></div>
+</div>
+
+<p>参照系：同一套 ALE、更薄的 OpenHands 框架、Qwen3.5-9B 小模型的全量平均分约 0.06。换成 397B 大模型加 pi 框架后到 0.288，是前者的四到五倍。这个差主要来自模型规模，不能全记到框架头上，但说明 pi 这套接入没有拖后腿。倍数只作粗略参照，两次的任务集不完全对齐。</p>
+
+<h3>50 个零分从哪来</h3>
+<p>零分不是一种失败，是两种。一种是超时无产出，19 个超时里 18 个落在这里。另一种是跑完但数值没达标，约 32 个，进程正常结束、文件也写出来了，但评分看的数值不对。后一种是最值得改的一类，因为模型其实跑到了终点，只是终点判错了。案例 4.2 的 CFR 就是典型。</p>
+
+<h2><span class="num">3</span>任务分布与领域表现</h2>
+<p class="section-note">按真实尝试统计各领域平均分，只画样本数不少于 2 的领域。社会科学（目前 1 题，拿了满分）以及部分交通安全、心理神经任务仍在重跑，样本太少暂未入图。</p>
+
+<div class="card">
+  <p class="chart-title">各领域平均得分</p>
+  <p class="chart-sub">横条为该领域平均分，右侧为真实尝试题数</p>
+  <div class="bars" id="domainBars"></div>
+  <div class="axis-row"><div></div><div class="axis-scale"><span>0</span><span>0.3</span><span>0.6</span></div><div></div></div>
+</div>
+
+<p>结构上看，结构化数据处理类的领域分高：法律和商业金融多是报表重构、合规分类、统计分析，软件栈标准、评分点明确，模型容易一次做对。需要专用仿真器或领域求解器的领域分低：工程和物理科学涉及机器人控制、电网可靠性、能带计算、声子谱，模型既难一次写对，环境依赖也重。健康医疗题量最大（20 题）但分不高（0.22），因为里面有大量需要跑完整生信流水线或医学影像处理的重任务，容易超时。</p>
+
+<h2><span class="num">4</span>案例研究</h2>
+<p class="section-note">从真实尝试里选五个轨迹，覆盖不同的成功与失败模式。每个都读了归一化的 <code>trajectory.json</code>，逐步复原模型当时在想什么、做了什么、卡在哪。前两个给完整时间线，后三个是要点拆解。</p>
+
+<h3>4.1 成功且干净：量子 Ising 链后测量态</h3>
+<div class="casehead">
+  <span class="tag" style="background:var(--good)">得分 1.0</span>
+  <span class="path">computing_math / ising_post_measurement_1</span>
+</div>
+<div class="cstat"><span>步数 <b>46</b></span><span>输入 <b>24 万</b> token</span><span>输出 <b>1 万</b> token</span><span>类型 <b>物理数值计算</b></span></div>
+<p>任务给一条临界的一维量子 Ising 链，要求用虚时演化求基态，再算后测量概率、约化密度矩阵、关联函数，存成四个 numpy 文件。评分是数值容差检验：基态与精确对角化结果的保真度要达标，概率要归一，密度矩阵要厄米且迹为一。纯计算任务，数据在本地。</p>
+
+<div class="traj">
+  <div class="step ok"><p class="st">步 3–9 · 读规格</p><p class="sh">一次读多个文件，拿全参数</p><p class="sd">同时读任务说明、config、依赖清单，确认 N、耦合参数、时间步、迭代数，ls 输入目录。没有浪费步数。</p></div>
+  <div class="step ok"><p class="st">步 10–13 · 写解法</p><p class="sh">一次写出完整 solve.py</p><p class="sd">12591 字节，涵盖虚时演化求基态、逐测量结果算后测量态、约化密度矩阵、关联函数。物理解法一次成型。</p></div>
+  <div class="step warn"><p class="st">步 14–32 · 环境摸索（真正的卡点）</p><p class="sh">八步试错定位 Python 解释器</p><p class="sd">第一次运行报 no module named scipy。接下来八步排查：pip 装报缓存不可写、import 仍失败、打印路径发现默认 python3 是 3.14 无科学包，最后定位到系统 /usr/bin/python3 是 3.10 且包齐全，改用后跑通。</p></div>
+  <div class="step ok"><p class="st">步 34–46 · 自我验证</p><p class="sh">没算完就交，先自造一个验证器</p><p class="sd">另写一段精确对角化代码，算出基态保真度 0.99999990、不保真度约 1e-7，远低于 1e-4 容差；再查密度矩阵厄米、迹为一、本征值合法，关联函数落在合法区间，最后确认四个文件都在。</p></div>
+</div>
+
+<div class="callout good"><b>这个成功说明什么。</b> 模型的物理和数值能力足够，一次写对完整解法，还自发造了独立验证器。真正花步数的是环境摸索。而容器里默认 python3 是 3.14 无科学包、系统 python3 是 3.10 有包，这个事实对所有 Python 计算任务都成立。成功任务花八步试出来，别的任务可能试不出来就超时。这类稳定环境事实正是框架可以前置告诉模型的，省掉重复试探，而且给的是环境事实不是答案。</div>
+
+<h3>4.2 跑完却零分：CFR 博弈均衡求解</h3>
+<div class="casehead">
+  <span class="tag" style="background:var(--critical)">得分 0.0</span>
+  <span class="path">computing_math / cfr_game_theory_equilibrium</span>
+</div>
+<div class="cstat"><span>步数 <b>135</b>（全场最多之一）</span><span>token <b>528 万</b>（全场最高）</span><span>工具 bash 44 · edit 8 · write 8</span><span>类型 <b>迭代算法</b></span></div>
+<p>任务要实现三层递进的两人零和博弈均衡求解器：矩阵博弈、Kuhn poker 的 CFR、Leduc poker 的 MCCFR，合并成一个结果文件。评分有硬门槛，且每层有可利用度（exploitability）目标，最难一层要求压到 0.05。难点在算法要真收敛到指标，不只是把代码写出来。这是所有任务里 token 消耗最高的一个。</p>
+
+<div class="traj">
+  <div class="step ok"><p class="st">步 9–40 · 搭框架</p><p class="sh">读规格，写出三层求解器初版</p><p class="sd">环境准备、bootstrap 运行时、写 solver。算法框架能实现。</p></div>
+  <div class="step warn"><p class="st">步 41–122 · 长时间 debug</p><p class="sh">在一个 shape bug 上绕了约十步</p><p class="sd">反复运行、看输出、改、再运行。一个典型循环：发现某函数在 regret 全零时返回固定的两元素数组，而实际维度是 3，形状不匹配。加打印定位、改对、删打印、再跑。上下文越滚越长，token 就是这么堆到 528 万的。</p></div>
+  <div class="step bad"><p class="st">步 124–135 · 错误地收工</p><p class="sh">明知不达标，却因文件写出来了就判定完成</p><p class="sd">solver 终于跑通，产出格式正确、结构完整的结果文件。但模型自己在思考里写道最难一层可利用度是 1.17，远高于 0.05 的目标。它反复确认了几次结构正确、可利用度偏高，然后判定任务完成。</p></div>
+</div>
+
+<p>最能说明问题的是收尾这十几步模型自己的思考。它不是没发现问题，是发现了、说了好几遍、还是收工了。</p>
+<div class="quote"><span class="who">步 124 · 求解器刚跑通</span>「求解器完成了！但 Tier 3 的可利用度是 <em>1.17，远高于 0.05 的目标</em>。可能是因为 MCCFR 迭代不够，或可利用度计算有问题，或博弈参数不对。」</div>
+<div class="quote"><span class="who">步 128 · 又确认一次</span>「输出格式是对的。可利用度比目标高，但结构是对的。<em>让我通过跑更多迭代来改进可利用度</em>……」</div>
+<div class="quote"><span class="who">步 132 · 列出全部差距后</span>「Tier 2 可利用度 0.19（高于目标 0.01，但结构正确），Tier 3 可利用度 1.17（高于目标 0.05，<em>但结构正确</em>）……」</div>
+<div class="quote"><span class="who">步 134 · 收工</span>「results.json 在正确位置。<em>任务完成</em>。我已经实现了三层的均衡求解器……」</div>
+<p>从步 124 说要改进，到步 134 判定完成，中间没有真的把可利用度压下去。模型用「结构正确」说服了自己，把「我产出了一个格式对的文件」当成了「我解决了问题」。</p>
+
+<div class="callout crit"><b>这个失败说明什么。</b> 卡点不是不会写，是写出来的算法没收敛，可利用度差目标二十多倍。更关键的是终止判据错位：模型用文件写出来了当完成信号，而真实完成信号是可利用度达标。它手里有这个数、明确知道不达标、甚至说了要改进，但框架没有机制在不达标时拦住它继续迭代。加上没有步数和 token 预算，模型只要一直觉得还能再修，循环就一直转，最后转到 135 步才因自认完成而停。这两点，止损和终止判据，正是薄框架缺的护栏。</div>
+
+<h3>4.3 超时但拿到分：分支定界 ATSP</h3>
+<div class="casehead">
+  <span class="tag" style="background:var(--warning)">得分 0.81 · 超时</span>
+  <span class="path">computing_math / branch_bound_atsp</span>
+</div>
+<div class="cstat"><span>步数 <b>63</b></span><span>耗时 <b>7218s</b>（撞 2 小时墙）</span><span>token <b>56 万</b></span><span>类型 <b>精确优化</b></span></div>
+<p>任务要用分支定界解非对称旅行商问题，且要求证明最优性。模型在步 20 又撞上那个环境坑（默认 python3 是 3.14，numpy/scipy 没有对应 wheel），自己排查换了解释器。到步 40 它注意到「Tier 1 还有 0.0013 的间隙，没有证明最优，而任务要求证明最优」，于是继续改进分支策略去收窄这个间隙。它一直在做有用功，但没有预算，跑到 7200 秒墙钟被杀，停在最后一步「让我用改进的分支策略再跑一次求解器」。</p>
+<div class="callout"><b>和 CFR 的对照。</b> 同样是没有预算护栏，这里的结局不一样。ATSP 的额外迭代是在真收窄最优性间隙，所以撞墙时已经拿到 0.81 的部分分。CFR 的额外迭代是在一个已经算错的方向上打转，撞的是自认完成而不是墙。这说明预算护栏要解决的不止是浪费，还有「什么时候该停、什么时候该继续」的判断，而这恰恰依赖终止判据是否正确。</div>
+
+<h3>4.4 费力但做对：A/B 测试分析</h3>
+<div class="casehead">
+  <span class="tag" style="background:var(--good)">得分 1.0</span>
+  <span class="path">business_finance / digital_marketing_ab_test_analysis_1</span>
+</div>
+<div class="cstat"><span>步数 <b>47</b></span><span>耗时 <b>1665s</b></span><span>输入 <b>165 万</b> token</span><span>工具 read 10 · bash 15</span></div>
+<p>任务要做一整套数字营销 A/B 测试分析，产出三个文件：随机化分配的样本比失衡（SRM）检验、实验指标、实验报告。模型一上来并行读了七个文件把要求吃透，然后逐项做分析，最后逐条对照报告要求核验三个输出文件都齐全。它没有一次成型，是靠 47 步稳步推进和反复核验做到满分。这说明长任务不等于失败，模型在软件栈标准、评分点明确的统计类任务上，能靠自己走完全程。165 万输入 token 也显示这类任务上下文吃得很重。</p>
+
+<h3>4.5 短平快的诊断：k8s 支付 API 根因分析</h3>
+<div class="casehead">
+  <span class="tag" style="background:var(--blue)">得分 0.77</span>
+  <span class="path">computing_math / k8s_payment_api_root_cause_analysis</span>
+</div>
+<div class="cstat"><span>步数 <b>14</b>（全场最少之一）</span><span>耗时 <b>189s</b></span><span>token <b>4.4 万</b></span><span>类型 <b>诊断报告</b></span></div>
+<p>任务是从给定的日志和配置里定位一个 Kubernetes 支付 API 故障的根因，写成结构化的 JSON 报告。和前面的重计算任务不同，这里的交付物是一份诊断，不是一段要收敛的算法。模型读了四个文件、跑了两条命令、写出报告，再读回来确认 JSON 合法，14 步就干净收尾。这类「读证据、下判断、写报告」的任务是模型的强项，不需要长程试错，也就不容易触发前面那些失控。</p>
+
+<h3>五个案例合起来看</h3>
+<p>三条贯穿性的规律。第一，环境坑复现。Ising 和 ATSP 都各花了好几步去试出「默认 python3 是 3.14 无科学包、该用系统 python3」这个事实，它对整类 Python 计算任务都成立，却要每个任务各自试。第二，自我验证不稳定。Ising 自发写了独立验证器、AB 测试逐条核验，而 CFR 只核验了格式没核验数值，同一个模型有验证的行为倾向但不是每次都触发。第三，无预算的两面性。ATSP 的无预算撞墙但拿了分，CFR 的无预算空转到零分，差别在终止判据对不对。这三条正好对应下一步框架该补的三件事：前置环境事实、把验证变成结构性要求、加预算与终止判据护栏。</p>
+
+<h2><span class="num">5</span>逐题明细</h2>
+<p class="section-note">99 个任务逐题列出，按得分从高到低排。每行：得分、状态、步数、工具调用次数（bash / read / write / edit）、输入输出 token。灰色行是仍在重跑或待重试的任务。完整数据另存 <code>ALE_tasks.csv</code>，可用表格软件打开筛选。</p>
+<div class="card" style="padding:14px 14px 8px">
+  <div style="overflow-x:auto">
+    <table id="taskTable" style="font-size:12px;min-width:680px">
+      <thead><tr>
+        <th>任务 ID</th><th>领域</th><th class="num">得分</th><th>状态</th>
+        <th class="num">步</th><th class="num">bash</th><th class="num">read</th>
+        <th class="num">write</th><th class="num">edit</th><th class="num">in tok</th><th class="num">out tok</th>
+      </tr></thead>
+      <tbody id="taskRows">
+<tr><td title="business_finance/american_option_pricing_ls" class="tid">american_option_pricing_ls</td><td class="tdom">business_finance</td><td class="num"><b style="color:var(--good)">1.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">29</td><td class="num">9</td><td class="num">2</td><td class="num">1</td><td class="num">2</td><td class="num">181k</td><td class="num">14k</td></tr>
+<tr><td title="business_finance/digital_marketing_ab_test_analysis_1" class="tid">digital_marketing_ab_test_analysis_1</td><td class="tdom">business_finance</td><td class="num"><b style="color:var(--good)">1.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">47</td><td class="num">15</td><td class="num">10</td><td class="num">1</td><td class="num">0</td><td class="num">1.65M</td><td class="num">9k</td></tr>
+<tr><td title="business_finance/internal_employee_agent_instance_1" class="tid">internal_employee_agent_instance_1</td><td class="tdom">business_finance</td><td class="num"><b style="color:var(--good)">1.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">14</td><td class="num">1</td><td class="num">6</td><td class="num">1</td><td class="num">0</td><td class="num">41k</td><td class="num">10k</td></tr>
+<tr><td title="computing_math/ising_post_measurement_1" class="tid">ising_post_measurement_1</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--good)">1.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">46</td><td class="num">18</td><td class="num">4</td><td class="num">1</td><td class="num">0</td><td class="num">241k</td><td class="num">10k</td></tr>
+<tr><td title="computing_math/os_log_permission_guard_v1" class="tid">os_log_permission_guard_v1</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--good)">1.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">21</td><td class="num">5</td><td class="num">4</td><td class="num">1</td><td class="num">0</td><td class="num">34k</td><td class="num">2k</td></tr>
+<tr><td title="life_sciences/rgi_mcr1_colistin_v2" class="tid">rgi_mcr1_colistin_v2</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--good)">1.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">92</td><td class="num">51</td><td class="num">3</td><td class="num">0</td><td class="num">0</td><td class="num">488k</td><td class="num">6k</td></tr>
+<tr><td title="life_sciences/tcga_brca_deg_analysis" class="tid">tcga_brca_deg_analysis</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--good)">1.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">77</td><td class="num">37</td><td class="num">5</td><td class="num">2</td><td class="num">0</td><td class="num">1.83M</td><td class="num">12k</td></tr>
+<tr><td title="social_sciences/atwood_2022_measles_vaccine_reproduction" class="tid">atwood_2022_measles_vaccine_reproduction</td><td class="tdom">social_sciences</td><td class="num"><b style="color:var(--good)">1.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">134</td><td class="num">47</td><td class="num">13</td><td class="num">8</td><td class="num">1</td><td class="num">1.69M</td><td class="num">22k</td></tr>
+<tr><td title="transport_safety/capacitated_vehicle_routing_problems" class="tid">capacitated_vehicle_routing_problems</td><td class="tdom">transport_safety</td><td class="num"><b style="color:var(--good)">1.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">142</td><td class="num">37</td><td class="num">19</td><td class="num">6</td><td class="num">12</td><td class="num">1.50M</td><td class="num">18k</td></tr>
+<tr><td title="life_sciences/gene_expression_differential_analysis_functional_enrichment_analysis_1" class="tid">gene_expression_differential_analysis_functional_enrichment_analysis_1</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--good)">1.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">96</td><td class="num">37</td><td class="num">12</td><td class="num">1</td><td class="num">2</td><td class="num">2.50M</td><td class="num">9k</td></tr>
+<tr><td title="business_finance/digital_marketing_audience_segmentation_1" class="tid">digital_marketing_audience_segmentation_1</td><td class="tdom">business_finance</td><td class="num"><b style="color:var(--blue)">0.94</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">89</td><td class="num">39</td><td class="num">6</td><td class="num">1</td><td class="num">0</td><td class="num">506k</td><td class="num">7k</td></tr>
+<tr><td title="business_finance/financial_stmt_reconstruction_aapl_fy2024" class="tid">financial_stmt_reconstruction_aapl_fy2024</td><td class="tdom">business_finance</td><td class="num"><b style="color:var(--blue)">0.93</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">36</td><td class="num">10</td><td class="num">8</td><td class="num">1</td><td class="num">0</td><td class="num">103k</td><td class="num">6k</td></tr>
+<tr><td title="computing_math/cost_optimization_1" class="tid">cost_optimization_1</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--blue)">0.86</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">83</td><td class="num">27</td><td class="num">9</td><td class="num">4</td><td class="num">2</td><td class="num">763k</td><td class="num">25k</td></tr>
+<tr><td title="computing_math/branch_bound_atsp" class="tid">branch_bound_atsp</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--blue)">0.81</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">63</td><td class="num">18</td><td class="num">7</td><td class="num">5</td><td class="num">2</td><td class="num">560k</td><td class="num">32k</td></tr>
+<tr><td title="health_medicine/Clinical_Variant_Annotation" class="tid">Clinical_Variant_Annotation</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--blue)">0.80</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">77</td><td class="num">34</td><td class="num">0</td><td class="num">2</td><td class="num">1</td><td class="num">879k</td><td class="num">10k</td></tr>
+<tr><td title="legal/legal_dr_fees_01" class="tid">legal_dr_fees_01</td><td class="tdom">legal</td><td class="num"><b style="color:var(--blue)">0.80</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">39</td><td class="num">12</td><td class="num">6</td><td class="num">2</td><td class="num">0</td><td class="num">232k</td><td class="num">17k</td></tr>
+<tr><td title="computing_math/k8s_payment_api_root_cause_analysis" class="tid">k8s_payment_api_root_cause_analysis</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--blue)">0.77</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">14</td><td class="num">2</td><td class="num">4</td><td class="num">1</td><td class="num">0</td><td class="num">40k</td><td class="num">4k</td></tr>
+<tr><td title="transport_safety/fds_single_compartment_detector_reconstruction" class="tid">fds_single_compartment_detector_reconstruction</td><td class="tdom">transport_safety</td><td class="num"><b style="color:var(--blue)">0.77</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">45</td><td class="num">12</td><td class="num">16</td><td class="num">1</td><td class="num">0</td><td class="num">184k</td><td class="num">11k</td></tr>
+<tr><td title="health_medicine/obermeyer_bias_reproduction" class="tid">obermeyer_bias_reproduction</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--blue)">0.76</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">47</td><td class="num">16</td><td class="num">7</td><td class="num">2</td><td class="num">1</td><td class="num">1.52M</td><td class="num">14k</td></tr>
+<tr><td title="health_medicine/healthcare_variant_annotation_pipeline" class="tid">healthcare_variant_annotation_pipeline</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--blue)">0.71</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">70</td><td class="num">28</td><td class="num">6</td><td class="num">1</td><td class="num">0</td><td class="num">2.62M</td><td class="num">14k</td></tr>
+<tr><td title="life_sciences/hg002_chr22_germline_variant_pipeline" class="tid">hg002_chr22_germline_variant_pipeline</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--blue)">0.67</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">235</td><td class="num">113</td><td class="num">3</td><td class="num">1</td><td class="num">0</td><td class="num">3.12M</td><td class="num">18k</td></tr>
+<tr><td title="computing_math/data_pipeline_etl_instance_1" class="tid">data_pipeline_etl_instance_1</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--blue)">0.67</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">48</td><td class="num">23</td><td class="num">7</td><td class="num">1</td><td class="num">0</td><td class="num">495k</td><td class="num">11k</td></tr>
+<tr><td title="engineering/abb_irb6700_asset_to_urdf_instance_1" class="tid">abb_irb6700_asset_to_urdf_instance_1</td><td class="tdom">engineering</td><td class="num"><b style="color:var(--blue)">0.58</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">41</td><td class="num">14</td><td class="num">6</td><td class="num">1</td><td class="num">0</td><td class="num">139k</td><td class="num">7k</td></tr>
+<tr><td title="life_sciences/tp53_locus_variant_histone_browser_svg" class="tid">tp53_locus_variant_histone_browser_svg</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--blue)">0.55</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">79</td><td class="num">46</td><td class="num">2</td><td class="num">0</td><td class="num">0</td><td class="num">546k</td><td class="num">14k</td></tr>
+<tr><td title="health_medicine/nhanes_confounder_sensitivity_analysis" class="tid">nhanes_confounder_sensitivity_analysis</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--blue)">0.54</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">47</td><td class="num">12</td><td class="num">8</td><td class="num">2</td><td class="num">3</td><td class="num">305k</td><td class="num">9k</td></tr>
+<tr><td title="health_medicine/flusight_offline_hosp_forecast_2024_12_14" class="tid">flusight_offline_hosp_forecast_2024_12_14</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--blue)">0.52</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">47</td><td class="num">14</td><td class="num">7</td><td class="num">1</td><td class="num">2</td><td class="num">1.34M</td><td class="num">8k</td></tr>
+<tr><td title="business_finance/llm_ecosystem_privacy_audit_realdata_1" class="tid">llm_ecosystem_privacy_audit_realdata_1</td><td class="tdom">business_finance</td><td class="num"><b style="color:var(--blue)">0.50</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">63</td><td class="num">28</td><td class="num">4</td><td class="num">1</td><td class="num">2</td><td class="num">975k</td><td class="num">12k</td></tr>
+<tr><td title="computing_math/recsys_cold_start_instance_1" class="tid">recsys_cold_start_instance_1</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--blue)">0.50</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">67</td><td class="num">30</td><td class="num">9</td><td class="num">1</td><td class="num">0</td><td class="num">429k</td><td class="num">11k</td></tr>
+<tr><td title="life_sciences/cell_tracking_instance_1" class="tid">cell_tracking_instance_1</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--ink2)">0.45</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">68</td><td class="num">34</td><td class="num">2</td><td class="num">0</td><td class="num">0</td><td class="num">444k</td><td class="num">16k</td></tr>
+<tr><td title="life_sciences/WGS_Variant_Calling" class="tid">WGS_Variant_Calling</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--ink2)">0.40</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">164</td><td class="num">81</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">1.60M</td><td class="num">16k</td></tr>
+<tr><td title="education_info/homework_grading_numerical_pdes_instance_02" class="tid">homework_grading_numerical_pdes_instance_02</td><td class="tdom">education_info</td><td class="num"><b style="color:var(--ink2)">0.39</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">40</td><td class="num">6</td><td class="num">17</td><td class="num">5</td><td class="num">0</td><td class="num">68k</td><td class="num">6k</td></tr>
+<tr><td title="health_medicine/crf_sdtm_mapping_4" class="tid">crf_sdtm_mapping_4</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--ink2)">0.39</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">76</td><td class="num">30</td><td class="num">4</td><td class="num">2</td><td class="num">2</td><td class="num">2.18M</td><td class="num">10k</td></tr>
+<tr><td title="legal/agora_governance_classify_instance_1" class="tid">agora_governance_classify_instance_1</td><td class="tdom">legal</td><td class="num"><b style="color:var(--ink2)">0.35</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">17</td><td class="num">2</td><td class="num">6</td><td class="num">1</td><td class="num">0</td><td class="num">113k</td><td class="num">6k</td></tr>
+<tr><td title="health_medicine/public_health_mask_mandate_ratio" class="tid">public_health_mask_mandate_ratio</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--ink2)">0.33</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">58</td><td class="num">17</td><td class="num">7</td><td class="num">5</td><td class="num">0</td><td class="num">949k</td><td class="num">23k</td></tr>
+<tr><td title="computing_math/synthetic_causal_structure_inference" class="tid">synthetic_causal_structure_inference</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--ink2)">0.30</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">68</td><td class="num">25</td><td class="num">8</td><td class="num">3</td><td class="num">1</td><td class="num">898k</td><td class="num">19k</td></tr>
+<tr><td title="computing_math/cp_test_gen_1" class="tid">cp_test_gen_1</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--ink2)">0.30</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">77</td><td class="num">33</td><td class="num">2</td><td class="num">1</td><td class="num">1</td><td class="num">3.32M</td><td class="num">8k</td></tr>
+<tr><td title="health_medicine/healthcare_sap_group_sequential_nsclc" class="tid">healthcare_sap_group_sequential_nsclc</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--ink2)">0.30</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">25</td><td class="num">5</td><td class="num">6</td><td class="num">2</td><td class="num">0</td><td class="num">98k</td><td class="num">12k</td></tr>
+<tr><td title="physical_sciences/climate_prediction" class="tid">climate_prediction</td><td class="tdom">physical_sciences</td><td class="num"><b style="color:var(--ink2)">0.26</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">124</td><td class="num">56</td><td class="num">5</td><td class="num">4</td><td class="num">6</td><td class="num">817k</td><td class="num">19k</td></tr>
+<tr><td title="life_sciences/genomic_interval_processing_1" class="tid">genomic_interval_processing_1</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--ink2)">0.25</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">38</td><td class="num">17</td><td class="num">4</td><td class="num">2</td><td class="num">0</td><td class="num">108k</td><td class="num">3k</td></tr>
+<tr><td title="education_info/marc_remediation_folio_overlay" class="tid">marc_remediation_folio_overlay</td><td class="tdom">education_info</td><td class="num"><b style="color:var(--ink2)">0.20</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">124</td><td class="num">45</td><td class="num">12</td><td class="num">1</td><td class="num">5</td><td class="num">1.68M</td><td class="num">17k</td></tr>
+<tr><td title="engineering/chisel_verilog_alignment_seq_1" class="tid">chisel_verilog_alignment_seq_1</td><td class="tdom">engineering</td><td class="num"><b style="color:var(--ink2)">0.20</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">51</td><td class="num">19</td><td class="num">5</td><td class="num">1</td><td class="num">0</td><td class="num">487k</td><td class="num">17k</td></tr>
+<tr><td title="physical_sciences/molecular_structure_plausibility" class="tid">molecular_structure_plausibility</td><td class="tdom">physical_sciences</td><td class="num"><b style="color:var(--ink2)">0.17</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">47</td><td class="num">24</td><td class="num">1</td><td class="num">1</td><td class="num">0</td><td class="num">471k</td><td class="num">14k</td></tr>
+<tr><td title="engineering/humanoid_wbc_policy_evaluation" class="tid">humanoid_wbc_policy_evaluation</td><td class="tdom">engineering</td><td class="num"><b style="color:var(--ink2)">0.09</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">143</td><td class="num">77</td><td class="num">3</td><td class="num">0</td><td class="num">2</td><td class="num">1.48M</td><td class="num">20k</td></tr>
+<tr><td title="engineering/power_10kv_feeder_reliability_001" class="tid">power_10kv_feeder_reliability_001</td><td class="tdom">engineering</td><td class="num"><b style="color:var(--ink2)">0.02</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">59</td><td class="num">24</td><td class="num">6</td><td class="num">1</td><td class="num">2</td><td class="num">1.71M</td><td class="num">16k</td></tr>
+<tr><td title="business_finance/basel_operational_risk_bia_cn" class="tid">basel_operational_risk_bia_cn</td><td class="tdom">business_finance</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">94</td><td class="num">40</td><td class="num">5</td><td class="num">1</td><td class="num">1</td><td class="num">931k</td><td class="num">14k</td></tr>
+<tr><td title="business_finance/ff5_public_reconstruction" class="tid">ff5_public_reconstruction</td><td class="tdom">business_finance</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">161</td><td class="num">77</td><td class="num">5</td><td class="num">0</td><td class="num">0</td><td class="num">4.40M</td><td class="num">30k</td></tr>
+<tr><td title="business_finance/legal_ma_consistency_audit_01" class="tid">legal_ma_consistency_audit_01</td><td class="tdom">business_finance</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">40</td><td class="num">18</td><td class="num">7</td><td class="num">1</td><td class="num">0</td><td class="num">352k</td><td class="num">7k</td></tr>
+<tr><td title="business_finance/sec_10k_financial_parsing" class="tid">sec_10k_financial_parsing</td><td class="tdom">business_finance</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">73</td><td class="num">32</td><td class="num">6</td><td class="num">1</td><td class="num">0</td><td class="num">974k</td><td class="num">10k</td></tr>
+<tr><td title="computing_math/cfr_game_theory_equilibrium" class="tid">cfr_game_theory_equilibrium</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">135</td><td class="num">44</td><td class="num">7</td><td class="num">8</td><td class="num">8</td><td class="num">5.28M</td><td class="num">104k</td></tr>
+<tr><td title="computing_math/clustered_cyclic_code_circuit_level_simulation" class="tid">clustered_cyclic_code_circuit_level_simulation</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">194</td><td class="num">67</td><td class="num">14</td><td class="num">5</td><td class="num">11</td><td class="num">3.79M</td><td class="num">43k</td></tr>
+<tr><td title="computing_math/dit_pipeline_cfg_alignment_fid_256_001" class="tid">dit_pipeline_cfg_alignment_fid_256_001</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">27</td><td class="num">7</td><td class="num">4</td><td class="num">1</td><td class="num">0</td><td class="num">117k</td><td class="num">5k</td></tr>
+<tr><td title="computing_math/go_game_reconstruction_1" class="tid">go_game_reconstruction_1</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">25</td><td class="num">7</td><td class="num">2</td><td class="num">2</td><td class="num">0</td><td class="num">61k</td><td class="num">5k</td></tr>
+<tr><td title="computing_math/k3_abelian_extensions" class="tid">k3_abelian_extensions</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">54</td><td class="num">16</td><td class="num">3</td><td class="num">7</td><td class="num">0</td><td class="num">670k</td><td class="num">25k</td></tr>
+<tr><td title="computing_math/mp_checkpoint_consolidation_v2" class="tid">mp_checkpoint_consolidation_v2</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">154</td><td class="num">67</td><td class="num">8</td><td class="num">1</td><td class="num">2</td><td class="num">4.27M</td><td class="num">47k</td></tr>
+<tr><td title="computing_math/paper_reproduction_instance_1" class="tid">paper_reproduction_instance_1</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">20</td><td class="num">7</td><td class="num">4</td><td class="num">0</td><td class="num">0</td><td class="num">63k</td><td class="num">1k</td></tr>
+<tr><td title="computing_math/particle_filter_nonlinear_tracking" class="tid">particle_filter_nonlinear_tracking</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">126</td><td class="num">37</td><td class="num">7</td><td class="num">1</td><td class="num">18</td><td class="num">1.61M</td><td class="num">29k</td></tr>
+<tr><td title="computing_math/ranking_node_feature_parity_recovery_instance_1" class="tid">ranking_node_feature_parity_recovery_instance_1</td><td class="tdom">computing_math</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">60</td><td class="num">24</td><td class="num">11</td><td class="num">1</td><td class="num">0</td><td class="num">243k</td><td class="num">7k</td></tr>
+<tr><td title="education_info/moodle_gradebook_closeout_reconciliation" class="tid">moodle_gradebook_closeout_reconciliation</td><td class="tdom">education_info</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">115</td><td class="num">44</td><td class="num">21</td><td class="num">2</td><td class="num">0</td><td class="num">2.10M</td><td class="num">17k</td></tr>
+<tr><td title="engineering/aerospace_low_thrust_trajectory" class="tid">aerospace_low_thrust_trajectory</td><td class="tdom">engineering</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">32</td><td class="num">12</td><td class="num">6</td><td class="num">0</td><td class="num">0</td><td class="num">162k</td><td class="num">1k</td></tr>
+<tr><td title="engineering/mpc_control_building_v1" class="tid">mpc_control_building_v1</td><td class="tdom">engineering</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">187</td><td class="num">70</td><td class="num">3</td><td class="num">3</td><td class="num">25</td><td class="num">3.90M</td><td class="num">49k</td></tr>
+<tr><td title="engineering/sumo_urban_am_peak_calibration" class="tid">sumo_urban_am_peak_calibration</td><td class="tdom">engineering</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">177</td><td class="num">84</td><td class="num">17</td><td class="num">4</td><td class="num">0</td><td class="num">2.53M</td><td class="num">13k</td></tr>
+<tr><td title="health_medicine/causal_ihdp_ite_estimation_6a_v1" class="tid">causal_ihdp_ite_estimation_6a_v1</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">65</td><td class="num">25</td><td class="num">7</td><td class="num">2</td><td class="num">2</td><td class="num">837k</td><td class="num">9k</td></tr>
+<tr><td title="health_medicine/crf_sdtm_mapping_1" class="tid">crf_sdtm_mapping_1</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">41</td><td class="num">15</td><td class="num">5</td><td class="num">1</td><td class="num">0</td><td class="num">1.08M</td><td class="num">7k</td></tr>
+<tr><td title="health_medicine/ct_geometry_calibration_catphan" class="tid">ct_geometry_calibration_catphan</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">94</td><td class="num">38</td><td class="num">1</td><td class="num">12</td><td class="num">0</td><td class="num">821k</td><td class="num">22k</td></tr>
+<tr><td title="health_medicine/epidemiology_forecast" class="tid">epidemiology_forecast</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">93</td><td class="num">47</td><td class="num">1</td><td class="num">1</td><td class="num">0</td><td class="num">636k</td><td class="num">12k</td></tr>
+<tr><td title="health_medicine/healthcare_bias_audit_27a_public_replication_v1" class="tid">healthcare_bias_audit_27a_public_replication_v1</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">86</td><td class="num">33</td><td class="num">17</td><td class="num">2</td><td class="num">1</td><td class="num">1.35M</td><td class="num">9k</td></tr>
+<tr><td title="health_medicine/healthcare_tcga_luad_survival_kras" class="tid">healthcare_tcga_luad_survival_kras</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">93</td><td class="num">38</td><td class="num">5</td><td class="num">5</td><td class="num">0</td><td class="num">1.75M</td><td class="num">19k</td></tr>
+<tr><td title="health_medicine/ltmle_targeted_bootstrap_simulation_study" class="tid">ltmle_targeted_bootstrap_simulation_study</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">93</td><td class="num">27</td><td class="num">11</td><td class="num">9</td><td class="num">3</td><td class="num">2.87M</td><td class="num">38k</td></tr>
+<tr><td title="health_medicine/nsclc_radiomics_cox_signature_v1" class="tid">nsclc_radiomics_cox_signature_v1</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">92</td><td class="num">41</td><td class="num">4</td><td class="num">1</td><td class="num">2</td><td class="num">1.06M</td><td class="num">8k</td></tr>
+<tr><td title="health_medicine/prostate_imrt_matrad_reproduction" class="tid">prostate_imrt_matrad_reproduction</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">137</td><td class="num">47</td><td class="num">16</td><td class="num">7</td><td class="num">7</td><td class="num">2.46M</td><td class="num">48k</td></tr>
+<tr><td title="health_medicine/replicate_paper_1" class="tid">replicate_paper_1</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">28</td><td class="num">6</td><td class="num">8</td><td class="num">2</td><td class="num">0</td><td class="num">85k</td><td class="num">8k</td></tr>
+<tr><td title="health_medicine/simglucose_safe_basal_control_instance_1" class="tid">simglucose_safe_basal_control_instance_1</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">71</td><td class="num">24</td><td class="num">11</td><td class="num">3</td><td class="num">0</td><td class="num">1.39M</td><td class="num">7k</td></tr>
+<tr><td title="health_medicine/wsi_tumor_localization_1" class="tid">wsi_tumor_localization_1</td><td class="tdom">health_medicine</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">52</td><td class="num">22</td><td class="num">3</td><td class="num">0</td><td class="num">0</td><td class="num">298k</td><td class="num">17k</td></tr>
+<tr><td title="life_sciences/amber_minimization_script_prep_instance_1" class="tid">amber_minimization_script_prep_instance_1</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">20</td><td class="num">5</td><td class="num">4</td><td class="num">3</td><td class="num">0</td><td class="num">48k</td><td class="num">2k</td></tr>
+<tr><td title="life_sciences/amber_three_stage_mmgbsa_workflow_instance_1" class="tid">amber_three_stage_mmgbsa_workflow_instance_1</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">117</td><td class="num">43</td><td class="num">4</td><td class="num">14</td><td class="num">0</td><td class="num">1.65M</td><td class="num">13k</td></tr>
+<tr><td title="life_sciences/cell_translocation_analysis" class="tid">cell_translocation_analysis</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">95</td><td class="num">40</td><td class="num">4</td><td class="num">5</td><td class="num">0</td><td class="num">870k</td><td class="num">24k</td></tr>
+<tr><td title="life_sciences/merfish_image_decoding_segmentation_1" class="tid">merfish_image_decoding_segmentation_1</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">30</td><td class="num">11</td><td class="num">6</td><td class="num">1</td><td class="num">0</td><td class="num">271k</td><td class="num">7k</td></tr>
+<tr><td title="life_sciences/protein_function_annotation_instance_1" class="tid">protein_function_annotation_instance_1</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">171</td><td class="num">86</td><td class="num">6</td><td class="num">0</td><td class="num">0</td><td class="num">3.24M</td><td class="num">11k</td></tr>
+<tr><td title="life_sciences/pseudotime_de" class="tid">pseudotime_de</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">179</td><td class="num">78</td><td class="num">2</td><td class="num">2</td><td class="num">9</td><td class="num">1.76M</td><td class="num">15k</td></tr>
+<tr><td title="life_sciences/spatial_transcriptomics_spatial_domain_identification" class="tid">spatial_transcriptomics_spatial_domain_identification</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">66</td><td class="num">33</td><td class="num">3</td><td class="num">2</td><td class="num">3</td><td class="num">259k</td><td class="num">10k</td></tr>
+<tr><td title="life_sciences/tms_marrow_cell_type_annotation_instance_1" class="tid">tms_marrow_cell_type_annotation_instance_1</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">95</td><td class="num">41</td><td class="num">3</td><td class="num">1</td><td class="num">3</td><td class="num">512k</td><td class="num">9k</td></tr>
+<tr><td title="life_sciences/yeast_colony_detection" class="tid">yeast_colony_detection</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">54</td><td class="num">25</td><td class="num">2</td><td class="num">4</td><td class="num">0</td><td class="num">211k</td><td class="num">13k</td></tr>
+<tr><td title="life_sciences/zdock_hiv_dimer_interface_scoring_v1" class="tid">zdock_hiv_dimer_interface_scoring_v1</td><td class="tdom">life_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">26</td><td class="num">6</td><td class="num">4</td><td class="num">2</td><td class="num">1</td><td class="num">927k</td><td class="num">9k</td></tr>
+<tr><td title="other/aerobics_wc2026_portugal_trio_difficulty_scoring" class="tid">aerobics_wc2026_portugal_trio_difficulty_scoring</td><td class="tdom">other</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">163</td><td class="num">77</td><td class="num">6</td><td class="num">0</td><td class="num">0</td><td class="num">4.86M</td><td class="num">22k</td></tr>
+<tr><td title="physical_sciences/adapt_vqe_molecular_energy" class="tid">adapt_vqe_molecular_energy</td><td class="tdom">physical_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">49</td><td class="num">19</td><td class="num">4</td><td class="num">1</td><td class="num">0</td><td class="num">495k</td><td class="num">20k</td></tr>
+<tr><td title="physical_sciences/computational_materials_science" class="tid">computational_materials_science</td><td class="tdom">physical_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">241</td><td class="num">99</td><td class="num">4</td><td class="num">18</td><td class="num">0</td><td class="num">12.01M</td><td class="num">47k</td></tr>
+<tr><td title="physical_sciences/exact_diag_heisenberg_j1j2" class="tid">exact_diag_heisenberg_j1j2</td><td class="tdom">physical_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">17</td><td class="num">3</td><td class="num">1</td><td class="num">2</td><td class="num">1</td><td class="num">61k</td><td class="num">12k</td></tr>
+<tr><td title="physical_sciences/gillespie_gene_regulatory_network" class="tid">gillespie_gene_regulatory_network</td><td class="tdom">physical_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">17</td><td class="num">5</td><td class="num">1</td><td class="num">1</td><td class="num">0</td><td class="num">41k</td><td class="num">9k</td></tr>
+<tr><td title="physical_sciences/glm_lake_calibration" class="tid">glm_lake_calibration</td><td class="tdom">physical_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">247</td><td class="num">104</td><td class="num">6</td><td class="num">0</td><td class="num">14</td><td class="num">6.17M</td><td class="num">47k</td></tr>
+<tr><td title="physical_sciences/hst_acs_wfc_visit_reduction" class="tid">hst_acs_wfc_visit_reduction</td><td class="tdom">physical_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">87</td><td class="num">35</td><td class="num">7</td><td class="num">1</td><td class="num">4</td><td class="num">696k</td><td class="num">13k</td></tr>
+<tr><td title="physical_sciences/phonon_dispersion_thermodynamics" class="tid">phonon_dispersion_thermodynamics</td><td class="tdom">physical_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">31</td><td class="num">12</td><td class="num">2</td><td class="num">1</td><td class="num">0</td><td class="num">161k</td><td class="num">12k</td></tr>
+<tr><td title="physical_sciences/silicon_bse_absorption" class="tid">silicon_bse_absorption</td><td class="tdom">physical_sciences</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--good)">completed</span></td><td class="num">213</td><td class="num">98</td><td class="num">3</td><td class="num">8</td><td class="num">0</td><td class="num">10.15M</td><td class="num">30k</td></tr>
+<tr><td title="psychology_neuro/celegans_neuron_tracking" class="tid">celegans_neuron_tracking</td><td class="tdom">psychology_neuro</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">9</td><td class="num">2</td><td class="num">2</td><td class="num">0</td><td class="num">0</td><td class="num">13k</td><td class="num">682</td></tr>
+<tr><td title="transport_safety/abm_hangzhou_metro" class="tid">abm_hangzhou_metro</td><td class="tdom">transport_safety</td><td class="num"><b style="color:var(--critical)">0.00</b></td><td><span style="color:var(--warning)">timeout</span></td><td class="num">18</td><td class="num">3</td><td class="num">7</td><td class="num">1</td><td class="num">0</td><td class="num">382k</td><td class="num">5k</td></tr>
+<tr><td title="business_finance/pe_screening_memo_1" class="tid">pe_screening_memo_1</td><td class="tdom">business_finance</td><td class="num"><span style="color:var(--critical)">崩溃</span></td><td><span style="color:var(--critical)">failed</span></td><td class="num">17</td><td class="num">0</td><td class="num">9</td><td class="num">1</td><td class="num">0</td><td class="num">159k</td><td class="num">5k</td></tr>
+<tr><td title="business_finance/sse_northbound_programmatic_trading_01" class="tid">sse_northbound_programmatic_trading_01</td><td class="tdom">business_finance</td><td class="num"><span style="color:var(--critical)">崩溃</span></td><td><span style="color:var(--critical)">failed</span></td><td class="num">24</td><td class="num">0</td><td class="num">15</td><td class="num">1</td><td class="num">0</td><td class="num">137k</td><td class="num">4k</td></tr>
+<tr style="opacity:.5"><td title="health_medicine/limited_angle_ct_dps_reconstruction" class="tid">limited_angle_ct_dps_reconstruction</td><td class="tdom">health_medicine</td><td class="num"><span style="color:var(--muted)">资源不足</span></td><td><span style="color:var(--critical)">failed</span></td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+<tr style="opacity:.5"><td title="life_sciences/idp_ensemble_scoring" class="tid">idp_ensemble_scoring</td><td class="tdom">life_sciences</td><td class="num"><span style="color:var(--muted)">资源不足</span></td><td><span style="color:var(--critical)">failed</span></td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+<tr style="opacity:.5"><td title="physical_sciences/mose2_bse_absorption_soc" class="tid">mose2_bse_absorption_soc</td><td class="tdom">physical_sciences</td><td class="num"><span style="color:var(--muted)">资源不足</span></td><td><span style="color:var(--critical)">failed</span></td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<h2><span class="num">6</span>结论与下一步</h2>
+<p>四条结论。第一，模型规模到 397B 后，薄框架 pi 在 ALE CLI 子集上能到平均分 0.288，是 9B 小模型的四到五倍，接入本身没问题。第二，瓶颈不是缺工具，缺搜索或联网工具的担心数据不支持，真实零分里几乎没有联网类任务。第三，两类最直接可改的失败，超时和跑完零分，有共同根源，都是框架没有护栏，一个是主循环无预算能无限刷步，一个是终止判据交给模型、模型会自我合理化。第四，模型的正面能力是真实的，会自发写验证器，只是不稳定。</p>
+<p>下一步不改模型，先在框架外补一层只给事实和预算、不给答案的护栏：给步数和 token 预算做止损；接一个轻量客观检查，在模型准备收工时把当前指标是否达标这个事实反射回去，逼它面对差距；把稳定环境事实前置。这层护栏守一条红线，只反射关于模型自己行为和处境的事实，不给任何任务解，这样提上来的分才是模型的能力，而不是框架喂出来的。</p>
+
+<div class="foot">
+  <p>数据来源：<code>local_docker_pi_qwen35_cli</code> 全量运行加 <code>_rerun13</code> 重跑，输出在 <code>.logs/ale/.../run.json</code> 与 <code>trajectory.json</code>。分数按已拿到分数的真实尝试计（94 个），排除 3 个因本机资源不足（需 16 CPU、60 GB）无法运行的任务。逐题明细见同目录 <code>ALE_tasks.csv</code>。案例轨迹取自各自任务的归一化 <code>trajectory.json</code>。</p>
+</div>
+
+</div>
+
+<script>
+var DOMAINS = /*__DOMAINS__*/[["social_sciences", "社会科学", 1.0, 1], ["transport_safety", "交通安全", 0.589, 3], ["legal", "法律", 0.576, 2], ["business_finance", "商业金融", 0.538, 10], ["computing_math", "计算数学", 0.345, 18], ["life_sciences", "生命科学", 0.296, 18], ["health_medicine", "健康医疗", 0.217, 20], ["education_info", "教育信息", 0.196, 3], ["engineering", "工程", 0.127, 7], ["physical_sciences", "物理科学", 0.042, 10], ["other", "其他", 0.0, 1], ["psychology_neuro", "心理神经", 0.0, 1]]/*__END__*/;
+var MAX=0.6;
+var host=document.getElementById('domainBars');
+DOMAINS.filter(function(d){return d[3]>=2}).forEach(function(d){
+  var pct=(d[2]/MAX*100).toFixed(1);
+  var row=document.createElement('div');row.className='bar-row';
+  row.innerHTML='<div class="bar-label" title="'+d[0]+'">'+d[1]+'</div>'+
+    '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:var(--blue)"></div></div>'+
+    '<div class="bar-val">'+d[2].toFixed(2)+'<span class="n"> ·n'+d[3]+'</span></div>';
+  host.appendChild(row);
+});
+
+</script>
+</body>
+</html>
