@@ -44,7 +44,7 @@
 
 <div class="lead">
 <h3 style="margin-top:0">结论先行</h3>
-<p class="big"><strong>三个干预(skills、prep、两者一起)都没有可检测的效应。</strong>更要紧的是:<strong>每一个 Δ 的正负号,都由单独一道题决定。</strong>把 ct_geometry 这一题拿掉,三个 Δ 全部从负翻正。两种算法下 |t| 都不超过 1.01,和 0 分不开。</p>
+<p class="big"><strong>三个干预(skills、prep、两者一起)都没有可检测的效应。</strong>更要紧的是:<strong>每一个 Δ 的正负号,都由单独一道题决定。</strong>把 ct_geometry 这一题拿掉,三个 Δ 全部从负翻正。两种算法下 |t| 都不超过 1.00,和 0 分不开。零干预 base 均分 <strong>0.6415</strong>,是四个臂里最高的。</p>
 <p>这不是"干预有害"的证据,也不是"干预有用"的证据。这是<strong>这个基准在单次跑下测不出这个量级效应</strong>的证据。</p>
 </div>
 
@@ -61,28 +61,28 @@
 </div>
 
 <h2>2. 总体结果</h2>
-<p>26 题里 <span class="kbd">pe_screening_memo_1</span> 四臂全部失败(评测侧,见第 6 节),下面是可计分的 25 题。</p>
+<p><span class="kbd">pe_screening_memo_1</span> 首轮四臂全挂,<span class="kbd">--resume</span> 只重跑这 4 个 unit 后全部拿到分数(是<strong>瞬时</strong>的评测侧故障,不是永久的)。所以下面是完整的 <strong>26 题、零失败</strong>。</p>
 
 <table>
 <thead><tr><th>臂</th><th>均分</th><th>总分</th><th>满分题</th><th>零分题</th><th>n</th></tr></thead>
 <tbody>
-<tr><td>ale_claw_base(零干预)</td><td class="num">0.6279</td><td class="num">15.698</td><td class="num">7</td><td class="num">4</td><td class="num">25</td></tr>
-<tr><td>ale_claw_prep</td><td class="num">0.5963</td><td class="num">14.906</td><td class="num">6</td><td class="num">5</td><td class="num">25</td></tr>
-<tr><td>ale_claw_skills</td><td class="num">0.6073</td><td class="num">15.183</td><td class="num">7</td><td class="num">5</td><td class="num">25</td></tr>
-<tr><td>ale_claw_skills_prep</td><td class="num">0.5994</td><td class="num">14.986</td><td class="num">7</td><td class="num">5</td><td class="num">25</td></tr>
+<tr><td>ale_claw_base(零干预)</td><td class="num">0.6415</td><td class="num">16.679</td><td class="num">7</td><td class="num">4</td><td class="num">26</td></tr>
+<tr><td>ale_claw_prep</td><td class="num">0.6094</td><td class="num">15.844</td><td class="num">6</td><td class="num">5</td><td class="num">26</td></tr>
+<tr><td>ale_claw_skills</td><td class="num">0.6214</td><td class="num">16.158</td><td class="num">7</td><td class="num">5</td><td class="num">26</td></tr>
+<tr><td>ale_claw_skills_prep</td><td class="num">0.6103</td><td class="num">15.867</td><td class="num">7</td><td class="num">5</td><td class="num">26</td></tr>
 </tbody>
 </table>
 
 <h3>配对差(对 base),以及它对单独一道题有多敏感</h3>
 <table>
-<thead><tr><th>臂</th><th>全部 25 题 Δ</th><th>t</th><th>去掉 ct_geometry(24 题)Δ</th><th>t</th></tr></thead>
+<thead><tr><th>臂</th><th>全部 26 题 Δ</th><th>t</th><th>去掉 ct_geometry(25 题)Δ</th><th>t</th></tr></thead>
 <tbody>
-<tr><td>prep</td><td class="num neg">−0.0317</td><td class="num">−0.71</td><td class="num pos">+0.0087</td><td class="num">+0.43</td></tr>
-<tr><td>skills</td><td class="num neg">−0.0206</td><td class="num">−0.46</td><td class="num pos">+0.0202</td><td class="num">+1.01</td></tr>
-<tr><td>skills_prep</td><td class="num neg">−0.0285</td><td class="num">−0.65</td><td class="num pos">+0.0120</td><td class="num">+0.67</td></tr>
+<tr><td>prep</td><td class="num neg">−0.0321</td><td class="num">−0.75</td><td class="num pos">+0.0066</td><td class="num">+0.34</td></tr>
+<tr><td>skills</td><td class="num neg">−0.0201</td><td class="num">−0.46</td><td class="num pos">+0.0191</td><td class="num">+1.00</td></tr>
+<tr><td>skills_prep</td><td class="num neg">−0.0312</td><td class="num">−0.74</td><td class="num pos">+0.0075</td><td class="num">+0.42</td></tr>
 </tbody>
 </table>
-<p><strong>三个符号全翻。</strong>这就是全部结论的脆弱程度:一道题换个方向,"干预都有害"就变成"干预都有益"。两种算法下都没有任何一个 |t| 达到 2,按 COGNITION 的口径全部算噪声。</p>
+<p><strong>三个符号全翻。</strong>这就是全部结论的脆弱程度:一道题换个方向,"干预都有害"就变成"干预都有益"。两种算法下都没有任何一个 |t| 达到 1.01,按 COGNITION 的口径全部算噪声。</p>
 
 <h2>3. ct_geometry:一道题如何决定整个结论</h2>
 <table>
@@ -100,7 +100,7 @@
 </div>
 
 <h2>4. 为什么这个基准测不出效应</h2>
-<p><strong>25 题里有 13 题对四个臂完全没有区分度</strong>,分数一模一样:</p>
+<p><strong>26 题里有 13 题对四个臂完全没有区分度</strong>,分数一模一样:</p>
 <table>
 <thead><tr><th>类型</th><th>题数</th><th>题</th></tr></thead>
 <tbody>
@@ -109,7 +109,7 @@
 <tr><td>卡死在中间</td><td class="num">3</td><td class="flat">llm_ecosystem 0.500、marc 0.200、moodle 0.885</td></tr>
 </tbody>
 </table>
-<p>真正会动的只有 <strong>12 题</strong>,而这 12 题的配对差标准差是 <strong>0.22</strong>。也就是说:有效样本只有 12,单题噪声比我们想测的效应(约 0.02)大一个数量级。<strong>在这个配置下,单次跑本来就不可能测出这个量级的效应。</strong>这不是干预的问题,是实验功效的问题。</p>
+<p>真正会动的只有 <strong>13 题</strong>(整整一半),而配对差标准差是 <strong>0.22</strong>。也就是说:有效样本只有 13,单题噪声比我们想测的效应(约 0.02)大一个数量级。<strong>在这个配置下,单次跑本来就不可能测出这个量级的效应。</strong>这不是干预的问题,是实验功效的问题。</p>
 
 <h2>5. 两个值得继续追的信号</h2>
 <p>下面两个不是结论,是<strong>线索</strong>:它们的特别之处在于,两个独立的臂给出了一致的方向和幅度,而开关正好解释了这个分组。</p>
@@ -130,19 +130,20 @@
 
 <h2>6. 失败与基础设施</h2>
 <ul>
-<li><strong>pe_screening_memo_1 四臂全挂</strong>(status=failed、score=null、各跑约 909 秒)。四个臂完全一致地挂,是评测侧的特征,不是 agent 能力差异。这类不计入 harness 效果。</li>
+<li><strong>pe_screening_memo_1 首轮四臂全挂,重跑后全部成功</strong>(base 0.981 / prep 0.938 / skills 0.975 / skills_prep 0.881)。所以它是<strong>瞬时</strong>评测侧故障,不是永久的。<span class="kbd">--resume</span> 只重跑了这 4 个 unit,已完成的 100 个一个没动。</li>
+<li><strong>顺带修掉 summarize.py 的一个真 bug</strong>:<span class="kbd">--resume</span> 会把重跑写进新的时间戳目录,旧的 failed run.json 还在,于是一个 unit 有两份记录。原来的字典构建是"后读到的赢",<strong>重跑成功的 unit 可能仍被显示成 failed,而且不确定</strong>。现在按 mtime 取最新的一份。</li>
 <li><strong>API 错误 0 次。</strong>三个端点(gpt_sub2api 两个 key + boyue)都可用,但<strong>API 从来不是瓶颈</strong>。</li>
 <li><strong>并行的天花板是能同时开几个沙箱。</strong>12 路稳(容器恒定 12、内存 21G/125G);之前 24 路 + <span class="kbd">cleanup_mode: keep</span> 那次 102/104 全挂,死容器堆到 104 个把机器吃干。<span class="kbd">delete</span> 是必须的。</li>
 </ul>
 
 <h2>7. 结论与下一步</h2>
 <div class="card">
-<p><strong>能说的:</strong>管道全部跑通(skills 注入、prep 产 notes 并被 agent 读到、结构性非泄露、反作弊守住)。base 基线首次拿到:<strong>0.6279</strong>。</p>
+<p><strong>能说的:</strong>管道全部跑通(skills 注入、prep 产 notes 并被 agent 读到、结构性非泄露、反作弊守住),26 题零失败。base 基线首次拿到:<strong>0.6415</strong>。</p>
 <p><strong>不能说的:</strong>三个干预有任何效果。全部在噪声里,且符号由单题决定。</p>
 <p><strong>下一步按性价比排序:</strong></p>
 <ol>
 <li><strong>先查 variant_annotation 的 prep 回归。</strong>两臂一致 −0.205,是最像真信号的一格,而且是坏的方向。看 notes 到底把 agent 带偏在哪。这个不需要重跑全量。</li>
-<li><strong>别再用单次全量跑测小效应。</strong>有效样本只有 12 题、sd 0.22,想测 0.02 的效应需要的重复次数远超现在。要么 k≥3 只跑那 12 道会动的题,要么承认这个量级测不了。</li>
+<li><strong>别再用单次全量跑测小效应。</strong>有效样本只有 13 题、sd 0.22,想测 0.02 的效应需要的重复次数远超现在。要么 k≥3 只跑那 13 道会动的题(省一半机器时间),要么承认这个量级测不了。</li>
 <li><strong>把力气放到"差一条被归零"的题上。</strong>bpmn_category、legal_ma 这类四臂全 0 的,已知是差一两个必需元素被 all-or-nothing 归零(bpmn 43 项过 41)。强制可运行自校验就是冲这个设计的,但这轮它们仍是 0,说明 skill 的文字还没能逼出那个穷举动作。这比继续磨均分更有意义。</li>
 </ol>
 </div>

@@ -18,7 +18,14 @@ from pathlib import Path
 
 
 def load_rows(root: Path):
-    rows = []  # (arm_id, task_slug, status, score)
+    """Collect (arm, task, status, score), keeping only the NEWEST run per unit.
+
+    `--resume` re-runs a failed unit into a NEW timestamped dir, leaving the old
+    failed run.json in place. Without deduping, a dict build would let whichever
+    run.json rglob yields last win, so a successfully resumed unit could still
+    show as failed (nondeterministically). The newest run supersedes.
+    """
+    best: dict[tuple[str, str], tuple[float, str, object]] = {}
     for rj in root.rglob("run.json"):
         try:
             d = json.loads(rj.read_text(encoding="utf-8"))
@@ -26,8 +33,14 @@ def load_rows(root: Path):
             continue
         agent = (d.get("agent") or {}).get("id") or (d.get("agent") or {}).get("class", "?")
         task = (d.get("task") or {}).get("slug", "?")
-        rows.append((agent, task, d.get("status"), d.get("score")))
-    return rows
+        try:
+            mtime = rj.stat().st_mtime
+        except OSError:
+            mtime = 0.0
+        key = (agent, task)
+        if key not in best or mtime > best[key][0]:
+            best[key] = (mtime, d.get("status"), d.get("score"))
+    return [(a, t, st, sc) for (a, t), (_, st, sc) in best.items()]
 
 
 def _num(x):
