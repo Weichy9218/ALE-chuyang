@@ -56,8 +56,8 @@ skill 给方法,真正的杠杆是让模型拿到更多信息和反馈。三件�
 - **控制面和 API 的细节看 `harness/run/README.md`(唯一权威)。** 一句话:改 `settings.yaml` 一个文件,跑 `launch.py --stack . --per-arm`,用 `summarize.py` 看结果。prep 开关是每 agent 的 `domain_prep` 标志,四臂共用一个输出根便于对照。已删掉 `build_run_configs.py`(它的 main 会生成同名的另一套预设,谁后跑谁覆盖谁)和一堆一次性 exp yaml。
 - **两条运行硬教训(都是实测踩出来的):**
   - `cleanup_mode` 必须 `delete`。`keep` 让每个 unit 留一个活沙箱,104 单元就是 104 个容器常驻,机器被吃干后续开不起来,雪崩。实测 24 路 + keep **102/104 全挂**(`error` 是 null,日志 208 次 `Waiting for Computer API Server to be ready`)。产物在删容器前已 pull 到 .logs,delete 不丢东西。
-  - **并行天花板是"能同时开几个沙箱",不是 API 吞吐。** 每个 unit 要一整个容器 + Computer API Server。8 路稳(104 单元约 332 分钟);12 路(4 臂 × 3)+ delete 稳(容器恒 12,内存 21G/125G,API 错误 0);24 路 + keep 崩过。三个 API 端点(gpt_sub2api 两个 key + boyue 的 `ale_api_key`+`ale_url/v1`)都实测服务 gpt-5.6-sol,可按臂轮转,但**API 从来不是瓶颈**,轮转是余量不是提速手段。
+  - **并行天花板是"能同时开几个沙箱",不是 API 吞吐。** 每个 unit 要一整个容器 + Computer API Server。8 路稳(104 单元约 332 分钟);12 路(4 臂 × 3)+ delete 稳(容器恒 12,内存 21G/125G,API 错误 0);24 路 + keep 崩过。三个 API 端点(gpt_sub2api 两个 key + boyue 的 `ale_api_key`+`ale_url`,注意 `ale_url` 已自带 `/v1`、再补就是 `/v1/v1` 404)都实测服务 gpt-5.6-sol,可按臂轮转,但**API 从来不是瓶颈**,轮转是余量不是提速手段。
 - 不给 pi 和 ale_claw 设 max_turns / wall-time 上限(长程任务时间难估)。harness-on 和 harness-off 都重跑,**同预算同环境**,否则结论作废。
-- 并行度各 8。跑在 pgl(`ssh ubuntu@pgl.zgcagi.ac.cn`),跑前清代理(unset http_proxy/https_proxy/all_proxy 或 NO_PROXY=*),gcp_key 缺失用 docker_nogcs 环境。
+- 并行度以 `run/README.md` 为准(当前每臂 3、四臂共 12,24 路崩过)。跑在 pgl(`ssh ubuntu@pgl.zgcagi.ac.cn -p 11015`)。.env 里那个常年挂掉的 Clash 代理**已删**,普通请求直接通;现存几处 `unset`/`trust_env=False` 挡的是环境自带代理,不是死代码。gcp_key 缺失用 docker_nogcs 环境。
 - k≥3 重复,先立噪声底(同配置 OFF-OFF 一对),任何效应必须超过噪声底两个标准误才算数。
 - 每次跑挂作弊审计:输出是否是 input/ 下真值的仿射变换、agent 自报的测试通过率是否真跑过。留产物(output_path 落盘),否则无法审计。
