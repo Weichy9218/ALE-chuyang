@@ -71,9 +71,23 @@ class AleClawConfig:
 
     disabled_tools: list[str] = field(default_factory=lambda: ["web_search"])
     """Tools to drop from the assembled tool list (matched by ``BaseTool.name``).
-    Defaults to ``["web_search"]`` because BRAVE_API_KEY is rarely provisioned;
-    set to ``[]`` to opt back in (and ensure ``BRAVE_API_KEY`` is exported in
-    your shell)."""
+    Defaults to ``["web_search"]`` because the search API keys are rarely
+    provisioned; set to ``[]`` to opt back in (and ensure at least one of
+    ``EXA_API_KEY`` / ``Firecrawl_API_KEY`` is exported in your shell)."""
+
+
+    skill_sources: dict[str, str] = field(default_factory=dict)
+    """{skill_name: SKILL.md text}. Seeded as method playbooks into the task
+    memory store: a short index goes into TASK_MEMORY.md (bootstrap-injected, so
+    always visible), and each full body becomes a method-<name>.md memory file
+    the model pulls with memory_get only when the skill's when-to-use matches.
+    Empty default -> byte-identical to before."""
+
+    domain_prep: bool = False
+    """Enable the domain-notes prep pre-step (capability B) for THIS agent. When
+    True the orchestration runs ale_run.orchestration.domain_prep before the agent,
+    so one experiment can mix prep-on and prep-off arms via distinct presets. The
+    ALE_DOMAIN_PREP env var forces it on globally regardless of this flag."""
 
     # ---- substrate transport ----
     substrate_transport: str = "mcp"

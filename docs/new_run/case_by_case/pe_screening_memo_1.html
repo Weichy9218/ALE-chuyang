@@ -1,0 +1,266 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zscaler 私募尽调筛选备忘录｜ALE 题解</title><style>
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}
+.wrap{max-width:960px;margin:0 auto;padding:32px 22px 90px}
+h1{font-size:25px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:34px 0 10px}
+h3{font-size:15px;margin:18px 0 6px}
+.sub{color:var(--muted);font-size:14.5px;margin:0 0 4px}
+.tid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted)}
+p{margin:10px 0}
+a{color:var(--accent)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--codebg);padding:1px 5px;border-radius:4px;word-break:break-word}
+pre{background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+pre code{background:none;padding:0}
+section{border-top:1px solid var(--line);padding-top:8px;margin-top:26px}
+.spec{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:2px 18px;margin:16px 0;display:grid;grid-template-columns:auto 1fr;gap:0 18px}
+.spec dt{font-weight:600;font-size:12.5px;padding:8px 0;color:var(--muted);border-top:1px solid var(--line)}
+.spec dd{margin:0;font-size:13.5px;padding:8px 0;border-top:1px solid var(--line)}
+.spec dt:first-of-type,.spec dd:first-of-type{border-top:none}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--card);font-weight:600;white-space:nowrap}
+.badge{display:inline-block;font-weight:700;font-size:12px;padding:1px 8px;border-radius:5px}
+.b-good{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+.b-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+.b-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.callout{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 16px;margin:14px 0;background:var(--card);font-size:14px}
+.callout.warn{border-left-color:var(--warn)}
+.tier{border:1px solid var(--line);border-radius:10px;padding:2px 18px 14px;margin:14px 0;background:var(--card)}
+.tier>h3:first-child{color:var(--fg);margin-top:14px}
+ul,ol{margin:10px 0;padding-left:22px}li{margin:5px 0}
+.back{font-size:13px;margin-bottom:10px;display:inline-block}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+</style></head><body><div class="wrap">
+<a class="back" href="index.html">← 返回 business_finance 题目列表</a>
+<h1>Zscaler 私募尽调筛选备忘录：写一份带明确投资建议的筛选备忘</h1>
+<div class="tid">taskId：business_finance/pe_screening_memo_1</div>
+<p class="sub">读一份已经放好的 Zscaler 尽调素材包（两季财报、两份业绩演示、一份 10-K），按固定模板写出结构化的私募筛选备忘录 <code>screening_memo.md</code>，给出明确的 Go / No-Go / Hold 建议。评分先过三道程序化硬门槛，再用 gpt-4o-mini 逐条判断各小节是否覆盖到位，最后加权得出 0.0 到 1.0 的连续分。</p>
+
+<dl class="spec">
+  <dt>领域 / 子域</dt><dd>business_finance / 6.1 Accounting &amp; Finance（taxonomy）</dd>
+  <dt>软件栈</dt><dd>Python（VM 上只用基础 shell / python 工具，无任务专用启动器）</dd>
+  <dt>VM</dt><dd>机型 <code>c4-standard-4</code>，镜像 <code>cpu-free-ubuntu</code>，超时 <code>7200</code> 秒</dd>
+  <dt>变体数</dt><dd>1 个，变体名 <code>zscaler_fy2025</code>（数据目录不是 base）</dd>
+  <dt>评测方式</dt><dd>程序化硬门槛 + LLM 裁判（gpt-4o-mini 逐问 yes/no）打软分，不跑隐藏测试套件</dd>
+  <dt>分值区间</dt><dd>0.0 到 1.0 连续分（保留 6 位小数），通过阈值 0.7</dd>
+  <dt>要交的产物</dt><dd><code>output/screening_memo.md</code>，UTF-8 Markdown，唯一必交文件</dd>
+</dl>
+
+<section>
+<h2>题目源在哪</h2>
+<p>这题属于 ALE（agents-last-exam）基准的 business_finance 域，sourceSubmissionId 为 <code>0b50671b-2311-4a6b-aaec-ba0e6e62b1f2</code>。相关路径如下。</p>
+<ul>
+  <li>任务定义（代码）：<code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/tasks/business_finance/pe_screening_memo_1/</code>，含 <code>main.py</code>、<code>task_card.json</code>。</li>
+  <li>打分脚本：<code>tasks/business_finance/pe_screening_memo_1/scripts/score_screening_memo.py</code>，评分真正逻辑都在这里。</li>
+  <li>题目数据（变体）：<code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/task-data/business_finance/pe_screening_memo_1/zscaler_fy2025/</code>。</li>
+  <li>agent 可见输入：该变体下 <code>input/</code>（任务简报、模板、素材清单，以及 5 组财报文档的 pdf 与 txt 抽取）。</li>
+  <li>隐藏参考：该变体下 <code>reference/</code>，含 <code>reference_memo.md</code>（参考备忘录）、<code>evaluation_contract.json</code>（评分契约）、<code>stage1_validation.json</code>（构建元数据）。agent 看不到。</li>
+</ul>
+</section>
+
+<section>
+<h2>题目做什么</h2>
+<p>任务提示词给 agent 的定位是：在 Linux 金融基准环境里，只用已经放好的 Zscaler 尽调素材包，为 Zscaler 写一份私募筛选备忘录。这里没有分难度层级，只有一个交付物，但交付物内部有固定的 6 个标题、5 个内容小节。评分实际上是按这 5 个小节 + 全文证据锚点来逐块给分的，所以下面按小节拆开，讲清每块要写什么、写到什么程度才被判定为覆盖到位。判定依据来自打分脚本里的 <code>SECTION_QUESTIONS</code> 和 <code>ANCHOR_QUESTIONS</code>。</p>
+
+<div class="tier">
+<h3>第 0 步：读素材、套模板</h3>
+<p>先读 <code>task_brief.md</code>、<code>memo_template.md</code>、<code>source_manifest.json</code>，再读 5 组素材的 txt 抽取（pdf 是同一内容的原件，可选读）。模板占位标题 <code># [Company] Screening Memo</code> 要改成 <code># Zscaler Screening Memo</code>，占位日期 <code>*[Date]*</code> 换成实际日期。备忘录必须是 Markdown，跟着模板的 6 个标题走，只交这一个文件，不能写成 PPT、PDF 或脱离模板的散文。</p>
+</div>
+
+<div class="tier">
+<h3>I. Recommendation（建议，权重 0.15）</h3>
+<p>给出明确的 Go、No-Go 或 Hold / Needs More Diligence 之一，并说清一两个驱动这个判断的理由。裁判在这一节额外看三件事：是否解释了建议背后的理由；是否说清了什么条件成立会改变建议（比如从 Hold 转 Go 需要看到什么）；是否承认了影响判断的主要顾虑或不确定性。参考答案给的是 Hold，理由是素材足以看出公司质量高，但回答不了市占率、留存队列、产品级毛利等筛选关键问题。</p>
+</div>
+
+<div class="tier">
+<h3>II. Investment Thesis（投资逻辑，权重 0.25）</h3>
+<p>论证公司为什么(不)值得投，每点都要落到素材里的证据。裁判看 6 个话题是否覆盖：零信任架构如何替代 VPN / 防火墙等传统方案；企业客户基数规模（客户总数、Forbes Global 2000 / Fortune 500 渗透率）；核心平台之外的新产品支柱与其收入走向；land-and-expand 动态（新客获取、老客上销、净留存）；云基础设施规模或网络优势（交换点数量、地理覆盖、遥测数据资产）；竞争格局与竞争定位。</p>
+</div>
+
+<div class="tier">
+<h3>III. Financial Summary（财务概览，权重 0.25）</h3>
+<p>从素材读出财务画像，不许自己造数或做无依据的估值。裁判看 6 个话题：多期收入及增长轨迹；毛利/利润率并区分 GAAP 与非 GAAP；经营性现金流或自由现金流；前瞻性指标如递延收入、RPO、billings；客户或用量指标如 ARR、按消费档划分的客户数、净留存率；资产负债表项目，或指出可得数据里缺了哪些重要财务指标。</p>
+</div>
+
+<div class="tier">
+<h3>IV. Risks（风险，权重 0.20）</h3>
+<p>列出重大风险和未决问题，最好对每条说清用什么尽调工作能解决，并区分业务固有风险与当前信息缺口。裁判看 6 个话题：竞争或客户续约/流失风险；渠道伙伴依赖或收入集中；新产品执行风险；股权激励、股份稀释或 GAAP 与非 GAAP 的盈利质量问题；Red Canary 收购或并购整合风险；可得尽调数据的缺口与素材局限。</p>
+</div>
+
+<div class="tier">
+<h3>V. Appendix — Business Overview（业务概述附录，权重 0.15）</h3>
+<p>纯事实描述公司，不做解读。裁判看 6 个话题：业务模式与核心价值主张；具体产品或解决方案类别；客户群体含企业与政府客户；go-to-market 策略、销售渠道或伙伴生态；地理覆盖或云基础设施规模；关键财务指标或近期公司交易如收购。</p>
+</div>
+
+<div class="callout">全文证据锚点（<code>ANCHOR_QUESTIONS</code>，独立于分节，占总分 0.25）：另有 10 个针对全文的问题，考察备忘录是否落到了 Zscaler 特有的具体证据，比如零信任交换平台、客户渗透率具体数字、新战略支柱、新老客户收入结构、云交换网络规模、多年收入数字、毛利/营业利润率、自由现金流/经营现金流金额、递延收入/RPO/ARR/净留存具体值、Red Canary 收购或可转债。空泛、不带数字的备忘录在这一段会大量丢分。</div>
+</section>
+
+<section>
+<h2>硬性要求</h2>
+<ul>
+  <li>只用已放好的素材包，不许用网络搜索。</li>
+  <li>不许假设素材不支持的事实；信息缺失或有歧义就明确写出来。</li>
+  <li>必须按 <code>memo_template.md</code> 的结构写，保留其要求的小节结构；不许写成幻灯片、PDF 或脱离模板的散文。</li>
+  <li>标题要用 <code># Zscaler Screening Memo</code>，日期占位换成实际日期。</li>
+  <li>必须在 Recommendation 一节给出明确的 <code>Go</code>、<code>No-Go</code> 或 <code>Hold / Needs More Diligence</code> 之一。</li>
+  <li>文件名必须正好是 <code>screening_memo.md</code>，内容为合法 UTF-8 Markdown。</li>
+  <li>只在指定 output 目录下写最终备忘录，别碰其他文件。</li>
+</ul>
+<div class="callout warn">路径不一致要注意：agent 实际收到的运行时任务描述（<code>main.py</code> 的 <code>task_description</code>）把输出路径解析成 <code>/media/user/data/agenthle/business_finance/pe_screening_memo_1/zscaler_fy2025/output/screening_memo.md</code>；但 <code>input/task_brief.md</code> 里写的却是 <code>.../agenthle/finance/pe_screening_memo_1/...</code>（域名写成了 finance）。评分只认 <code>main.py</code> metadata 里的 <code>output_file</code>，也就是 business_finance 那条。以运行时任务描述给的路径为准，别照 brief 里的旧路径写。</div>
+</section>
+
+<section>
+<h2>输入文件</h2>
+<p>都在变体目录的 <code>input/</code> 下。5 组财报文档各有 pdf 原件和 <code>pdftotext -layout</code> 抽出的 txt，解题读 txt 即可。素材说明这些可见资料是从 Zscaler 官方 IR / SEC 公开文件重建的。</p>
+<table>
+<thead><tr><th>文件</th><th>格式</th><th>给了什么</th></tr></thead>
+<tbody>
+<tr><td><code>task_brief.md</code></td><td>Markdown</td><td>主简报：要读哪些文件、要做的 8 件事、规则。</td></tr>
+<tr><td><code>memo_template.md</code></td><td>Markdown</td><td>备忘录结构模板，6 个标题、5 个内容小节的说明。</td></tr>
+<tr><td><code>source_manifest.json</code></td><td>JSON</td><td>可见素材清单，每个文件的 id、描述、公开来源 URL。</td></tr>
+<tr><td><code>q2_2025_earnings_release.pdf/.txt</code></td><td>PDF + 文本</td><td>Zscaler Q2 FY2025 业绩发布稿。</td></tr>
+<tr><td><code>q2_2025_earnings_presentation.pdf/.txt</code></td><td>PDF + 文本</td><td>Q2 FY2025 业绩电话会演示。</td></tr>
+<tr><td><code>q3_2025_earnings_release.pdf/.txt</code></td><td>PDF + 文本</td><td>Q3 FY2025 业绩发布稿。</td></tr>
+<tr><td><code>q3_2025_earnings_presentation.pdf/.txt</code></td><td>PDF + 文本</td><td>Q3 FY2025 业绩电话会演示。</td></tr>
+<tr><td><code>zscaler_10k_2025.pdf/.txt</code></td><td>PDF + 文本</td><td>Zscaler FY2025 Form 10-K 年报（约 95 万字节文本抽取）。</td></tr>
+</tbody>
+</table>
+<p><code>software/README.txt</code> 只说明无需任务专用启动器，用 VM 上基础 shell / python 即可。</p>
+</section>
+
+<section>
+<h2>要交什么</h2>
+<p>唯一必交文件是 <code>output/screening_memo.md</code>。它的结构 schema 就是模板里那 6 个标题，评分时会做标题归一化后按顺序核对。归一化规则：把破折号统一成半角连字符、去掉标题里的 <code>**</code> 加粗标记、折叠多余空格、把 <code>[Company]</code> 当作 <code>Zscaler</code>。所以标题里的公司名占位即使不改也能对上，但其余文字要和下面一致。</p>
+<pre><code># Zscaler Screening Memo
+*[你的日期]*
+
+## I. Recommendation
+（明确 Go / No-Go / Hold，加理由与改变条件）
+
+## II. Investment Thesis
+（投资逻辑，每点落到素材证据）
+
+## III. Financial Summary
+（多期收入、毛利、GAAP/非GAAP、现金流、ARR/RPO 等）
+
+## IV. Risks
+（竞争、渠道、新产品、SBC、并购、尽调缺口）
+
+## V. Appendix — Business Overview
+（纯事实业务描述，不做解读）</code></pre>
+<p>标题要按上面顺序出现（中间可以插别的标题，但这 6 个要能按序被找到）。此外全文词数要够（下节讲阈值），Recommendation 一节要真的出现 Go / No-Go / Hold 字样。</p>
+</section>
+
+<section>
+<h2>用什么评测</h2>
+<p>评分链路：<code>main.py</code> 的 <code>evaluate()</code> 先在 VM 上确认三个文件都存在，即 <code>output/screening_memo.md</code>（候选）、<code>reference/reference_memo.md</code>（隐藏参考）、<code>reference/evaluation_contract.json</code>（评分契约），任一缺失直接返回 <code>[0.0]</code>。然后读入三份文本，调用 <code>score_screening_memo.py</code> 里的 <code>score_screening_memo(candidate, reference, contract_text=...)</code>，拿返回对象的 <code>.score</code> 作为该题唯一分数返回给 harness。</p>
+<div class="callout">要点：打分函数签名里虽然收了参考备忘录 <code>reference_text</code>，但函数体第一行就 <code>del reference_text</code> 把它丢了。也就是说隐藏参考备忘录并不参与算分，它只是被 <code>evaluate()</code> 要求"必须存在"，存在与否是环境不变量、不是 agent 能左右的。真正被用到的隐藏文件是 <code>evaluation_contract.json</code>，脚本从里面取标题清单和通过阈值。这题的软分完全由候选备忘录自身的结构、覆盖度和证据密度决定，不做与参考答案的逐句相似度比对。</div>
+<p>评测性质是 <span class="badge b-warn">LLM 裁判</span>：脚本用 <code>openai</code> 客户端调 <code>gpt-4o-mini</code>（<code>temperature=0</code>，<code>max_tokens=5</code>），对每个问题让模型回 yes/no，答案以 yes 开头计为覆盖。硬门槛部分则是纯程序化的（标题、词数、建议关键词）。分数是 0.0 到 1.0 的连续值，通过阈值 0.7，但返回给 harness 的是连续分，所以存在部分分。</p>
+</section>
+
+<section>
+<h2>怎么评测</h2>
+<h3>第一步：三道硬门槛（任一不过直接 0.0）</h3>
+<p>顺序判定，命中即返回 0.0，不再算软分。</p>
+<table>
+<thead><tr><th>判据</th><th>条件</th><th>不满足的后果</th></tr></thead>
+<tbody>
+<tr><td>必需标题齐全且有序</td><td>契约 <code>structural_requirements.canonical_headings</code> 的 6 个标题，经归一化后要按顺序在备忘录里被找到（<code>_missing_headings</code> 用游标做子序列匹配）</td><td>缺任一标题 → 0.0，hard_gate = <code>missing required top-level sections</code></td></tr>
+<tr><td>最少词数</td><td>全文词数 ≥ <code>MIN_WORD_COUNT = 250</code>（按正则 <code>[A-Za-z0-9][A-Za-z0-9$%.,/-]*</code> 计词）</td><td>&lt; 250 → 0.0，hard_gate = <code>memo too short</code></td></tr>
+<tr><td>建议显式</td><td>I. Recommendation 一节文本里，按词边界匹配到 <code>go</code>、<code>no-go</code>、<code>no go</code>、<code>hold</code>、<code>needs more diligence</code>、<code>hold / needs more diligence</code> 之一</td><td>匹配不到 → 0.0，hard_gate = <code>explicit recommendation missing</code></td></tr>
+</tbody>
+</table>
+<p>标题清单从契约读取；契约里没有 <code>pass_threshold</code> 键，所以阈值回落到默认 <code>0.7</code>。契约给出的 6 个标题里附录用的是全角破折号 <code>## V. Appendix — Business Overview</code>，归一化后变成半角 <code>## V. Appendix - Business Overview</code>，与脚本内置默认一致。</p>
+
+<h3>第二步：分节覆盖软分（占 0.75）</h3>
+<p>过了硬门槛后，脚本把备忘录按标题切成小节（level ≤ 2 的标题为父节，其下 level ≥ 3 子节的正文同时计入父节），然后对 5 个小节各自的文本逐问跑裁判。各小节覆盖度 = 命中问题数 / 该节问题总数，再按下表加权。</p>
+<table>
+<thead><tr><th>小节</th><th>裁判问题数</th><th>命中/总数说明</th><th>权重</th></tr></thead>
+<tbody>
+<tr><td>recommendation</td><td>3</td><td>额外送 1 分"建议已显式"的白给分（硬门槛已过），故分母记 4、分子起始 1，满覆盖 4/4</td><td>0.15</td></tr>
+<tr><td>investment_thesis</td><td>6</td><td>命中数 / 6</td><td>0.25</td></tr>
+<tr><td>financial_summary</td><td>6</td><td>命中数 / 6</td><td>0.25</td></tr>
+<tr><td>risks</td><td>6</td><td>命中数 / 6</td><td>0.20</td></tr>
+<tr><td>appendix</td><td>6</td><td>命中数 / 6</td><td>0.15</td></tr>
+</tbody>
+</table>
+<p>加权覆盖 <code>weighted_coverage = 0.15·rec + 0.25·thesis + 0.25·fin + 0.20·risks + 0.15·appendix</code>，五个权重相加为 1.0。各小节的具体裁判问题见上文"题目做什么"里每张卡片列的话题。</p>
+
+<h3>第三步：证据锚点软分（占 0.25）</h3>
+<p>10 个 <code>ANCHOR_QUESTIONS</code> 针对全文（不分节）逐一跑裁判，<code>anchor_score = 命中数 / 10</code>。这 10 问都要求落到 Zscaler 特有的量化证据，见下表。</p>
+<table>
+<thead><tr><th>#</th><th>锚点问题（是否在全文出现）</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>零信任交换平台 / 零信任架构</td></tr>
+<tr><td>2</td><td>企业客户基数量化（客户总数、Fortune 500 / Forbes Global 2000 渗透率）</td></tr>
+<tr><td>3</td><td>新战略支柱（扩展的安全类别、AI 安全、agentic 安全）</td></tr>
+<tr><td>4</td><td>新老客户收入结构，或具体上销 / land-and-expand 指标</td></tr>
+<tr><td>5</td><td>云交换网络规模（交换点数量、覆盖国家数）</td></tr>
+<tr><td>6</td><td>具体多年收入数字，体现增长轨迹</td></tr>
+<tr><td>7</td><td>具体毛利率 / 营业利润率，或营业利润金额</td></tr>
+<tr><td>8</td><td>具体自由现金流 / 经营现金流金额</td></tr>
+<tr><td>9</td><td>递延收入、RPO、ARR 或净留存率的具体数字</td></tr>
+<tr><td>10</td><td>Red Canary 收购或可转债</td></tr>
+</tbody>
+</table>
+
+<h3>第四步：合成总分</h3>
+<pre><code>score = round(0.75 * weighted_coverage + 0.25 * anchor_score, 6)
+passed = score &gt;= 0.7   # 阈值来自契约缺省，等于 0.7</code></pre>
+<p>全覆盖时 <code>weighted_coverage = 1.0</code>、<code>anchor_score = 1.0</code>，理论满分 1.0。返回给 harness 的是这个连续分，不是 pass/fail 的 0/1，所以覆盖越全、证据越密，分越高。要达到 0.7，粗略说要么各节覆盖都比较全、锚点也命中过半，要么在覆盖和证据两侧都做扎实，缺一侧都容易压不过阈值。</p>
+</section>
+
+<section>
+<h2>参考答案的目标值</h2>
+<p>隐藏参考备忘录 <code>reference_memo.md</code> 不参与算分（脚本 <code>del</code> 掉了），但它示范了满覆盖、高证据密度的样子，也给出了这份 zscaler_fy2025 素材包里的关键数字，可用来对表自查。参考答案给的建议是 <strong>Hold</strong>。以下数值均出自参考备忘录，源头是素材包里的财报与 10-K。</p>
+<table>
+<thead><tr><th>指标</th><th>值</th></tr></thead>
+<tbody>
+<tr><td>收入（FY2023 / FY2024 / FY2025）</td><td>$1.617B / $2.168B / $2.673B（同比 +34% / +23%）</td></tr>
+<tr><td>GAAP 毛利率 FY2025</td><td>77%（FY2024、FY2023 为 78%）</td></tr>
+<tr><td>非 GAAP 毛利率 FY2025</td><td>80%（前两年 81%）</td></tr>
+<tr><td>GAAP 净亏损 FY2025 / GAAP 营业利润率</td><td>净亏 $41.5M / 营业利润率 -5%</td></tr>
+<tr><td>非 GAAP 营业利润 / 营业利润率 FY2025</td><td>$580.1M / 22%（FY2024 20%、FY2023 15%）</td></tr>
+<tr><td>股权激励 SBC FY2025</td><td>$685.5M</td></tr>
+<tr><td>经营现金流 / 自由现金流 FY2025</td><td>$972.5M / $726.7M（FCF 利润率 27%）</td></tr>
+<tr><td>递延收入（2025-07-31）</td><td>流动 $2.054B + 非流动 $413.6M</td></tr>
+<tr><td>RPO（Q2 / Q3）</td><td>$4.615B / $4.978B，当期 RPO 约占 48%–49%</td></tr>
+<tr><td>ARR（Q2 / Q3）</td><td>超 $2.7B / 约 $2.9B，均同比 +23%</td></tr>
+<tr><td>&gt;$1M ARR 客户数（Q2 / Q3）</td><td>620 / 642</td></tr>
+<tr><td>&gt;$100K ARR 客户数（Q2 / Q3）</td><td>3,291 / 3,363</td></tr>
+<tr><td>净留存（Q2 / Q3）</td><td>115% / 114%</td></tr>
+<tr><td>客户总数与渗透（2025-07-31）</td><td>&gt;9,400 客户，约 40% Forbes Global 2000、&gt;45% Fortune 500，约 49% 收入来自美国以外</td></tr>
+<tr><td>云规模</td><td>&gt;160 个公共交换点 + 数千私有交换点，覆盖 &gt;185 国</td></tr>
+<tr><td>渠道集中</td><td>前五渠道伙伴及关联方占 FY2025 收入 28%；无单一终端客户超 10%</td></tr>
+<tr><td>现金与投资 / 可转债（2025-07-31）</td><td>现金 $2.389B + 短投 $1.183B；非流动可转债 $1.701B</td></tr>
+<tr><td>Red Canary 收购</td><td>预计 FY2026 Q1 动用约 $675M 现金</td></tr>
+<tr><td>四大解决方案</td><td>Zero Trust Everywhere、Data Security Everywhere、Security for AI、Agentic Operations；三者合并 ARR 接近 $1B 且快于整体 ARR</td></tr>
+</tbody>
+</table>
+</section>
+
+<section>
+<h2>失分的典型形态</h2>
+<ul>
+  <li><span class="badge b-bad">直接 0 分</span>没交 <code>output/screening_memo.md</code>，或写到了错误路径（例如照 brief 里的 <code>finance/</code> 旧路径而非运行时描述给的 <code>business_finance/</code> 路径）。</li>
+  <li><span class="badge b-bad">直接 0 分</span>缺任一必需标题，或标题文字与归一化后目标对不上、或顺序错乱导致子序列匹配失败。</li>
+  <li><span class="badge b-bad">直接 0 分</span>全文不足 250 词，被判"太短、不算认真尝试"。</li>
+  <li><span class="badge b-bad">直接 0 分</span>Recommendation 一节没写出 Go / No-Go / Hold 等关键词，建议不显式。注意关键词只在这一节里找。</li>
+  <li><span class="badge b-warn">部分分</span>结构齐全但内容空泛：只有定性套话、不带 Zscaler 特有的具体数字（收入、毛利、FCF、ARR、RPO、客户数、渗透率、交换点数），锚点 10 问会大面积判否，直接砍掉那 0.25 的证据分。</li>
+  <li><span class="badge b-warn">部分分</span>某些小节覆盖不全：比如 Financial Summary 只提收入不提 GAAP 与非 GAAP 之别、不提现金流或 ARR/RPO；Risks 漏掉渠道依赖、SBC/盈利质量、Red Canary 整合或尽调缺口；Thesis 不谈竞争格局或新产品支柱。每漏一个话题就少一份分节命中。</li>
+  <li><span class="badge b-warn">部分分</span>把内容写在错误的小节里：裁判是按小节文本判该节问题的，比如财务数字全堆在附录、Financial Summary 一节本身内容单薄，会让 financial_summary 那 0.25 权重的覆盖度偏低。</li>
+  <li><span class="badge b-warn">部分分</span>Recommendation 只给结论、不解释理由、不写"什么条件会改变建议"、不承认顾虑，三个裁判问题命中少，拉低 0.15 权重节的覆盖度。</li>
+  <li><span class="badge b-warn">风险</span>编造素材里没有的数字或做无依据的估值。虽然打分脚本不核对事实真伪（不与参考做逐句比对），但 brief 明令禁止，且不带真实数字的内容也很难让裁判判"覆盖到位"。</li>
+</ul>
+</section>
+
+<footer>
+题目源：tasks/business_finance/pe_screening_memo_1/（main.py、task_card.json、scripts/score_screening_memo.py）；数据：task-data/business_finance/pe_screening_memo_1/zscaler_fy2025/（input/、reference/）。整理日期 2026-07-15。
+</footer>
+</div></body></html>

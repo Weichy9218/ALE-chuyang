@@ -14,7 +14,8 @@ th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line)}th{ba
 code{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:13px;font-family:ui-monospace,Menlo,monospace}
 pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5}
 ul,ol{margin:8px 0;padding-left:22px}li{margin:6px 0}a{color:var(--pi)}footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}</style></head><body><div class="wrap">
-<h1>harness 消融：M1 turn cap 与 M2 交付契约</h1>
+<h1>harness 消融（历史文档）</h1>
+<div class="note warn"><b>最终结论（2026-07-15）：提醒类 harness 没用，已废弃。</b>后续把 pi 与 ale_claw 各跑 OFF/ON 全 26 题：pi 0.593→0.588、ale_claw 0.544→0.571，均在噪声内，两套框架基本持平。本文是早期消融记录。完整结论与逐题分析见仓库根 <code>README</code> 与 <a href="../pi-cases/index.html">pi-cases</a>。</div>
 <div class="sub">按 <a href="../harness_design.html">设计稿</a> 实现后，对 pi 和 ale_claw 各跑 harness 关（OFF）与开（ON）两条件，26 题，同模型 gpt-5.6-sol、同网关、同 100 轮上限，只有 harness 变。ON 加的是 M2 交付契约（提示注入变体）。回到 <a href="../chuyang_results.html">结果总表</a>。</div>
 
 <h2>一句话结论</h2>

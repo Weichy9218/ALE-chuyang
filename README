@@ -1,0 +1,89 @@
+# ALE 分析:逐题拆解 + harness 研究
+
+在 ALE(agents-last-exam)这批 26 题上,逐题分析任务本身和评测方式,并研究 harness 层能不能在**不泄露评测和答案**的前提下提升 agent 表现。
+
+**两份权威文档,这份 README 只是入口:**
+
+| 文件 | 是什么 |
+|------|--------|
+| `harness/COGNITION.md` | **认知的唯一事实源**。哪些干预被证伪、噪声底有多高、当前设计、红线。改 harness 之前先读它。 |
+| `harness/run/README.md` | **运行和 API 的唯一事实源**。怎么跑、三个 API 端点怎么成对配、两条运行硬教训。 |
+
+下面的历史结论只保留经验和 insight。**任何配置数字以上面两份为准,不要引用本文的历史设置。**
+
+---
+
+## 当前配置(锚定在 `harness/run/settings.yaml`)
+
+所有超参数只在 `harness/run/settings.yaml` 一个文件里,代码里没有第二处。
+
+- **模型** gpt-5.6-sol。**三个 API 端点**都实测可用:gpt_sub2api 网关(两个 key 可互换)+ boyue 网关(`ale_api_key` 必须配 `ale_url`,两者不通用)。可按臂轮转。
+- **不设轮次/时间上限**(`max_turns: 100000`)。不等预算会凭空造出假效应,这是踩过的坑。
+- **并行**:`launch.py --per-arm`,每臂独立进程。天花板是能同时开几个沙箱,不是 API。
+- **`cleanup_mode: delete`** 必须。`keep` 会让死容器堆积把机器吃干。
+
+跑法就三步:改 `settings.yaml` → `python3 harness/run/launch.py --stack . --per-arm --launch` → `python3 harness/run/summarize.py <out> --baseline ale_claw_base`。细节看 `harness/run/README.md`。
+
+---
+
+## 历史实验的结论(经验保留,操作细节已废弃)
+
+### 1. 提醒类(镜子式)harness 没用,已废弃
+
+复述模型已知/已做的事(检查交付文件非空、注意题面阈值、别重复失败命令),在这 26 题上没有可测价值:pi 0.593→0.588、claw 0.544→0.571,一负一正都在噪声内。
+
+**为什么没用**,这三条是后来所有设计的出发点:
+
+- 模型不用提醒就会自己 ls/cat/跑校验。镜子把它已经在做的事又说一遍,不产生新信息。
+- 它缺的不是提醒,是能力。比如把 SSIM 从 0.903 推到 0.95。
+- **把参照指给模型看本身危险。** 在 ct_geometry 上,"迭代到达标"这条提醒把模型逼成作弊:它把参照图逐字节拷成输出、假报 SSIM=1.0,只被评测器的反作弊挡下。这条直接催生了现在常驻的反作弊不变量(`harness/run/invariant.txt`)。
+
+### 2. 唯一被证实的 harness 收益是资源控制
+
+轮次上限从 30 提到 100 救回了空输出失分。空输出只在 30 轮上限下是主要失分点。这是"资源"而不是"提示"起的作用。现在干脆不设上限。
+
+### 3. 26 题的失分,一半是模型能力,一半是评测本身
+
+6 题满分、3 题卡真能力天花板、6 题纯评测 artifact、1 题指令理解、10 题混合。**raw 均分 0.59 低估了模型**:还原评测器的脆点(精确字符串匹配自由文本、隐藏 schema 白名单、全有或全无悬崖)后真实水平在 0.7 以上。这两类 harness 都碰不了:前者要更强的模型,后者要出题方改 scorer。
+
+### 4. 越硬的题,瓶颈越是"评测设计"而非"模型能力"
+
+bpmn_category(约 50 条隐藏检查、全有或全无)四条运行全 0,但 pi 实际过了约 44/50。卡点是猜不到的命名约定和**没有反馈闭环**,不是不会设计流程。参考解喂进同一评测器五段全过,所以题可解。
+
+**当时给出的最大杠杆是"给反馈闭环:让 agent 对着能跑的检查器 fix-until-green"。现在的 `deliverable-contract` skill 就是这条的落地** —— 但不是把评测器给它(那是泄露),而是让它**从题面自带的验收清单自己造一个校验器并跑到全绿**。
+
+---
+
+## 当前在做什么
+
+沿着"反馈闭环 > 镜子"这条线,两个能力,都非泄露(只用公开 input + 通用领域知识 + 自建反馈):
+
+- **skills**(`harness/skills/`):两个,分工是一个清晰二分——能不能跑一个检查?能就 `deliverable-contract`(抽验收清单、写校验器、不全绿不算完),只判断就 `evidence-audit`(先枚举所有比对单元逐格走、每条发现锚定原文)。
+- **prep**(`ale_run/orchestration/domain_prep.py`):agent 跑之前先产一份通用可复用的领域/软件 notes 放进任务目录。结构性非泄露:reference 要等 agent 跑完才进沙箱。
+
+**诚实的现状**:两者都跑通了、notes 质量也过关,但**都还没拿出跨噪声的提分证据**。噪声底很高(逐题 sd:pi≈0.09、claw≈0.20),单次跑测不出小于 0.05 的效应,任何结论都要 k≥3。详见 `harness/COGNITION.md`。
+
+---
+
+## 仓库地图
+
+```
+harness/                     harness 的单一事实源
+  COGNITION.md               认知(先读)
+  run/                       运行控制面:settings.yaml / launch.py / presets.py / summarize.py / invariant.txt
+  skills/                    要注入的两个 skill(纯 .md,渐进式披露)
+  patches/                   对 agent deployer 的实修复(非提示类)
+docs/new_run/
+  case_by_case/              任务+评测深度规格(约 12 题 + index),bpmn_category 一篇最全
+  pi-cases/                  pi 逐题执行 forensics(index + 26 张)
+  harness-study/             消融数据页
+ale_run/                     ale_run 框架(pgl 上是完整运行环境)
+  orchestration/domain_prep.py   prep 预处理步(能力 B)
+llm/                         各网关客户端(boyueapi_client.py = boyue/ale 网关)
+```
+
+运行环境在 pgl `~/ale/agents-last-exam`(task-data、评测器、`.venv`、`secret/.env`)。
+
+---
+
+_历史结论整理于 2026-07-15(那轮用 100 轮上限、haoxiang 网关)。当前配置已改,以 `harness/run/README.md` 为准。_

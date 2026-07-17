@@ -1,0 +1,247 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>并购申报文件一致性审计｜ALE 题解</title><style>
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}
+.wrap{max-width:960px;margin:0 auto;padding:32px 22px 90px}
+h1{font-size:25px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:34px 0 10px}
+h3{font-size:15px;margin:18px 0 6px}
+.sub{color:var(--muted);font-size:14.5px;margin:0 0 4px}
+.tid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted)}
+p{margin:10px 0}
+a{color:var(--accent)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--codebg);padding:1px 5px;border-radius:4px;word-break:break-word}
+pre{background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+pre code{background:none;padding:0}
+section{border-top:1px solid var(--line);padding-top:8px;margin-top:26px}
+.spec{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:2px 18px;margin:16px 0;display:grid;grid-template-columns:auto 1fr;gap:0 18px}
+.spec dt{font-weight:600;font-size:12.5px;padding:8px 0;color:var(--muted);border-top:1px solid var(--line)}
+.spec dd{margin:0;font-size:13.5px;padding:8px 0;border-top:1px solid var(--line)}
+.spec dt:first-of-type,.spec dd:first-of-type{border-top:none}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--card);font-weight:600;white-space:nowrap}
+.badge{display:inline-block;font-weight:700;font-size:12px;padding:1px 8px;border-radius:5px}
+.b-good{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+.b-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+.b-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.callout{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 16px;margin:14px 0;background:var(--card);font-size:14px}
+.callout.warn{border-left-color:var(--warn)}
+.tier{border:1px solid var(--line);border-radius:10px;padding:2px 18px 14px;margin:14px 0;background:var(--card)}
+.tier>h3:first-child{color:var(--fg);margin-top:14px}
+ul,ol{margin:10px 0;padding-left:22px}li{margin:5px 0}
+.back{font-size:13px;margin-bottom:10px;display:inline-block}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+</style></head><body><div class="wrap">
+<a class="back" href="index.html">← 返回 business_finance 题目列表</a>
+<h1>并购申报文件一致性审计</h1>
+<div class="tid">taskId：business_finance/legal_ma_consistency_audit_01</div>
+<p class="sub">读四份关于同一笔股份协议转让的中文监管申报文件，交叉核对找出四处事实性不一致，写一份英文审计报告，每处附中文原文证据和文档加页码定位；评分脚本用正则和字符串匹配逐条核验，四处必须全召回否则直接 0 分。</p>
+
+<dl class="spec">
+  <dt>领域 / 子域</dt><dd>数据集目录归在 business_finance。task_card 的 taxonomy 已被分类器重标为 legal（domain_id 7）/ Litigation Support &amp; Discovery（7.1），此前为 business_finance（6.4 Compliance &amp; Regulatory）。</dd>
+  <dt>软件栈</dt><dd><code>software/python</code>：转发参数给基线 Ubuntu VM 的 Python 解释器，启用 UTF-8 模式。可选，只在需要脚本解析材料时用。</dd>
+  <dt>VM</dt><dd>机型 <code>c4-standard-4</code>，镜像 <code>cpu-free-ubuntu</code>，超时 <code>7200</code> 秒（2 小时）。</dd>
+  <dt>变体数</dt><dd>1 个：<code>base</code>。</dd>
+  <dt>评测方式</dt><dd>程序化打分。<code>score_audit_report.py</code> 只用正则和字符串匹配核验，无 LLM 裁判，无隐藏测试套件。</dd>
+  <dt>分值区间</dt><dd>0.0 到 1.0。满分 1.0 逐条扣分（每项按 0.2 或 0.1），四处不一致未全部召回时走硬门返回 0.0。</dd>
+  <dt>要交产物</dt><dd>唯一一个 Markdown 文件 <code>output/audit_report.md</code>（英文正文，附中文证据）。</dd>
+</dl>
+
+<section>
+<h2>题目源在哪</h2>
+<ul>
+  <li>任务代码目录：<code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/tasks/business_finance/legal_ma_consistency_audit_01/</code>，含 <code>main.py</code>、<code>task_card.json</code>、<code>scripts/score_audit_report.py</code>。</li>
+  <li>题目数据目录：<code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/task-data/business_finance/legal_ma_consistency_audit_01/base/</code>，含 <code>input/</code>（agent 可见）、<code>reference/</code>（隐藏参考）、<code>software/</code>。</li>
+  <li>打分脚本：<code>scripts/score_audit_report.py</code> 里的 <code>score_report_text()</code>。<code>main.py</code> 的 <code>evaluate()</code> 调用它。</li>
+  <li>隶属 ALE（agents-last-exam）基准。来源提交见 <code>reference/source_manifest.json</code>：GCS 目录 <code>hengduanfan/2026-04-18_07-42-34_e978c625</code>，四份 PDF 与参考输出 docx 均带 sha256 校验。原始企业为「新华百货」（银川新华百货商业集团股份有限公司，证券代码 600785）关于股东协议转让股份的一组公告与权益变动报告书。</li>
+</ul>
+</section>
+
+<section>
+<h2>题目做什么</h2>
+<p>同一笔股份协议转让，涉及四份中文文件：一份公告和三份简式权益变动报告书（受让方 1、受让方 2、转让方）。这四份文件对同一交易的若干数据本应一致，但被人为植入了不一致。任务是逐份读取，交叉比对，把这些不一致找出来，写成英文审计报告。</p>
+<p>参考答案定死了 <b>4 处</b>目标不一致（<code>target_a</code> 到 <code>target_d</code>），分属四种类别：文字笔误、数值不符、股权结构不符、资金来源逻辑矛盾。评分只认这 4 处。转让方报告书（<code>seller_report</code>，Document 4）是干扰项，不涉及任何目标不一致，也不在打分脚本的文档别名表里。下面逐个拆解。</p>
+
+<div class="tier">
+<h3>target_a｜控股股东定义的文字笔误（Clerical）</h3>
+<p>公告「重要内容提示」段把「控股股东」误写成「空股股东」。这是一处错别字，法律文书里应为「控股股东」。</p>
+<ul>
+  <li>文档与页码：Document 1（公告），第 1 页。</li>
+  <li>中文证据：<code>空股股东物美科技集团有限公司</code>。</li>
+  <li>佐证：同一份公告后文正确用了「控股股东」（例如「不涉及公司控股股东、实际控制人」），说明第 1 页那处是笔误。</li>
+</ul>
+</div>
+
+<div class="tier">
+<h3>target_b｜受让方 2 转让对价数值不符（Numerical）</h3>
+<p>公告的摘要表把受让方 2（厦门联芯美）的协议转让对价写成 <code>146,660,323.00</code>，比公告详细条款和受让方 2 自己报告书里的 <code>146,660,332.00</code> 少 9 元。三处形成一低两高的矛盾，摘要表那处是错的。</p>
+<ul>
+  <li>Document 1（公告）第 2 页摘要表：<code>协议转让对价 146,660,323.00</code>（错值）。</li>
+  <li>Document 1（公告）第 11 页股份转让协议详情：<code>146,660,332.00 元</code>（正确值）。</li>
+  <li>Document 3（受让方 2 报告书）第 7 页交易价格：<code>146,660,332.00 元</code>（确认正确值）。</li>
+</ul>
+</div>
+
+<div class="tier">
+<h3>target_c｜受让方 1 股权结构不符（Structural）</h3>
+<p>受让方 1 的主要合伙人「聚源盛业投资（宁波）有限公司」的持股比例，公告写 45%，受让方 1 自己的报告书写 40%。同一主体、同一口径，两份文件数值不同。</p>
+<ul>
+  <li>Document 1（公告）第 4 页受让方 1 基本情况：<code>聚源盛业投资（宁波）有限公司持有 45%合伙份额</code>。</li>
+  <li>Document 2（受让方 1 报告书）第 5 页股东结构：<code>聚源盛业投资（宁波）有限公司持有 40%合伙份额</code>。</li>
+</ul>
+</div>
+
+<div class="tier">
+<h3>target_d｜受让方 1 资金来源逻辑矛盾（Logical）</h3>
+<p>公告摘要表把受让方 1 的资金来源勾成「自有资金」，但受让方 1 的报告书写明部分资金来自银行借款。自有资金（权益）与借款（债务）是两种性质，构成逻辑矛盾。</p>
+<ul>
+  <li>Document 1（公告）第 2 页摘要表：<code>√自有资金</code>（勾选框）。</li>
+  <li>Document 2（受让方 1 报告书）第 12 页资金来源：<code>本次权益变动资金来源部分来源于信息披露义务人向银行的借款。</code></li>
+</ul>
+</div>
+
+<div class="callout">四处的层级关系：没有难度分层，四处是并列的独立检查点。但打分对它们不是平权的。召回是硬门，四处任一漏掉整份报告直接 0 分；证据和定位是软扣分，缺一处扣 0.2 或 0.1。所以先保证四处全找到，再逐处补齐中文证据和文档页码。</div>
+</section>
+
+<section>
+<h2>硬性要求</h2>
+<ul>
+  <li>报告用英文写。</li>
+  <li>只交一个文件：<code>output/audit_report.md</code>（Markdown）。</li>
+  <li>报告出能从材料里支撑的每一处实质性不一致；不许编造材料不支持的问题（编造会被当作误报扣分）。</li>
+  <li>每处发现必须包含四件东西：简短英文标题、冲突的简要说明、能证明问题的中文原文、带文档名和页码的定位标记。</li>
+  <li>中文证据要用文件里的原文，不能只给英文转述。</li>
+  <li>报告体量不能超过 200,000 个 UTF-8 字节，否则直接判 0。</li>
+  <li>要脚本解析材料时，用任务根目录下的 <code>software/python</code>。</li>
+</ul>
+</section>
+
+<section>
+<h2>输入文件</h2>
+<p>都在 <code>base/input/</code> 下，agent 可见。</p>
+<table>
+<thead><tr><th>文件 / 目录</th><th>格式</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td><code>task_brief.md</code></td><td>Markdown</td><td>任务说明和输出契约，含建议的报告结构模板。</td></tr>
+<tr><td><code>document_manifest.json</code></td><td>JSON</td><td>四份文件的规范文件名、英文名（Document 1..4）、原始中文文件名、PDF 与提取文本路径、页数（公告 16 页、受让方 1 报告 21 页、受让方 2 报告 20 页、转让方报告 33 页）。</td></tr>
+<tr><td><code>source_documents/</code></td><td>PDF 目录</td><td>四份原始 PDF：<code>announcement.pdf</code>、<code>buyer1_report.pdf</code>、<code>buyer2_report.pdf</code>、<code>seller_report.pdf</code>。</td></tr>
+<tr><td><code>extracted_text/</code></td><td>UTF-8 文本目录</td><td>四份文件的分页提取文本，页标记形如 <code>=== Page N ===</code>，便于检索和引用页码。四个 <code>.txt</code> 与 PDF 同名。</td></tr>
+</tbody>
+</table>
+<p>另有 <code>base/software/python</code>（可选 Python 启动器）与 <code>software/README.txt</code> 说明。转让方报告书虽在输入中，但不涉及任何目标发现。</p>
+</section>
+
+<section>
+<h2>要交什么</h2>
+<p>唯一产物：<code>base/output/audit_report.md</code>。评分脚本按 Markdown 标题切分「发现」小节，因此建议每处发现用一个 <code>##</code> 标题起头，标题里带能被识别为「发现」的词（见下节）。task_brief 给的建议结构如下，参考答案 <code>gold_findings.md</code> 就是这个格式：</p>
+<pre><code># Share Transfer Disclosure Consistency Review
+
+## Finding 1: &lt;title&gt;
+- Documents: ...
+- Why it is inconsistent: ...
+- Evidence:
+  - `Document X, Page Y`: `&lt;Chinese text&gt;`
+  - `Document Z, Page W`: `&lt;Chinese text&gt;`
+</code></pre>
+<p>定位标记的写法很关键：文档名和页码要写在同一行、且彼此靠近，例如 <code>`Document 1 (Announcement), Page 2`</code>。脚本按行、按分隔符（<code>;</code> <code>；</code> <code>|</code>）切段来判定「某文档」与「某页码」是否配对，写得太散会判定不成对。</p>
+</section>
+
+<section>
+<h2>用什么评测</h2>
+<p>评分链路：<code>main.py</code> 的 <code>evaluate()</code> 先确认 <code>output/audit_report.md</code> 和参考文件 <code>reference/gold_findings.json</code> 都存在（缺任一返回 <code>[0.0]</code>）。然后把两者读进临时目录，调用 <code>score_report_text(report_text=..., reference_payload=...)</code>，取返回字典里的 <code>score</code> 字段转成 float 作为唯一分数返回。整个过程抛异常也返回 <code>[0.0]</code>。</p>
+<p>这是纯程序化打分。<code>score_audit_report.py</code> 只 import 了 argparse、json、re、dataclasses、pathlib、typing，没有任何 LLM、网络或子进程调用。所有判定都是正则匹配和 Python 字符串包含判断。参考答案 <code>gold_findings.json</code> 提供四处目标（<code>required_findings</code>），但脚本并不直接文本比对参考答案，而是把每处目标编码成一组固定的匹配、证据、定位规则，用这些规则去扫 agent 的报告。</p>
+<p>分值构成：满分 1.0 起，先过两道硬门，再逐项软扣分。</p>
+<ul>
+  <li>硬门（任一触发直接 0.0）：报告为空；报告 UTF-8 字节数超过 200,000；四处目标里有任何一处未被召回。</li>
+  <li>软扣分（召回全过之后）：每个多报的、材料不支持的「发现」小节扣 0.2；每处已召回但缺中文证据的目标扣 0.2；每处已召回但文档页码定位不对的目标扣 0.1。最后 clamp 到 [0.0, 1.0]。</li>
+</ul>
+</section>
+
+<section>
+<h2>怎么评测</h2>
+<p>脚本先用 <code>_split_sections</code> 按 Markdown 标题（<code>#</code> 到 <code>######</code>）把报告切成小节（没有标题就整篇当一节），再对每处目标跑三层判定：召回匹配、证据、定位。文本判定前会做归一化（转小写、全角空格转半角、全角冒号括号引号转半角、折叠连续空白）。中文关键词按原文匹配（大小写归一化不影响中文）。</p>
+
+<h3>第一层：召回匹配（match，硬门，四处必须全过）</h3>
+<p>对每处目标，先在每个小节上试规则，再在整篇上试一次；小节命中或整篇命中即算该处「已召回」。四处里任一未召回，直接返回 0.0，reason 为 <code>missing_required_targets</code>。文档是否被提到，由别名表判定（<code>announcement</code> 认 announcement / document 1 / doc 1 / 公告 等；<code>buyer1_report</code> 认 buyer 1 / document 2 / doc 2 / 受让方1 等；<code>buyer2_report</code> 认 buyer 2 / document 3 / doc 3 / 受让方2 等。转让方无别名）。</p>
+<table>
+<thead><tr><th>目标</th><th>召回需同时满足</th></tr></thead>
+<tbody>
+<tr><td>target_a</td><td>提到公告 <b>且</b> 文本含 <code>空股股东</code> <b>且</b>（含 <code>控股股东</code>，或归一化文本含 typo / clerical / should read / instead of / error 之一）。</td></tr>
+<tr><td>target_b</td><td>提到公告 <b>且</b> 提到受让方 2 报告 <b>且</b> 命中 <code>146,660,323</code>（可带 .0）<b>且</b> 命中 <code>146,660,332</code>（可带 .0）。数字正则允许中间有空格或逗号。</td></tr>
+<tr><td>target_c</td><td>提到公告 <b>且</b> 提到受让方 1 报告 <b>且</b> 含 <code>45%</code> <b>且</b> 含 <code>40%</code> <b>且</b>（含 <code>聚源盛业</code> 或 <code>合伙份额</code>，或归一化含 ownership / shareholder）。</td></tr>
+<tr><td>target_d</td><td>提到公告 <b>且</b> 提到受让方 1 报告 <b>且</b> 含 <code>自有资金</code> <b>且</b> 含借款语（<code>借款</code> 或 <code>银行</code>，或归一化含 bank loan / loan）。</td></tr>
+</tbody>
+</table>
+
+<h3>第二层：证据（evidence，每缺一处扣 0.2）</h3>
+<p>已召回的目标，若拿不出足够的中文原文证据，扣 0.2。命中判定用命中的小节聚合（任一命中小节的证据 OK 即算 OK）；若只靠整篇命中则在整篇上判。</p>
+<table>
+<thead><tr><th>目标</th><th>证据需满足</th><th>不满足后果</th></tr></thead>
+<tbody>
+<tr><td>target_a</td><td>文本含 <code>空股股东</code>。</td><td rowspan="4">该处扣 0.2</td></tr>
+<tr><td>target_b</td><td>同时含 <code>146,660,323</code> 和 <code>146,660,332</code> <b>且</b>（含 <code>协议转让</code> 或 <code>对价</code>）<b>且</b>（含 <code>元</code> 或 <code>受让方2</code>）。</td></tr>
+<tr><td>target_c</td><td>含 <code>45%</code> 和 <code>40%</code> <b>且</b>（含 <code>聚源盛业</code> 或 <code>合伙份额</code>）。</td></tr>
+<tr><td>target_d</td><td>含 <code>自有资金</code> <b>且</b>（含 <code>借款</code> 或 <code>银行</code>）。</td></tr>
+</tbody>
+</table>
+
+<h3>第三层：定位（location，每缺一处扣 0.1）</h3>
+<p>已召回的目标，若文档加页码的配对不对，扣 0.1。判定函数 <code>_doc_has_page_pair</code> 逐行扫描：在一行里找到某文档别名后，以相邻别名和分隔符（<code>;</code> <code>；</code> <code>|</code>）为边界圈出该别名左右的局部片段，片段里出现的页码若与期望页集合有交集即算配对成功。所以文档名和页码要写在同一行且靠得近。</p>
+<table>
+<thead><tr><th>目标</th><th>定位需满足（全部配对）</th><th>不满足后果</th></tr></thead>
+<tbody>
+<tr><td>target_a</td><td>公告 + 第 1 页。</td><td rowspan="4">该处扣 0.1</td></tr>
+<tr><td>target_b</td><td>公告 + 第 2 页 <b>且</b> 公告 + 第 11 页 <b>且</b> 受让方 2 报告 + 第 7 页（三处都要）。</td></tr>
+<tr><td>target_c</td><td>公告 + 第 4 页 <b>且</b> 受让方 1 报告 + 第 5 页。</td></tr>
+<tr><td>target_d</td><td>公告 + 第 2 页 <b>且</b> 受让方 1 报告 + 第 12 页。</td></tr>
+</tbody>
+</table>
+
+<h3>第四层：误报（false positive，每处扣 0.2）</h3>
+<p>召回全过后，脚本用 <code>_split_claim_units</code> 把报告按「像发现的行」切成一个个主张单元。一行被当作发现的开头，需要它看起来像发现标题（以 <code>finding </code> 开头，或含 finding / issue / error / mismatch / contradiction / discrep / clerical / numerical / structural / logical 之一），且不是明显的佐证行（以 documents: / document: / category: / why it is inconsistent: / evidence: / location: / page 等开头的行会被排除）。若某个被识别为「主张」的单元不匹配四处目标里的任何一处，就算一处误报，扣 0.2。识别「主张单元」的条件是：标题像发现，或（含 evidence 且有页码且提到某个别名文档）。</p>
+
+<h3>最终计分</h3>
+<pre><code>score = 1.0
+score -= 0.2 * 误报小节数
+score -= 0.2 * 缺证据的已召回目标数
+score -= 0.1 * 缺定位的已召回目标数
+score = clamp(score, 0.0, 1.0)   # 再 round 到 6 位小数</code></pre>
+<p>据此可自查：四处全召回、四处都带对中文证据、四处都带对文档页码、且不多报，得 1.0。举例：四处召回但其中一处缺证据、另一处定位错、还多报一处 → 1.0 − 0.2 − 0.1 − 0.2 = 0.5。任一处目标漏召回 → 0.0。</p>
+</section>
+
+<section>
+<h2>参考答案的目标值</h2>
+<p>来自 <code>reference/gold_findings.json</code>（脚本读取）与 <code>gold_findings.md</code>（等价 Markdown，符合满分格式）。四处目标、对应文档与页码、中文证据如下，全部已对照 <code>extracted_text</code> 的分页文本核实。</p>
+<table>
+<thead><tr><th>id</th><th>类别</th><th>文档 + 页</th><th>中文证据原文</th></tr></thead>
+<tbody>
+<tr><td>target_a</td><td>Clerical</td><td>Document 1（公告）P1</td><td><code>空股股东物美科技集团有限公司</code>（应为「控股股东」）</td></tr>
+<tr><td>target_b</td><td>Numerical</td><td>Document 1（公告）P2；Document 1 P11；Document 3（受让方 2）P7</td><td><code>协议转让对价 146,660,323.00</code>（错）；<code>146,660,332.00 元</code>（对，公告详情）；<code>146,660,332.00 元</code>（对，受让方 2 报告）</td></tr>
+<tr><td>target_c</td><td>Structural</td><td>Document 1（公告）P4；Document 2（受让方 1）P5</td><td><code>聚源盛业投资（宁波）有限公司持有 45%合伙份额</code>；<code>...持有 40%合伙份额</code></td></tr>
+<tr><td>target_d</td><td>Logical</td><td>Document 1（公告）P2；Document 2（受让方 1）P12</td><td><code>√自有资金</code>；<code>本次权益变动资金来源部分来源于信息披露义务人向银行的借款。</code></td></tr>
+</tbody>
+</table>
+<p>另有 <code>gold_reference_output.txt</code> / <code>gold_reference_output.docx</code>：人工撰写的黄金审计报告，行文更详细，可作范文参考，但打分不直接与它比对。</p>
+</section>
+
+<section>
+<h2>失分的典型形态</h2>
+<ul>
+  <li><span class="badge b-bad">0 分</span> 漏掉四处中任一处。这是最常见的归零原因，尤其容易漏 target_b 的三处配对之一，或把某处不一致写得不满足召回规则（比如只写了 40% 没写 45%、只提受让方 1 没提公告）。</li>
+  <li><span class="badge b-bad">0 分</span> 没交 <code>output/audit_report.md</code>、文件为空、或超过 200,000 字节。</li>
+  <li><span class="badge b-warn">−0.2</span> 只给英文转述、缺中文原文。例如 target_b 只写了两个数字却没带 <code>协议转让</code>/<code>对价</code> 和 <code>元</code>/<code>受让方2</code>，或 target_c 没带 <code>聚源盛业</code>/<code>合伙份额</code>。</li>
+  <li><span class="badge b-warn">−0.1</span> 文档页码配对不对或不成对。常见于把文档名和页码写在不同行、或页码写错（target_b 少了公告第 11 页那一条、target_d 把受让方 1 写成第 2 页而非第 12 页）。</li>
+  <li><span class="badge b-warn">−0.2 每处</span> 多报材料不支持的「发现」。典型是对干扰项转让方报告书（Document 4）编造不一致，或把同一处不一致拆成多个带发现标题的小节，多出来的会被算误报。</li>
+  <li>定位写法踩坑：脚本按行和分隔符切段判配对，若把多处文档页码堆在一大段自由文字里、彼此不靠近，可能判为不成对而扣 0.1。按建议模板每条证据单起一行、文档名紧挨页码最稳妥。</li>
+</ul>
+</section>
+
+<footer>
+题目源：<code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/tasks/business_finance/legal_ma_consistency_audit_01/</code>（代码）与 <code>.../task-data/business_finance/legal_ma_consistency_audit_01/base/</code>（数据）。打分脚本 <code>scripts/score_audit_report.py</code>。日期：2026-07-15。
+</footer>
+</div></body></html>

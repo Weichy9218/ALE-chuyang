@@ -39,6 +39,7 @@ from ..environments.env import ALEEnv
 from ..executors import DockerExecutor, LocalExecutor, SandboxExecutor
 from ..tasks.loader import TaskLoader
 from ..tasks.driver import TaskDriver
+from .domain_prep import maybe_prepare_domain_notes
 from .factory import EnvironmentRouter, build_config, resolve_agent
 from .run_writer import RunWriter, slug_task
 from .experiment_spec import ArtifactsSpec, RunUnit, UnitResult
@@ -275,6 +276,19 @@ async def run_one_unit(
                 session_rebuilder=env.reset_session,
             )
             await task_driver.setup()
+
+            # ============================================================
+            # Phase 1b — domain-notes prep pre-step (capability B, opt-in).
+            # Runs after inputs are staged + setup, BEFORE the agent and BEFORE
+            # reference/ is staged (Phase 3, stage_reference) — a structural
+            # non-leak guarantee: the answers aren't on the box yet. No-op unless
+            # ALE_DOMAIN_PREP is set; best-effort, never raises. On success it
+            # appends a pointer to task_meta["description"], which the agent
+            # prompt below (task_meta["description"]) then includes.
+            # ============================================================
+            await maybe_prepare_domain_notes(
+                env=env, config=config, task_meta=task_meta, writer=writer,
+            )
 
             # ============================================================
             # Phase 2 — agent
@@ -793,6 +807,8 @@ def _collect_env_passthrough() -> dict[str, str]:
         "OPENAI_API_KEY",
         "OPENROUTER_API_KEY",
         "BRAVE_API_KEY",
+        "EXA_API_KEY",
+        "Firecrawl_API_KEY",
         "CURSOR_API_KEY",
         "GEMINI_API_KEY",
         "GOOGLE_API_KEY",

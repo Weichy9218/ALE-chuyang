@@ -1,0 +1,147 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Skills 消融报告</title><style>
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--bad:#c8443a;--codebg:#f0f3f6}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--bad:#ff6b60;--codebg:#1b2129}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--bad:#c8443a;--codebg:#f0f3f6}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--bad:#ff6b60;--codebg:#1b2129}
+.wrap{max-width:1000px;margin:0 auto;padding:28px 20px 80px}
+h1{font-size:23px;margin:0 0 4px}h2{font-size:18px;margin:30px 0 8px}
+.sub{color:var(--muted);font-size:13.5px}
+section{border-top:1px solid var(--line);padding-top:6px;margin-top:22px}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:12.5px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:5px 8px;text-align:center;white-space:nowrap}
+th{background:var(--card);font-weight:600}
+td.l,th.l{text-align:left}
+.up{color:var(--good);font-weight:700}.dn{color:var(--bad);font-weight:700}.z{color:var(--muted)}
+tr.hi td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:var(--codebg);padding:1px 4px;border-radius:4px}
+pre{background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow-x:auto;font-size:11.5px;line-height:1.45;white-space:pre-wrap}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:10px 0}@media(max-width:720px){.grid{grid-template-columns:1fr}}
+.card{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--card)}
+.card h3{margin:0 0 8px;font-size:14px}
+.kpi{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-top:1px dashed var(--line)}
+.kpi:first-of-type{border-top:none}.kpi b{font-variant-numeric:tabular-nums}
+.d-up{color:var(--good)}.d-dn{color:var(--bad)}
+.callout{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:9px 14px;margin:12px 0;background:var(--card);font-size:13.5px}
+ul{margin:8px 0;padding-left:20px}li{margin:4px 0}
+.vig{border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:9px 0;font-size:13.5px}
+.vig b{color:var(--accent)}
+footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+</style></head><body><div class="wrap">
+<h1>Skills 消融报告</h1>
+<div class="sub">26 题 × {pi, ale_claw} × {带 skills, 不带} = 104 单元。统一超参、无轮次与时间上限,并行 8,pgl 实跑。单次(k=1)。2026-07-16。</div>
+
+<div class="callout"><b>结论</b>:两个 agent 带 skills 的总分都涨,ale_claw +0.67(/26)、pi +0.88(/26,其中 +0.54 来自 agora 那道 no-skills 跑挂的题)。满分数、全错数基本持平,涨分集中在少数结构/判断题。作弊未复发(上轮 pi 把参考图混进输出刷分,本轮四臂 ct_geometry 诚实全 0)。单次跑,小变动在噪声内。</div>
+
+<section>
+<h2>1–2. 四臂统计:满分数 / 全错数 / 总分</h2>
+<table><thead><tr><th class="l">指标(26 题)</th><th>pi<br>off</th><th>pi<br>on</th><th>Δ</th><th>claw<br>off</th><th>claw<br>on</th><th>Δ</th></tr></thead><tbody>
+<tr><td class="l">满分数(=1.0)</td><td>7</td><td>7</td><td class="z">0</td><td>6</td><td>7</td><td class="up">+1</td></tr>
+<tr><td class="l">全错数(=0.0)</td><td>6</td><td>5</td><td class="up">−1</td><td>5</td><td>5</td><td class="z">0</td></tr>
+<tr><td class="l">总分</td><td>14.40</td><td>15.29</td><td class="up">+0.88</td><td>14.95</td><td>15.62</td><td class="up">+0.67</td></tr>
+<tr><td class="l">均分</td><td>0.554</td><td>0.588</td><td class="up">+0.034</td><td>0.575</td><td>0.601</td><td class="up">+0.026</td></tr>
+<tr><td class="l">跑挂(failed)</td><td>2</td><td>1</td><td>—</td><td>1</td><td>1</td><td>—</td></tr>
+</tbody></table>
+<div class="sub">满分占比:pi 7/26=27%,claw off 6/26=23% → on 7/26=27%。全错(硬零)5 道两边都破不了。pe_screening 四臂全跑挂(裁判 gpt-4o-mini 网关不服务),计 0。</div>
+</section>
+
+<section>
+<h2>3. 实验设置</h2>
+<ul>
+<li><b>唯一变量是 skills</b>。四臂共用一条常驻不变量(prompt_suffix:精确满足题面、不猜评测器、输出靠计算产生不要拷参考值);其余配置逐字节相同。</li>
+<li><b>无上限</b>:pi 无轮次上限;ale_claw max_turns=100000;无墙钟上限(24h 兜底);并行 8;产物落盘供审计。</li>
+<li><b>skills 机制</b>:pi 原生 <code>--skill</code>(SKILL.md 索引常驻、正文按需 <code>read</code>);ale_claw 原生 memory(索引进 TASK_MEMORY 开局注入、正文作 method-*.md 由 <code>memory_get</code> 拉取)。模型自选,不匹配则沉默。</li>
+</ul>
+</section>
+
+<section>
+<h2>4. 逐题结果(四臂)</h2>
+<table><thead><tr><th class="l">题目</th><th>pi off</th><th>pi on</th><th>claw off</th><th>claw on</th></tr></thead><tbody>
+<tr class="hi"><td class="l">sse_northbound(判断)</td><td>0.33</td><td class="up">0.67</td><td>0.33</td><td class="up">0.67</td></tr>
+<tr class="hi"><td class="l">agora_governance_classify(判断)</td><td class="dn">0.00*</td><td>0.54</td><td>0.49</td><td class="up">0.68</td></tr>
+<tr class="hi"><td class="l">healthcare_tcga_survival(构造)</td><td>1.00</td><td>1.00</td><td>0.84</td><td class="up">1.00</td></tr>
+<tr class="hi"><td class="l">healthcare_variant_annotation(构造)</td><td>0.79</td><td class="up">1.00</td><td>1.00</td><td>1.00</td></tr>
+<tr class="hi"><td class="l">bpmn_supply_disruption(构造)</td><td>0.85</td><td class="up">0.88</td><td>0.82</td><td class="up">0.89</td></tr>
+<tr class="hi"><td class="l">healthcare_sap_group_sequential</td><td>0.35</td><td class="dn">0.25</td><td>0.25</td><td class="up">0.34</td></tr>
+<tr class="hi"><td class="l">homework_grading_pdes</td><td>0.64</td><td class="up">0.72</td><td>0.66</td><td>0.64</td></tr>
+<tr class="hi"><td class="l">crf_sdtm_mapping_4</td><td>0.65</td><td class="dn">0.58</td><td>0.60</td><td class="up">0.64</td></tr>
+<tr class="hi"><td class="l">moodle_gradebook(评分核对)</td><td>0.95</td><td class="dn">0.82</td><td>0.95</td><td>0.95</td></tr>
+<tr class="hi"><td class="l">digital_marketing_audience_seg</td><td>0.72</td><td>0.72</td><td>0.94</td><td class="dn">0.72</td></tr>
+<tr class="hi"><td class="l">flusight_forecast</td><td>0.74</td><td>0.72</td><td>0.72</td><td>0.73</td></tr>
+<tr class="hi"><td class="l">sec_10k_financial_parsing</td><td>0.67</td><td>0.67</td><td>0.64</td><td>0.65</td></tr>
+<tr><td class="l z">6 满分题(american_option / digital_ab / financial_stmt / internal_employee / epidemiology / legal_dr)</td><td>1.00</td><td>1.00</td><td>1.00</td><td>1.00</td></tr>
+<tr><td class="l z">5 硬零题(bpmn_category / legal_ma / crf_sdtm_1 / healthcare_bias / ct_geometry)</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.00</td></tr>
+<tr><td class="l z">llm_privacy 0.50 / marc 0.20(四臂持平) · pe_screening 全 None</td><td colspan="4">—</td></tr>
+</tbody></table>
+<div class="sub">*agora 的 pi off 是跑挂(failed)记 0,不是真实 0,所以 pi 那格 +0.54 有水分。高亮行=有变动的题。</div>
+</section>
+
+<section>
+<h2>5. 两个 skill:原文 + 中文解释</h2>
+<div class="grid">
+<div class="card"><h3>deliverable-contract(构造题)</h3>
+<pre>Use ONLY when a task asks you to PRODUCE
+artifacts with checkable structure — named
+output files, a schema/format, exact counts
+or fields, code, or a model/workflow.
+
+1 Enumerate the contract: every required
+  artifact + every hard requirement (schema,
+  counts, fields, naming). Quote the source.
+2 Turn checkable requirements into checks;
+  run any shipped runtime for real.
+3 Build in dependency order; verify each part
+  before moving on.
+4 Converge: every requirement met + artifacts
+  mutually consistent; re-scan for anything
+  uncovered.
+Boundaries: from the task's own materials
+only; no grader scripts / reference answers.</pre>
+<div class="sub">中文:交付契约纪律。把题面要求当契约,先枚举每个必交产物和每条硬约束(schema/数量/字段/命名)并引原文,能机械校验的就写检查跑一遍,按依赖顺序分片实现、逐块验证,直到全部满足且文件互相一致。只用可见材料,不读评测脚本/参考答案。</div>
+</div>
+<div class="card"><h3>evidence-audit(判断/审计题)</h3>
+<pre>Use ONLY when a task asks you to review,
+audit, compare, or judge documents/data and
+report findings. Work = comprehension +
+evidence, not building a checker.
+
+1 Read sources closely before concluding.
+2 Anchor every finding to quoted evidence;
+  no unanchored finding goes in.
+3 Be skeptical of references and of yourself;
+  catch small textual/numeric discrepancies.
+4 Cross-check consistency; state which source
+  governs on conflict.
+5 Report faithfully in the required form
+  (incl. bilingual / per-field rules).
+Boundaries: task's own materials only; do not
+infer a hidden count/category/convention.</pre>
+<div class="sub">中文:证据审计纪律。判断题考的是理解和证据,不是写校验脚本。逐条为每个结论配精确引文,对参考和自身假设存疑、抓细小出入,交叉核一致性,按题面格式(含中英混合)如实交。不臆测题面没说的数量/类别。</div>
+</div>
+</div>
+<div class="sub">设计来自 <code>harness/skills/*/SKILL.md</code>。frontmatter 的 name+description 常驻(约 20 token)当触发信号,正文按需拉取(渐进式披露)。</div>
+</section>
+
+<section>
+<h2>6. 轨迹里 skills 怎么被用(实测,非推测)</h2>
+<div class="vig"><b>pi · sse(判断题,+0.33)</b>:pi 读了 <b>deliverable-contract 共 15 次</b>(没读 evidence-audit)。原话:"I'm writing the single required JSON file now. Each evidence [anchor…]"。也就是说 sse 虽是判断题,但要交结构化 JSON,pi 把它当契约:枚举字段、逐条锚证据。提分来自契约纪律,不是"证据审计"那个 skill。</div>
+<div class="vig"><b>ale_claw · tcga(构造题,+0.16 → 1.00)</b>:整局 <b>memory_get 调用 579 次</b>,拉 method-deliverable-contract <b>153 次</b>、method-evidence-audit 76 次。重度依赖契约 playbook 把生存分析的交付物做全,拿到满分。</div>
+<div class="vig"><b>pi · bpmn_supply(构造题,双方涨)</b>:读 <b>deliverable-contract 54 次</b>,用契约纪律拆 BPMN 结构与三份 JSON。</div>
+<div class="callout"><b>共同现象</b>:两个 agent 压倒性地拉 <b>deliverable-contract</b>,连 sse 这种判断题也当契约做;evidence-audit 触发少、独立作用不明显。因为 ALE 多数题最终都要交结构化产物,"构造 vs 判断"的边界在实际中被模糊了。ale_claw 的 memory_get 高达 579 次,有过度检索之嫌。</div>
+</section>
+
+<section>
+<h2>7. skills 还该怎么优化</h2>
+<ul>
+<li><b>deliverable-contract 是被证实的主力,继续打磨</b>;evidence-audit 触发少、效果不明,先单独在纯判断题上验证它是否真有独立价值,不成立就并入 contract(多数判断题也交结构化产物)。</li>
+<li><b>治 ale_claw 的过度检索</b>(memory_get 579 次):首次拉到 method 后缓存进上下文,别每步都搜;或把索引直接写进常驻 prompt(像 pi 那样),省掉反复检索。</li>
+<li><b>查回归、加护栏</b>:moodle(pi −0.13)、digital_audience(claw −0.22)在带 skills 后掉分,疑似契约纪律让本已简单的题被过度约束。给 skill 加一句"任务已简单直接时不要强加流程"。</li>
+<li><b>压噪声</b>:单次跑,均分 Δ(pi +0.034、claw +0.026)和多数逐题变动都在噪声底内(pi sd≈0.09、claw≈0.20)。对大变动题(sse、tcga、variant、digital_audience、moodle)做 <b>k≥3</b> 重复,才能分清真效应与随机。</li>
+<li><b>补裁判 API</b>:pe_screening 四臂全挂,把裁判指向 boyue(gpt-4o-mini 缺失,用 gpt-5-mini 替代)才能让这题进对比。</li>
+</ul>
+</section>
+
+<footer>数据:pgl <code>.logs/ale/harness_ablation/</code> 评测器原始分 + 轨迹计数。作弊审计:ct_geometry 无混参考、tcga 无拷参考。代码与 skill:<code>ALE-chuyang/harness/</code>(与 pgl 已统一)。</footer>
+</div></body></html>

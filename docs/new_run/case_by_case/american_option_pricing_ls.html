@@ -1,0 +1,320 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>美式期权定价（Longstaff-Schwartz）｜ALE 题解</title><style>
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}
+.wrap{max-width:960px;margin:0 auto;padding:32px 22px 90px}
+h1{font-size:25px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:34px 0 10px}
+h3{font-size:15px;margin:18px 0 6px}
+.sub{color:var(--muted);font-size:14.5px;margin:0 0 4px}
+.tid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted)}
+p{margin:10px 0}
+a{color:var(--accent)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--codebg);padding:1px 5px;border-radius:4px;word-break:break-word}
+pre{background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+pre code{background:none;padding:0}
+section{border-top:1px solid var(--line);padding-top:8px;margin-top:26px}
+.spec{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:2px 18px;margin:16px 0;display:grid;grid-template-columns:auto 1fr;gap:0 18px}
+.spec dt{font-weight:600;font-size:12.5px;padding:8px 0;color:var(--muted);border-top:1px solid var(--line)}
+.spec dd{margin:0;font-size:13.5px;padding:8px 0;border-top:1px solid var(--line)}
+.spec dt:first-of-type,.spec dd:first-of-type{border-top:none}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--card);font-weight:600;white-space:nowrap}
+.badge{display:inline-block;font-weight:700;font-size:12px;padding:1px 8px;border-radius:5px}
+.b-good{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+.b-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+.b-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.callout{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 16px;margin:14px 0;background:var(--card);font-size:14px}
+.callout.warn{border-left-color:var(--warn)}
+.tier{border:1px solid var(--line);border-radius:10px;padding:2px 18px 14px;margin:14px 0;background:var(--card)}
+.tier>h3:first-child{color:var(--fg);margin-top:14px}
+ul,ol{margin:10px 0;padding-left:22px}li{margin:5px 0}
+.back{font-size:13px;margin-bottom:10px;display:inline-block}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+</style></head><body><div class="wrap">
+<a class="back" href="index.html">← 返回 business_finance 题目列表</a>
+<h1>美式期权定价（Longstaff-Schwartz）</h1>
+<div class="tid">taskId：business_finance/american_option_pricing_ls</div>
+<p class="sub">用蒙特卡洛加 Longstaff-Schwartz 最小二乘回归给美式期权定价，分三个 Tier，从有闭式解的欧式期权校准，到单资产美式看跌，再到 5 资产相关篮子美式看跌并算 Greeks。要交 results.json 和一个长度 100 的行权边界数组，确定性 Python 脚本对照隐藏参考答案打分，分值只有 0.0、0.5、1.0 三档。</p>
+
+<dl class="spec">
+  <dt>领域 / 子域</dt><dd>business_finance / quant_finance（子域 6.7，Quantitative Finance &amp; Trading）</dd>
+  <dt>软件栈</dt><dd>Python、NumPy、SciPy、uv</dd>
+  <dt>VM</dt><dd>机型 c4-standard-4，镜像 cpu-free-ubuntu，超时 7200 秒。题面自检另写了 8 小时 wall-clock、4 核约 3GHz 的上限。参考解 Tier 2 实测约 0.53 秒、Tier 3 约 3.8 秒，时间不是瓶颈。</dd>
+  <dt>变体数</dt><dd>1（目录 base）</dd>
+  <dt>评测方式</dt><dd>程序化打分，确定性 Python 脚本对照隐藏参考答案，没有 LLM 裁判，没有隐藏测试套件，没有人工。</dd>
+  <dt>分值区间</dt><dd>离散三档：0.0 / 0.5 / 1.0</dd>
+  <dt>要交的产物</dt><dd><code>base/output/results.json</code>、<code>base/output/exercise_boundary_tier2.npy</code></dd>
+</dl>
+
+<section>
+<h2>题目源在哪</h2>
+<p>这题属于 agents-last-exam（ALE）基准，<code>sourceSubmissionId</code> 是 <code>2090fc20-6faf-425c-9c12-145afde1af35</code>。题目源分两块。</p>
+<p>题目定义（代码，进 git 仓库）：<br>
+<code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/tasks/business_finance/american_option_pricing_ls/</code></p>
+<ul>
+  <li><code>main.py</code>：任务配置、<code>task_description</code>（发给 agent 的提示词）、<code>start()</code> 装载、<code>evaluate()</code> 打分入口。</li>
+  <li><code>task_card.json</code>：任务元信息，含 taskPrompt、要交的文件、evaluation 说明、VM 规格、taxonomy。</li>
+  <li><code>scripts/score_american_option_outputs.py</code>：真正的打分逻辑，核心函数 <code>score_submission()</code>。</li>
+</ul>
+<p>题目数据（不进 git，单独同步到 task-data）：<br>
+<code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/task-data/business_finance/american_option_pricing_ls/base/</code></p>
+<ul>
+  <li><code>input/problem_spec.md</code>：完整题面，agent 能看到，248 行，含全部参数、算法步骤、输出 schema、自检清单。</li>
+  <li><code>input/runtime_env/pyproject.toml</code>、<code>uv.lock</code>：钉死版本的 NumPy/SciPy 运行时。</li>
+  <li><code>software/python.sh</code>：题目指定的 Python 入口，内部用 <code>uv run --frozen</code> 拉起上面那套运行时。</li>
+  <li><code>reference/results.json</code>、<code>reference/exercise_boundary_tier2.npy</code>：隐藏参考答案，只有打分时读，agent 看不到。</li>
+  <li><code>reference/option_solver.py</code>：出题方的参考实现，用来生成上面两个参考文件，不参与打分。</li>
+  <li><code>reference/reference_manifest.json</code>：记录哪些是 agent 可见输入、哪些是参考文件、要求交哪些输出。</li>
+</ul>
+</section>
+
+<section>
+<h2>题目做什么</h2>
+<p>三个 Tier 难度递增，共用同一套 GBM 模拟约定：风险中性测度下用精确对数正态公式推进价格 <code>S(t+dt)=S(t)·exp((r−0.5σ²)dt+σ√dt·Z)</code>，禁止用 SDE 的 Euler 离散，随机数种子统一 <code>numpy.random.default_rng(77777)</code>。</p>
+
+<div class="tier">
+<h3>Tier 1：欧式看跌，Black-Scholes 校准</h3>
+<p>参数：S0=100，K=100，r=0.05，sigma=0.2，T=1.0。要做四件事：</p>
+<ul>
+  <li>算 Black-Scholes 闭式看跌价 <code>P = K·e^(−rT)·N(−d2) − S0·N(−d1)</code>。</li>
+  <li>算 Greeks：Delta = N(d1)−1，Gamma = N'(d1)/(S0·σ·√T)，Vega = S0·N'(d1)·√T，Theta。</li>
+  <li>跑 10 万条路径的蒙特卡洛，作为验证。</li>
+  <li>验证 MC 价落在 BS 价的 2 倍标准误之内。</li>
+</ul>
+<p>这一层是校准，确认模拟框架本身没写错，为后两层的美式定价托底。</p>
+</div>
+
+<div class="tier">
+<h3>Tier 2：单资产美式看跌，Longstaff-Schwartz</h3>
+<p>参数：S0=100，K=110（实值），r=0.05，sigma=0.2，T=1.0，10 万条路径，100 个时间步（即 100 个可行权时点），回归多项式次数 3。</p>
+<p>这一层是题目主体，要点在于 Black-Scholes 在这里会算错。BS 给的是欧式价约 10.68，而实值美式看跌可以提前行权，真实价约 12.00，提前行权溢价约 1.25，占欧式价约 12%。用 BS 给美式看跌定价，绝对误差会超过 1.0。</p>
+<p>Longstaff-Schwartz 的做法是在模拟路径上做反向归纳：在每个行权时点，把继续持有的未来贴现现金流对当前状态变量的多项式基做横截面回归（用 <code>numpy.linalg.lstsq</code>），估出继续持有价值，当即时行权收益超过它就行权。题面点名了几个实现细节：</p>
+<ul>
+  <li>只用实值路径进回归（即时收益 max(K−S,0) 为正的路径）。</li>
+  <li>回归前把 S 标准化 <code>x=(S−mean)/std</code> 再造基 <code>[1, x, x², x³]</code>，否则 S 在 100 附近时 degree-3 的 Vandermonde 矩阵病态。</li>
+  <li>实值路径数少于 poly_degree+1 就跳过这一步，该步无人行权。</li>
+  <li>时间 0 不作为行权时点，反向归纳从第 N_steps−1 步做到第 1 步。</li>
+</ul>
+<p>还要输出行权边界：每个时间步记录当步行权路径里的最高资产价，连起来就是估计出的提前行权边界。</p>
+</div>
+
+<div class="tier">
+<h3>Tier 3：5 资产相关篮子美式看跌加 Greeks</h3>
+<p>参数：5 个资产，S0 全 100，sigma=[0.18, 0.22, 0.25, 0.20, 0.28]，篮子权重=[0.25, 0.20, 0.20, 0.15, 0.20]，篮子行权价 K=95，r=0.05，T=1.0，两两等相关 rho=0.3，20 万条路径，100 步，回归次数 3。</p>
+<p>篮子价是 5 个资产的加权和 <code>B(t)=Σ w_i·S_i(t)</code>，看跌收益是 max(K−B(t), 0)。相关路径靠对相关矩阵做 Cholesky 分解，每步先取 5 个独立标准正态 epsilon，再 <code>Z = L @ epsilon</code> 得到相关增量。回归基比单资产丰富：篮子价及其各次幂，加每个资产价的一次和二次项（标准化），共 <code>1 + poly_degree + 2·N_assets = 1 + 3 + 10 = 14</code> 个特征；要求实值路径数至少 <code>2·poly_degree·N_assets + 1</code> 才做回归。</p>
+<p>Greeks 用 pathwise 法在冻结行权边界的前提下算：先用 LS 定出每条路径的停时 tau，再对贴现收益就参数求导，行权决策保持不变。Delta_j 对初值 S0_j 求导，逐路径导数 <code>−w_j·S_j(tau)/S0_j</code>；Vega_j 对波动率 sigma_j 求导，逐路径导数 <code>−w_j·S_j(tau)·(−σ_j·t + BM_j(t))</code>，其中 BM_j(t) 是资产 j 到时间 t 的累计相关布朗增量。每个 Greek 是对应贴现导数在所有路径上的均值。</p>
+</div>
+</section>
+
+<section>
+<h2>硬性要求</h2>
+<p>来自 <code>main.py</code> 的 <code>task_description</code> 和 <code>problem_spec.md</code> 的 Constraints：</p>
+<ul>
+  <li>只能用 Python + NumPy + SciPy。禁用 QuantLib、py_vollib 等期权库，禁用 autograd、JAX、PyTorch、TensorFlow 等自动微分框架。</li>
+  <li>GBM 必须用精确对数正态公式，不能用 SDE 的 Euler 离散。</li>
+  <li>严格照题面的固定种子、路径数、回归设计、输出 schema。</li>
+  <li>Tier 1 和 Tier 2 是拿分的必要条件，Tier 3 是拿满分的必要条件。</li>
+  <li>Tier 3 做不完就如实留空，不要伪造 Tier 3 的指标；Tier 1/Tier 2 的输出要真实。</li>
+  <li>不许改 <code>base/output</code> 以外的任何文件。</li>
+  <li>环境：Python 3.10+，NumPy≥1.24，SciPy≥1.10，Matplotlib 只用于可选画图。</li>
+</ul>
+</section>
+
+<section>
+<h2>输入文件</h2>
+<p>agent 在 <code>base/</code> 下能看到这些文件，参考答案不在其中。</p>
+<table>
+<thead><tr><th>文件</th><th>格式</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td><code>input/problem_spec.md</code></td><td>Markdown</td><td>完整题面，248 行，含三个 Tier 的全部参数、算法步骤、输出 schema、自检清单、约束。</td></tr>
+<tr><td><code>input/runtime_env/pyproject.toml</code></td><td>TOML</td><td>钉死版本的 NumPy/SciPy 运行时清单。</td></tr>
+<tr><td><code>input/runtime_env/uv.lock</code></td><td>Lockfile</td><td>钉死版本的 uv 锁文件。</td></tr>
+<tr><td><code>software/python.sh</code></td><td>Shell</td><td>题目指定的 Python 入口，用 <code>uv run --frozen</code> 拉起上面那套运行时。</td></tr>
+</tbody>
+</table>
+</section>
+
+<section>
+<h2>要交什么</h2>
+<p>两个文件，都写到 <code>base/output/</code>。</p>
+<h3>1. results.json</h3>
+<p>三个 Tier 的结果对象。每个 Tier 先重复一遍固定常量字段（打分会逐个校验），再给算出来的指标。</p>
+<pre><code>{
+  "tier1": {
+    "S0": 100.0, "K": 100.0, "r": 0.05, "sigma": 0.2, "T": 1.0,
+    "bs_price": &lt;float&gt;, "bs_delta": &lt;float&gt;, "bs_gamma": &lt;float&gt;,
+    "bs_vega": &lt;float&gt;, "bs_theta": &lt;float&gt;,
+    "mc_price": &lt;float&gt;, "mc_stderr": &lt;float&gt;,
+    "mc_n_paths": 100000, "mc_within_2se": &lt;bool&gt;
+  },
+  "tier2": {
+    "S0": 100.0, "K": 110.0, "r": 0.05, "sigma": 0.2, "T": 1.0,
+    "n_paths": 100000, "n_steps": 100, "poly_degree": 3,
+    "bs_european_put": &lt;float&gt;,
+    "american_put_price": &lt;float&gt;, "american_put_se": &lt;float&gt;,
+    "european_mc_from_paths": &lt;float&gt;,
+    "early_exercise_premium": &lt;float&gt;,
+    "premium_positive": &lt;bool&gt;, "bs_underestimates": &lt;bool&gt;,
+    "exercise_boundary_sample": [ 10 个采样：boundary[0], boundary[10], ..., boundary[90]，NaN 写成 null ]
+  },
+  "tier3": {
+    "n_assets": 5,
+    "S0": [100.0, 100.0, 100.0, 100.0, 100.0],
+    "sigma": [0.18, 0.22, 0.25, 0.20, 0.28],
+    "weights": [0.25, 0.20, 0.20, 0.15, 0.20],
+    "K": 95.0, "r": 0.05, "T": 1.0, "rho": 0.3,
+    "n_paths": 200000, "n_steps": 100, "poly_degree": 3,
+    "american_basket_put_price": &lt;float&gt;, "american_basket_put_se": &lt;float&gt;,
+    "european_basket_put_mc": &lt;float&gt;, "early_exercise_premium": &lt;float&gt;,
+    "deltas": [5 个 &lt;float&gt;], "vegas": [5 个 &lt;float&gt;],
+    "weighted_delta_sum": &lt;float&gt;
+  }
+}</code></pre>
+<h3>2. exercise_boundary_tier2.npy</h3>
+<p>shape 为 (100,) 的 NumPy 数组，第 t 项是第 t 步行权路径里的最高资产价，该步无人行权则为 NaN。</p>
+<div class="callout warn">Tier 2 的 <code>exercise_boundary_sample</code> 必须正好是 <code>boundary[::10]</code> 这 10 个采样点（NaN 写成 null），打分时逐点比对，防止 JSON 和 npy 对不上。</div>
+</section>
+
+<section>
+<h2>用什么评测</h2>
+<p>确定性的 Python 打分脚本，对照隐藏参考答案判分，不是重跑 agent 的代码。评分链路：</p>
+<p><code>main.py</code> 里的 <code>evaluate()</code>（被 <code>@cb.evaluate_task</code> 装饰）读取 agent 交的 <code>output_files</code> 和隐藏的 <code>reference_files</code>，两组都是 <code>{results.json, exercise_boundary_tier2.npy}</code>，把字节流传给 <code>scripts/score_american_option_outputs.py</code> 的 <code>score_submission()</code>，返回 <code>[report.score]</code>。ALE 本地 harness 拿 <code>result[0]</code> 作为这题的最终分。<code>score_submission()</code> 内部抛异常时 <code>evaluate()</code> 捕获后返回 0.0。</p>
+<p>参照的隐藏答案是 <code>base/reference/results.json</code> 和 <code>base/reference/exercise_boundary_tier2.npy</code>。</p>
+<p>分值三档（脚本第 438 行起）：</p>
+<table>
+<thead><tr><th>分值</th><th>条件</th></tr></thead>
+<tbody>
+<tr><td><span class="badge b-good">1.0</span></td><td>Tier 1、Tier 2、Tier 3 全过。</td></tr>
+<tr><td><span class="badge b-warn">0.5</span></td><td>Tier 1、Tier 2 过，Tier 3 缺失或没过。</td></tr>
+<tr><td><span class="badge b-bad">0.0</span></td><td>缺文件、results.json 解析失败，或 Tier 1 / Tier 2 任一没过。</td></tr>
+</tbody>
+</table>
+</section>
+
+<section>
+<h2>怎么评测</h2>
+<p>逐条判据。每个 Tier 先校验固定常量字段（浮点容差 1e-9，整数与列表按精确相等），字段缺失或对不上就该 Tier 失败。下面表格里凡是标「fail」的即该 Tier 判负，对应地按上一节的三档映射扣分。</p>
+
+<h3>打分前的门槛</h3>
+<table>
+<thead><tr><th>检查</th><th>条件</th><th>不满足的后果</th></tr></thead>
+<tbody>
+<tr><td>参考文件齐全</td><td>reference 里 results.json 与 exercise_boundary_tier2.npy 都在</td><td>直接 0.0，三个 Tier 全判 reference data missing</td></tr>
+<tr><td>隐藏参考边界形状</td><td>reference 的 boundary shape 为 (100,)</td><td>score_submission 抛异常，evaluate 捕获后返回 0.0</td></tr>
+<tr><td>results.json 存在</td><td>output 里有 results.json</td><td>直接 0.0</td></tr>
+<tr><td>results.json 合法</td><td>能被 json 解析</td><td>直接 0.0</td></tr>
+<tr><td>exercise_boundary_tier2.npy 存在且可加载</td><td>output 里有且能 np.load</td><td>Tier 2 直接判负，连带最终分为 0.0</td></tr>
+</tbody>
+</table>
+
+<h3>Tier 1 判据</h3>
+<table>
+<thead><tr><th>判据</th><th>阈值 / 条件</th><th>不满足</th></tr></thead>
+<tbody>
+<tr><td>常量字段</td><td>S0=100、K=100、r=0.05、sigma=0.2、T=1.0（容差 1e-9）、mc_n_paths=100000（精确）</td><td>fail</td></tr>
+<tr><td>bs_price、bs_delta、bs_gamma、bs_theta 对参考绝对误差</td><td>≤ 1e-4</td><td>fail</td></tr>
+<tr><td>bs_vega 对参考绝对误差</td><td>≤ 1e-2（量级大，容差放宽）</td><td>fail</td></tr>
+<tr><td>mc_stderr</td><td>&gt; 0</td><td>fail</td></tr>
+<tr><td>mc_within_2se</td><td>字段类型必须是布尔且为 true</td><td>fail</td></tr>
+<tr><td>脚本重算 |mc_price − bs_price|</td><td>≤ 2×mc_stderr + 1e-12（交上来的布尔值不算数）</td><td>fail</td></tr>
+</tbody>
+</table>
+
+<h3>Tier 2 判据</h3>
+<table>
+<thead><tr><th>判据</th><th>阈值 / 条件</th><th>不满足</th></tr></thead>
+<tbody>
+<tr><td>常量字段</td><td>S0=100、K=110、r=0.05、sigma=0.2、T=1.0、n_paths=100000、n_steps=100、poly_degree=3</td><td>fail</td></tr>
+<tr><td>bs_european_put 对参考误差</td><td>≤ 1e-4</td><td>fail</td></tr>
+<tr><td>|american_put_price − 参考|</td><td>≤ 0.20</td><td>fail</td></tr>
+<tr><td>american_put_se</td><td>&lt; 0.05</td><td>fail</td></tr>
+<tr><td>溢价自洽 |(american_put_price − european_mc_from_paths) − early_exercise_premium|</td><td>≤ 1e-6</td><td>fail</td></tr>
+<tr><td>early_exercise_premium</td><td>&gt; 0.5</td><td>fail</td></tr>
+<tr><td>premium_positive</td><td>布尔 true</td><td>fail</td></tr>
+<tr><td>bs_underestimates</td><td>布尔 true</td><td>fail</td></tr>
+<tr><td>行权边界形状</td><td>(100,)</td><td>fail</td></tr>
+<tr><td>行权边界 dtype</td><td>浮点或整数</td><td>fail</td></tr>
+<tr><td>有限项数</td><td>≥ 80</td><td>fail</td></tr>
+<tr><td>非零有限项数（|x|&gt;1e-12）</td><td>≥ 80</td><td>fail</td></tr>
+<tr><td>非零有限项取值范围</td><td>全落在 [70, 115]</td><td>fail</td></tr>
+<tr><td><code>boundary[::10]</code> 的非零有限采样数</td><td>≥ 7</td><td>fail</td></tr>
+<tr><td>采样序列单调违背（相邻差 &lt; −1e-6 的次数）</td><td>≤ 2 次</td><td>fail</td></tr>
+<tr><td>最后 10 项中位数（nanmedian）</td><td>&gt; 95</td><td>fail</td></tr>
+<tr><td>exercise_boundary_sample 长度</td><td>= 10</td><td>fail</td></tr>
+<tr><td>exercise_boundary_sample 逐点等于 <code>boundary[::10]</code></td><td>容差 1e-8，null 对应 NaN</td><td>fail</td></tr>
+</tbody>
+</table>
+
+<h3>Tier 3 判据</h3>
+<table>
+<thead><tr><th>判据</th><th>阈值 / 条件</th><th>不满足</th></tr></thead>
+<tbody>
+<tr><td>常量字段</td><td>n_assets=5、S0 五个 100、sigma 五元、weights 五元、K=95、r=0.05、T=1.0、rho=0.3、n_paths=200000、n_steps=100、poly_degree=3（列表按精确相等）</td><td>fail</td></tr>
+<tr><td>|american_basket_put_price − 参考|</td><td>≤ 0.30</td><td>fail</td></tr>
+<tr><td>american_basket_put_se</td><td>在开区间 (0, 0.05)</td><td>fail</td></tr>
+<tr><td>溢价自洽 |(american_price − european_basket_put_mc) − early_exercise_premium|</td><td>≤ 1e-6</td><td>fail</td></tr>
+<tr><td>early_exercise_premium</td><td>&gt; 0</td><td>fail</td></tr>
+<tr><td>5 个 delta</td><td>全 &lt; 0</td><td>fail</td></tr>
+<tr><td>5 个 vega</td><td>全 &gt; 0</td><td>fail</td></tr>
+<tr><td>每个 delta 比值 |actual| / max(|ref|, 1e-12)</td><td>落在 [1/3, 3]</td><td>fail</td></tr>
+<tr><td>每个 vega 比值 |actual| / max(|ref|, 1e-12)</td><td>落在 [1/3, 3]</td><td>fail</td></tr>
+<tr><td>加权 delta 和 |Σ(w_i·S0_i·delta_i) − weighted_delta_sum|</td><td>≤ 1e-6</td><td>fail</td></tr>
+</tbody>
+</table>
+<p>另外脚本会把 <code>boundary_mae_vs_reference</code>（交上来的边界和参考边界的平均绝对误差）写进顶层 notes，只作记录，不进分数。</p>
+</section>
+
+<section>
+<h2>参考答案的目标值</h2>
+<p>来自隐藏的 <code>base/reference/results.json</code>，用于对表。有容差的字段按上一节判，这里给参考的确切数值。</p>
+<table>
+<thead><tr><th>Tier</th><th>字段</th><th>参考值</th></tr></thead>
+<tbody>
+<tr><td rowspan="7">Tier 1</td><td>bs_price</td><td>5.5735260</td></tr>
+<tr><td>bs_delta</td><td>−0.3631693</td></tr>
+<tr><td>bs_gamma</td><td>0.0187620</td></tr>
+<tr><td>bs_vega</td><td>37.524035</td></tr>
+<tr><td>bs_theta</td><td>−1.6578804</td></tr>
+<tr><td>mc_price</td><td>5.5820178</td></tr>
+<tr><td>mc_stderr</td><td>0.0274099</td></tr>
+<tr><td rowspan="6">Tier 2</td><td>bs_european_put</td><td>10.675325</td></tr>
+<tr><td>american_put_price</td><td>11.998250</td></tr>
+<tr><td>american_put_se</td><td>0.0269895</td></tr>
+<tr><td>european_mc_from_paths</td><td>10.744188</td></tr>
+<tr><td>early_exercise_premium</td><td>1.254062</td></tr>
+<tr><td>exercise_boundary_sample</td><td>[null, 90.536, 90.971, 91.621, 92.563, 93.249, 94.430, 95.321, 96.463, 98.152]</td></tr>
+<tr><td rowspan="7">Tier 3</td><td>american_basket_put_price</td><td>2.376248</td></tr>
+<tr><td>american_basket_put_se</td><td>0.0088810</td></tr>
+<tr><td>european_basket_put_mc</td><td>2.128041</td></tr>
+<tr><td>early_exercise_premium</td><td>0.248207</td></tr>
+<tr><td>deltas</td><td>[−0.067521, −0.052477, −0.050825, −0.040594, −0.049143]</td></tr>
+<tr><td>vegas</td><td>[5.371934, 4.162428, 4.261850, 2.860964, 4.337879]</td></tr>
+<tr><td>weighted_delta_sum</td><td>−5.345845</td></tr>
+</tbody>
+</table>
+<p>对应题面自检：Tier 1 的 BS 价约 5.57、Delta 约 −0.36；Tier 2 的欧式价约 10.68、美式价约 12.00、溢价约 1.0 到 1.5、边界从早期约 90 单调升到接近行权价；Tier 3 全部 delta 为负（约 −0.041 到 −0.068）、全部 vega 为正（约 2.9 到 5.4）、篮子美式价高于欧式价。</p>
+</section>
+
+<section>
+<h2>失分的典型形态</h2>
+<p>按 <code>task_card.json</code> 的 evaluation 说明和打分逻辑，拿不到 1.0 通常是这几种：</p>
+<ul>
+  <li>缺输出文件，或 results.json 不是合法 JSON，直接 0.0。</li>
+  <li>只在 JSON 里编指标，而 <code>exercise_boundary_tier2.npy</code> 对不上 <code>exercise_boundary_sample</code>，Tier 2 判负。</li>
+  <li>行权边界不合理：形状不对、有限项不够、超出 [70, 115]、尾部中位数不到 95、或单调违背超过 2 次。</li>
+  <li>Tier 2 的美式价塌回欧式价，说明提前行权逻辑没生效，溢价过不了 &gt; 0.5 或 bs_underestimates 不为 true。</li>
+  <li>Tier 3 的 Greeks 符号错（有 delta 非负或 vega 非正），或某个 Greek 量级偏离参考 3 倍以上。</li>
+  <li>Tier 1/Tier 2 如实做出、Tier 3 缺失或没过，拿 0.5。</li>
+</ul>
+</section>
+
+<footer>
+题目源：<code>tasks/business_finance/american_option_pricing_ls/</code>（代码）、<code>task-data/business_finance/american_option_pricing_ls/base/</code>（数据）。打分脚本：<code>scripts/score_american_option_outputs.py</code>。日期 2026-07-15。
+</footer>
+</div></body></html>

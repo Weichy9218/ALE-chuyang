@@ -1,7 +1,8 @@
 """Web search + web fetch tools.
 
 Two BaseTool subclasses:
-  - :class:`WebSearchTool` — Brave Search API (one provider, env-var key).
+  - :class:`WebSearchTool` — Exa Search API (primary) with a Firecrawl
+    fallback; both keyed from env vars.
   - :class:`WebFetchTool` — HTTP(S) fetch with SSRF guard, Readability-based
     extraction, basic-HTML fallback, HTML→markdown conversion, and a
     per-process TTL cache.
@@ -10,8 +11,10 @@ Adapted from OpenClaw's ``web-search.ts`` / ``web-fetch.ts`` /
 ``web-guarded-fetch.ts`` / ``web-fetch-utils.ts`` / ``web-shared.ts``.
 
 Kept:
-  - Brave provider (``web-search-provider-common.ts``), schema params
-    ``query``/``count``/``freshness``/``country``/``date_after``.
+  - Web-search schema params ``query``/``count``/``freshness``/``country``/
+    ``date_after``. ``freshness``/``country`` are accepted but not consumed by
+    the Exa/Firecrawl backends; ``date_after`` maps to Exa
+    ``startPublishedDate``.
   - SSRF guard: http(s) only, reject private/loopback/link-local/multicast/
     reserved/unspecified on every resolved IP before fetch.
   - Redirect + timeout + max-response-bytes caps.
@@ -63,7 +66,13 @@ logger = logging.getLogger(__name__)
 # Constants (match OpenClaw web-fetch.ts:43-51 / web-shared.ts defaults)
 # ---------------------------------------------------------------------------
 
-BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
+# web_search backends: Exa is primary, Firecrawl is the fallback.
+EXA_SEARCH_URL = "https://api.exa.ai/search"
+FIRECRAWL_SEARCH_URL = "https://api.firecrawl.dev/v1/search"
+
+# Chars kept from an Exa result's ``text`` body when it has no highlight,
+# used as the result ``description`` snippet.
+_EXA_SNIPPET_MAX_CHARS = 300
 
 _DEFAULT_SEARCH_COUNT = 5
 _MAX_SEARCH_COUNT = 20
@@ -138,6 +147,34 @@ _FETCH_CACHE = _TTLCache()
 
 
 # ---------------------------------------------------------------------------
+# Host denylist (answer-leak guard)
+# ---------------------------------------------------------------------------
+# Hosts (and their subdomains) the agent must never reach: the benchmark's own
+# site could expose task prompts or reference answers. Applied in two places —
+# web_search filters matching results out before the model ever sees the link,
+# and web_fetch rejects the URL both pre-fetch and after every redirect. Extra
+# suffixes can be added via the ALE_BLOCKED_HOST_SUFFIXES env var (comma-
+# separated); the benchmark host is always blocked regardless of env.
+_ALWAYS_BLOCKED_HOST_SUFFIXES = ("agents-last-exam.org",)
+
+
+def _blocked_host_suffixes() -> tuple[str, ...]:
+    extra = os.environ.get("ALE_BLOCKED_HOST_SUFFIXES", "")
+    parsed = tuple(
+        h.strip().lower().lstrip(".") for h in extra.split(",") if h.strip()
+    )
+    return _ALWAYS_BLOCKED_HOST_SUFFIXES + parsed
+
+
+def _host_is_blocked(host: str) -> bool:
+    """True if ``host`` equals or is a subdomain of any blocked suffix."""
+    h = (host or "").strip().lower().rstrip(".")
+    if not h:
+        return False
+    return any(h == s or h.endswith("." + s) for s in _blocked_host_suffixes())
+
+
+# ---------------------------------------------------------------------------
 # SSRF guard
 # ---------------------------------------------------------------------------
 
@@ -180,6 +217,14 @@ def _assert_url_safe(url: str) -> None:
     host = parsed.hostname
     if not host:
         raise ValueError(f"URL {url!r} is missing a host.")
+
+    # Answer-leak guard: reject the benchmark's own host (and configured extras)
+    # before any DNS/fetch. Re-checked on the post-redirect final URL by the
+    # caller, so a redirect into the blocked host is caught too.
+    if _host_is_blocked(host):
+        raise ValueError(
+            f"URL {url!r} is on the blocked-host denylist (answer-leak guard)."
+        )
 
     # Bare-IP URLs: check the literal first — cheaper and no DNS involved.
     try:
@@ -333,34 +378,284 @@ def _resolve_int(raw: object, default: int, *, min_: int, max_: int) -> int:
     return max(min_, min(max_, val))
 
 
-def _normalize_freshness_and_date_after(
+def _normalize_search_params(
     freshness_raw: object,
+    country_raw: object,
     date_after_raw: object,
-) -> Optional[str]:
-    """Return the ``freshness`` query param Brave expects, or ``None``.
+) -> tuple[Optional[tuple], Optional[str], Optional[str]]:
+    """Normalize the optional search params. Never raises.
 
-    ``freshness`` accepts ``pd|pw|pm|py`` natively. ``date_after`` is
-    ``YYYY-MM-DD``; when set alone it's mapped to Brave's range syntax
-    ``YYYY-MM-DDto<today>`` (see ``web-search-provider-common.ts:261``).
-    Explicit ``freshness`` wins when both are supplied.
+    Returns ``(freshness_param, country, start_published_date)``:
+
+    - ``freshness_param`` — an opaque cache token (or ``None``) folding the
+      recognized ``freshness`` bucket together with ``start_published_date`` so
+      the ``_SEARCH_CACHE`` key keeps discriminating both time filters, exactly
+      as it did when ``date_after`` was baked into the old freshness string.
+      Not sent to any provider.
+    - ``country`` — upper-cased ISO code when a non-empty string, else ``None``.
+      Kept for the cache key + schema back-compat; the providers ignore it.
+    - ``start_published_date`` — ``date_after`` (``YYYY-MM-DD``) rendered as an
+      ISO-8601 timestamp for Exa's ``startPublishedDate``, else ``None``.
+
+    ``freshness`` (``pd|pw|pm|py``) is accepted for schema back-compat but Exa/
+    Firecrawl don't consume it. Unsupported or malformed values are skipped
+    rather than raised — Exa/Firecrawl silently ignore params they don't take,
+    so web_search does the same instead of erroring on them.
     """
-    if isinstance(freshness_raw, str) and freshness_raw.strip():
+    freshness: Optional[str] = None
+    if isinstance(freshness_raw, str):
         candidate = freshness_raw.strip().lower()
-        if candidate not in _VALID_FRESHNESS:
-            raise ValueError(
-                f'freshness must be one of {sorted(_VALID_FRESHNESS)}, got {freshness_raw!r}'
-            )
-        return candidate
-    if isinstance(date_after_raw, str) and date_after_raw.strip():
+        if candidate in _VALID_FRESHNESS:
+            freshness = candidate
+
+    country: Optional[str] = None
+    if isinstance(country_raw, str) and country_raw.strip():
+        country = country_raw.strip().upper()
+
+    start_published_date: Optional[str] = None
+    if isinstance(date_after_raw, str):
         candidate = date_after_raw.strip()
-        if not _DATE_AFTER_RE.match(candidate):
-            raise ValueError(
-                f'date_after must be YYYY-MM-DD, got {date_after_raw!r}'
-            )
-        # Brave range syntax expects "YYYY-MM-DDtoYYYY-MM-DD".
-        today = _dt.date.today().isoformat()
-        return f"{candidate}to{today}"
-    return None
+        if _DATE_AFTER_RE.match(candidate):
+            start_published_date = f"{candidate}T00:00:00.000Z"
+
+    if freshness is None and start_published_date is None:
+        freshness_param: Optional[tuple] = None
+    else:
+        freshness_param = (freshness, start_published_date)
+    return freshness_param, country, start_published_date
+
+
+# ---------------------------------------------------------------------------
+# web_search providers (Exa primary, Firecrawl fallback)
+# ---------------------------------------------------------------------------
+# Structured for offline unit-testing: the two ``_search_*`` coroutines are the
+# only network surface. Response mapping (``_map_*``), denylist filtering +
+# truncation (``_filter_and_truncate``) and provider selection
+# (``_run_web_search``) are pure and monkeypatchable without a socket.
+
+
+def _map_exa_results(payload: object) -> list[dict[str, str]]:
+    """Map an Exa ``/search`` payload → ``[{title,url,description}]``.
+
+    Defensive: tolerates a non-dict payload, a missing/non-list ``results``,
+    non-dict rows, and missing fields. ``description`` is the first non-empty
+    highlight when present, else a short snippet of the result ``text``, else
+    ``""``. Not host-filtered here — that happens in ``_filter_and_truncate``.
+    """
+    if not isinstance(payload, dict):
+        return []
+    raw = payload.get("results")
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, str]] = []
+    for r in raw:
+        if not isinstance(r, dict):
+            continue
+        description = ""
+        highlights = r.get("highlights")
+        if isinstance(highlights, list):
+            for h in highlights:
+                if isinstance(h, str) and h.strip():
+                    description = h.strip()
+                    break
+        if not description:
+            text = r.get("text")
+            if isinstance(text, str) and text.strip():
+                description = text.strip()[:_EXA_SNIPPET_MAX_CHARS]
+        out.append(
+            {
+                "title": r.get("title") or "",
+                "url": r.get("url") or "",
+                "description": description,
+            }
+        )
+    return out
+
+
+def _map_firecrawl_results(payload: object) -> list[dict[str, str]]:
+    """Map a Firecrawl ``/v1/search`` payload → ``[{title,url,description}]``.
+
+    Defensive over a non-dict payload, a missing/non-list ``data``, and
+    non-dict rows. Not host-filtered here.
+    """
+    if not isinstance(payload, dict):
+        return []
+    raw = payload.get("data")
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, str]] = []
+    for r in raw:
+        if not isinstance(r, dict):
+            continue
+        out.append(
+            {
+                "title": r.get("title") or "",
+                "url": r.get("url") or "",
+                "description": r.get("description") or "",
+            }
+        )
+    return out
+
+
+def _filter_and_truncate(raw_results: list, count: int) -> list[dict[str, str]]:
+    """Drop blocked-host results (answer-leak guard) and cap to ``count``.
+
+    Pure + synchronous: no network, no provider specifics — so mapping +
+    denylist + truncation are unit-testable in isolation. Applied to results
+    from BOTH providers (Exa and Firecrawl) before they are returned, so a
+    blocked host never reaches the model regardless of which provider served.
+    """
+    out: list[dict[str, str]] = []
+    for r in raw_results:
+        if len(out) >= count:
+            break
+        if not isinstance(r, dict):
+            continue
+        url = r.get("url") or ""
+        # Drop blocked hosts before the model sees the link (answer-leak guard).
+        if _host_is_blocked(urlparse(url).hostname or ""):
+            continue
+        out.append(
+            {
+                "title": r.get("title") or "",
+                "url": url,
+                "description": r.get("description") or "",
+            }
+        )
+    return out
+
+
+async def _search_exa(
+    api_key: str,
+    query: str,
+    count: int,
+    start_published_date: Optional[str] = None,
+) -> list[dict[str, str]]:
+    """Call Exa ``/search`` and return mapped ``[{title,url,description}]``.
+
+    Raises ``RuntimeError`` on HTTP >= 400 so the caller can fall back to
+    Firecrawl. Results are NOT host-filtered here.
+    """
+    import aiohttp
+
+    body: dict[str, Any] = {
+        "query": query,
+        "numResults": count,
+        "type": "auto",
+        "contents": {"highlights": {"numSentences": 2, "highlightsPerUrl": 1}},
+    }
+    if start_published_date:
+        body["startPublishedDate"] = start_published_date
+    headers = {"x-api-key": api_key, "Content-Type": "application/json"}
+    timeout = aiohttp.ClientTimeout(total=_DEFAULT_SEARCH_TIMEOUT_SECONDS)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.post(EXA_SEARCH_URL, json=body, headers=headers) as resp:
+            if resp.status == 429:
+                retry_after = resp.headers.get("Retry-After", "unknown")
+                raise RuntimeError(
+                    f"web_search rate-limited by Exa (HTTP 429, Retry-After={retry_after})"
+                )
+            if resp.status >= 400:
+                detail = (await resp.text())[:1000]
+                raise RuntimeError(
+                    f"web_search Exa failed (HTTP {resp.status}): {detail!r}"
+                )
+            payload = await resp.json(content_type=None)
+    return _map_exa_results(payload)
+
+
+async def _search_firecrawl(
+    api_key: str,
+    query: str,
+    count: int,
+) -> list[dict[str, str]]:
+    """Call Firecrawl ``/v1/search`` and return mapped ``[{title,url,description}]``.
+
+    Raises ``RuntimeError`` on HTTP >= 400. Results are NOT host-filtered here.
+    """
+    import aiohttp
+
+    body = {"query": query, "limit": count}
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    timeout = aiohttp.ClientTimeout(total=_DEFAULT_SEARCH_TIMEOUT_SECONDS)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.post(FIRECRAWL_SEARCH_URL, json=body, headers=headers) as resp:
+            if resp.status == 429:
+                retry_after = resp.headers.get("Retry-After", "unknown")
+                raise RuntimeError(
+                    f"web_search rate-limited by Firecrawl (HTTP 429, Retry-After={retry_after})"
+                )
+            if resp.status >= 400:
+                detail = (await resp.text())[:1000]
+                raise RuntimeError(
+                    f"web_search Firecrawl failed (HTTP {resp.status}): {detail!r}"
+                )
+            payload = await resp.json(content_type=None)
+    return _map_firecrawl_results(payload)
+
+
+def _build_search_payload(
+    provider: str, query: str, count: int, raw_results: list
+) -> dict:
+    """Apply the denylist filter + truncation and shape the tool return dict."""
+    results = _filter_and_truncate(raw_results, count)
+    return {
+        "success": True,
+        "provider": provider,
+        "query": query,
+        "count": len(results),
+        "results": results,
+    }
+
+
+async def _run_web_search(
+    exa_key: str,
+    firecrawl_key: str,
+    query: str,
+    count: int,
+    start_published_date: Optional[str],
+) -> dict:
+    """Run the Exa→Firecrawl search chain and return the tool payload.
+
+    Provider selection:
+      - Exa is primary whenever ``exa_key`` is set.
+      - Firecrawl is the fallback, used when Exa is unavailable (no
+        ``exa_key``), raises, or returns zero results — provided a
+        ``firecrawl_key`` exists.
+      - If Exa raises and there is no Firecrawl key, the Exa error propagates.
+      - If Exa returns zero results and there is no Firecrawl key, the empty
+        Exa result is returned as-is.
+
+    At least one key is guaranteed non-empty by the caller
+    (``WebSearchTool._resolve_api_keys``). Reads the module-level ``_search_*``
+    coroutines by name so tests can monkeypatch them.
+    """
+    if exa_key:
+        try:
+            raw = await _search_exa(exa_key, query, count, start_published_date)
+        except Exception as exa_err:  # noqa: BLE001 — fall back or resurface
+            if firecrawl_key:
+                logger.info(
+                    "web_search: Exa failed (%s); falling back to Firecrawl", exa_err
+                )
+                raw = await _search_firecrawl(firecrawl_key, query, count)
+                return _build_search_payload("firecrawl", query, count, raw)
+            raise
+        if raw:
+            return _build_search_payload("exa", query, count, raw)
+        # Exa succeeded but returned nothing — fall back if a key is available.
+        if firecrawl_key:
+            logger.info("web_search: Exa returned 0 results; falling back to Firecrawl")
+            raw = await _search_firecrawl(firecrawl_key, query, count)
+            return _build_search_payload("firecrawl", query, count, raw)
+        return _build_search_payload("exa", query, count, raw)
+
+    # No Exa key: Firecrawl is the only provider.
+    raw = await _search_firecrawl(firecrawl_key, query, count)
+    return _build_search_payload("firecrawl", query, count, raw)
 
 
 # ---------------------------------------------------------------------------
@@ -370,27 +665,32 @@ def _normalize_freshness_and_date_after(
 
 @register_tool("web_search")
 class WebSearchTool(BaseTool):
-    """Search the web via the Brave Search API.
+    """Search the web via Exa (primary) with a Firecrawl fallback.
 
-    Requires ``BRAVE_API_KEY`` (env var) or an explicit ``api_key`` kwarg.
-    Errors are returned as ``{"success": False, "error": "..."}`` to keep
-    the contract aligned with the other OpenClaw tools.
+    Requires at least one of ``EXA_API_KEY`` / ``Firecrawl_API_KEY`` (env
+    vars), or an explicit ``exa_api_key`` / ``firecrawl_api_key`` kwarg. Exa
+    serves whenever its key is present; Firecrawl takes over when Exa is
+    unavailable, errors, or returns no results. Errors are returned as
+    ``{"success": False, "error": "..."}`` to keep the contract aligned with
+    the other OpenClaw tools.
     """
 
     def __init__(
         self,
         *,
-        api_key: Optional[str] = None,
+        exa_api_key: Optional[str] = None,
+        firecrawl_api_key: Optional[str] = None,
         cfg: Optional[dict] = None,
     ):
-        self._api_key_override = api_key
+        self._exa_api_key_override = exa_api_key
+        self._firecrawl_api_key_override = firecrawl_api_key
         super().__init__(cfg)
 
     @property
     def description(self) -> str:
         return (
-            "Search the web (Brave API). Returns ranked results with title, "
-            "url, and description."
+            "Search the web (Exa, with Firecrawl fallback). Returns ranked "
+            "results with title, url, and description."
         )
 
     @property
@@ -426,22 +726,36 @@ class WebSearchTool(BaseTool):
                 "date_after": {
                     "type": "string",
                     "description": (
-                        "Only results newer than YYYY-MM-DD. Mapped to Brave "
-                        "range-freshness syntax. Ignored if freshness is set."
+                        "Only results published on or after YYYY-MM-DD. Maps to "
+                        "Exa's startPublishedDate; ignored by the Firecrawl fallback."
                     ),
                 },
             },
             "required": ["query"],
         }
 
-    def _resolve_api_key(self) -> str:
-        key = self._api_key_override or os.environ.get("BRAVE_API_KEY") or ""
-        key = key.strip()
-        if not key:
+    def _resolve_api_keys(self) -> tuple[str, str]:
+        """Resolve ``(exa_key, firecrawl_key)``; at least one must be present.
+
+        Explicit overrides win over env vars. web_search runs with whichever
+        provider has a key and only errors when BOTH are missing. Note the
+        intentional mixed-case ``Firecrawl_API_KEY`` env var name — it is read
+        verbatim, not upper-cased.
+        """
+        exa_key = (
+            self._exa_api_key_override or os.environ.get("EXA_API_KEY") or ""
+        ).strip()
+        firecrawl_key = (
+            self._firecrawl_api_key_override
+            or os.environ.get("Firecrawl_API_KEY")
+            or ""
+        ).strip()
+        if not exa_key and not firecrawl_key:
             raise ValueError(
-                "web_search requires BRAVE_API_KEY (env var) or an api_key kwarg."
+                "web_search requires at least one of EXA_API_KEY or "
+                "Firecrawl_API_KEY (env vars), or an api_key override."
             )
-        return key
+        return exa_key, firecrawl_key
 
     def call(self, params: Union[str, dict], **kwargs) -> dict:
         try:
@@ -453,17 +767,16 @@ class WebSearchTool(BaseTool):
                 min_=1,
                 max_=_MAX_SEARCH_COUNT,
             )
-            freshness_param = _normalize_freshness_and_date_after(
+            # freshness/country are accepted for schema back-compat but not
+            # consumed by Exa/Firecrawl; date_after maps to Exa
+            # startPublishedDate. None of this raises — unsupported/malformed
+            # values are skipped.
+            freshness_param, country, start_published_date = _normalize_search_params(
                 parsed.get("freshness"),
+                parsed.get("country"),
                 parsed.get("date_after"),
             )
-            country_raw = parsed.get("country")
-            country: Optional[str] = None
-            if country_raw is not None:
-                if not isinstance(country_raw, str) or not country_raw.strip():
-                    raise ValueError('web_search: "country" must be a non-empty string')
-                country = country_raw.strip().upper()
-            api_key = self._resolve_api_key()
+            exa_key, firecrawl_key = self._resolve_api_keys()
         except ValueError as e:
             return {"success": False, "error": f"Error: {e}"}
 
@@ -474,7 +787,9 @@ class WebSearchTool(BaseTool):
 
         try:
             result = _run_async(
-                self._search(api_key, query, count, freshness_param, country)
+                _run_web_search(
+                    exa_key, firecrawl_key, query, count, start_published_date
+                )
             )
         except Exception as e:  # noqa: BLE001 — surface HTTP errors as tool errors
             logger.error("web_search failure on %r: %s", query, e)
@@ -482,62 +797,6 @@ class WebSearchTool(BaseTool):
 
         _SEARCH_CACHE.set(cache_key, result, ttl_seconds=_SEARCH_CACHE_TTL_SECONDS)
         return result
-
-    async def _search(
-        self,
-        api_key: str,
-        query: str,
-        count: int,
-        freshness: Optional[str],
-        country: Optional[str],
-    ) -> dict:
-        import aiohttp
-
-        params: dict[str, Any] = {"q": query, "count": count}
-        if freshness:
-            params["freshness"] = freshness
-        if country:
-            params["country"] = country
-        headers = {
-            "X-Subscription-Token": api_key,
-            "Accept": "application/json",
-            "Accept-Encoding": "gzip",
-        }
-        timeout = aiohttp.ClientTimeout(total=_DEFAULT_SEARCH_TIMEOUT_SECONDS)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(BRAVE_SEARCH_URL, params=params, headers=headers) as resp:
-                if resp.status == 429:
-                    retry_after = resp.headers.get("Retry-After", "unknown")
-                    raise RuntimeError(
-                        f"web_search rate-limited by Brave (HTTP 429, Retry-After={retry_after})"
-                    )
-                if resp.status >= 400:
-                    body = (await resp.text())[:1000]
-                    raise RuntimeError(
-                        f"web_search failed (HTTP {resp.status}): {body!r}"
-                    )
-                payload = await resp.json(content_type=None)
-
-        web = payload.get("web") or {}
-        raw_results = web.get("results") or []
-        results: list[dict[str, Any]] = []
-        for r in raw_results[:count]:
-            if not isinstance(r, dict):
-                continue
-            results.append(
-                {
-                    "title": r.get("title") or "",
-                    "url": r.get("url") or "",
-                    "description": r.get("description") or "",
-                }
-            )
-        return {
-            "success": True,
-            "provider": "brave",
-            "query": query,
-            "count": len(results),
-            "results": results,
-        }
 
 
 # ---------------------------------------------------------------------------

@@ -223,6 +223,8 @@ class PiDeployer(BaseAgentDeployer):
         models_path = cfg_dir / "models.json"
         models_path.write_text(json.dumps(models_doc, indent=2), encoding="utf-8")
         models_path.chmod(0o600)
+
+        self._stage_skills(cfg, cfg_dir)
         logger.info(
             "pi: models.json staged at %s (provider=%s model=%s base=%s)",
             models_path, cfg.provider, cfg.model, cfg.base_url,
@@ -339,6 +341,29 @@ class PiDeployer(BaseAgentDeployer):
             error=error,
         )
 
+    def _stage_skills(self, cfg: PiConfig, cfg_dir: Path) -> None:
+        """Materialize ``cfg.skill_sources`` as ``<cfg_dir>/skills/<name>/SKILL.md``
+        and append each dir to ``cfg.skills`` so ``_build_argv`` emits ``--skill``.
+
+        Writes under the pi config dir (``PI_CODING_AGENT_DIR``), which is also
+        pi's own skill-discovery root — so the staged skills would be found even
+        without the flag. The flag is passed anyway: discovery of the project
+        ``.pi/skills/`` tree is gated on the project being trusted, and an
+        explicit ``--skill`` keeps loading deterministic rather than dependent
+        on trust state or cwd.
+        """
+        if not cfg.skill_sources:
+            return
+        staged: list[str] = []
+        for name, body in cfg.skill_sources.items():
+            skill_dir = cfg_dir / "skills" / name
+            skill_dir.mkdir(parents=True, exist_ok=True)
+            (skill_dir / "SKILL.md").write_text(body, encoding="utf-8")
+            staged.append(str(skill_dir))
+            logger.info("pi: staged skill %r at %s (%d bytes)", name, skill_dir, len(body))
+        # cfg.skills may arrive as a yaml list; normalize and extend.
+        cfg.skills = tuple(cfg.skills) + tuple(staged)
+
     def _build_argv(self, cfg: PiConfig, prompt: str) -> list[str]:
         argv = [
             self._pi_path,
@@ -353,6 +378,10 @@ class PiDeployer(BaseAgentDeployer):
             argv.append("--no-context-files")
         if cfg.disabled_tools:
             argv += ["--exclude-tools", ",".join(cfg.disabled_tools)]
+        for skill_path in cfg.skills:
+            argv += ["--skill", str(skill_path)]
+        for ext_path in cfg.extensions:
+            argv += ["--extension", str(ext_path)]
         argv.append(prompt)   # prompt is the final positional arg
         return argv
 

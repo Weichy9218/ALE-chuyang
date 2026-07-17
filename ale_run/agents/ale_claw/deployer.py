@@ -68,6 +68,37 @@ logger = logging.getLogger(__name__)
 _HARNESS_AGENTS_MD = Path(__file__).resolve().parent / "harness" / "AGENTS.md"
 
 
+def _skill_description(body: str) -> str:
+    """Extract the `description:` value from a SKILL.md frontmatter block."""
+    in_fm = False
+    for line in body.splitlines():
+        s = line.strip()
+        if s == "---":
+            if in_fm:
+                break
+            in_fm = True
+            continue
+        if in_fm and s.lower().startswith("description:"):
+            return s.split(":", 1)[1].strip()
+    return "(no description)"
+
+
+def _seed_skill_playbooks(memory_store, task_id: str, skill_sources: dict) -> None:
+    """Seed skill bodies as memory files + a when-to-use index into TASK_MEMORY.md."""
+    idx = [
+        "# Method playbooks (pre-seeded)",
+        "",
+        "Optional. Use the ONE whose 'when to use' matches this task; if neither "
+        "fits, ignore both. To load a playbook, memory_get the path shown.",
+        "",
+    ]
+    for name, body in skill_sources.items():
+        (memory_store.memory_dir / f"method-{name}.md").write_text(body, encoding="utf-8")
+        rel = f"tasks/{task_id}/memory/method-{name}.md"
+        idx.append(f"- **{name}** — {_skill_description(body)}  (load: memory_get {rel})")
+    memory_store.write_task_memory("\n".join(idx) + "\n")
+
+
 class AleClawDeployer(BaseAgentDeployer):
     """OpenClaw harness deployer. Runs on host or in docker container.
 
@@ -206,6 +237,8 @@ class AleClawDeployer(BaseAgentDeployer):
         # ---- 2. Memory + session + subagent registry ----
         memory_store = MemoryStore(task_id=task_id, base_dir=str(memory_base))
         memory_store.init_session()
+        if getattr(cfg, "skill_sources", None):
+            _seed_skill_playbooks(memory_store, task_id, cfg.skill_sources)
         session_mgr = SessionManager(task_id=task_id, base_dir=str(session_base))
         session_mgr.init_session(model=cfg.model)
         registry = SubagentRegistry(persist_path=session_mgr.task_dir / "subagent-runs.jsonl")

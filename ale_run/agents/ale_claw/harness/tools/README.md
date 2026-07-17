@@ -17,7 +17,7 @@ runtime paths those actions use to reach the VM or local harness services.
 
 - file tools such as `read`, `write`, and `edit`
 - shell execution via `exec`
-- web access via `web_search` and `web_fetch`
+- web access via `web_search` (Exa primary, Firecrawl fallback) and `web_fetch`
 - image analysis via `analyze_image`
 - GUI control via `computer`
 

@@ -83,6 +83,50 @@ class PiConfig:
     task tree do not leak into the system prompt (deterministic benchmark
     runs)."""
 
+    # ---- harness injection surfaces --------------------------------------
+    skills: tuple[str, ...] = ()
+    """Host paths passed through as ``--skill <path>`` (repeatable).
+
+    A skill is a ``SKILL.md`` directory whose YAML frontmatter (``name`` +
+    ``description``) is the only part resident in the system prompt; the body
+    is loaded solely when the model itself elects to invoke it. That makes
+    this the one surface with progressive disclosure built in: a skill that
+    does not trigger costs ~20 tokens and changes nothing, so relevance
+    gating is done by the model against the description rather than by us
+    guessing a task taxonomy up front.
+
+    Empty by default: a run that sets no skills is byte-identical to the
+    pre-existing argv, so this cannot perturb an established baseline."""
+
+    skill_sources: dict[str, str] = field(default_factory=dict)
+    """``{skill_name: SKILL.md text}`` materialized into the pi config dir at
+    install time and then passed via ``--skill``.
+
+    The deployer executes *inside* the sandbox (``install`` writes
+    ``models.json`` with a plain ``write_text``), so a host path in ``skills``
+    does not resolve there. Skill bodies therefore travel with the serialized
+    config — the same trick ``api_key`` uses to cross the executor boundary —
+    rather than relying on a mount that the sandbox executor does not provide.
+
+    ``skill_name`` must equal the SKILL.md frontmatter ``name`` and be
+    ``[a-z0-9-]+``; pi's loader warns and drops the skill when the name and
+    its parent directory disagree."""
+
+    extensions: tuple[str, ...] = ()
+    """Host paths passed through as ``--extension <path>`` (repeatable).
+
+    NOTE the flag is ``--extension`` (singular, repeatable) — ``--extensions``
+    belongs to ``pi update`` and is not an agent flag. Extensions attach to
+    the extension *event bus* (``tool_call``/``tool_result``/``turn_end``),
+    NOT to the three ``AgentLoopConfig`` loop hooks: ``shouldStopAfterTurn``
+    has no consumer in ``coding-agent`` at all, and ``before/afterToolCall``
+    are already claimed by ``agent-session.ts`` and bridged to the bus with
+    the ``terminate`` field dropped. Under ``--mode json`` there is therefore
+    no supported way for an extension to stop the loop; budget control has to
+    be emulated. Do not plan an intervention that depends on those hooks.
+
+    Empty by default, for the same baseline-safety reason as ``skills``."""
+
     # ---- env -------------------------------------------------------------
     clear_proxy: bool = True
     """Drop ``HTTP(S)_PROXY``/``ALL_PROXY`` from the child env. The ALE

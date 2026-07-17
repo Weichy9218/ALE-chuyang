@@ -1,0 +1,37 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>pi · moodle_gradebook_closeout_reconciliation</title><style>*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--pi:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--viol:#7a5af5}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--pi:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--viol:#a08bff}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--pi:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--viol:#7a5af5}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--pi:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--viol:#a08bff}
+.wrap{max-width:960px;margin:0 auto;padding:28px 20px 90px}h1{font-size:23px;margin:0 0 6px}h2{font-size:18px;margin:30px 0 8px}h3{font-size:14px;margin:16px 0 5px;color:var(--muted);text-transform:none}.sub{color:var(--muted);font-size:14px}p{margin:9px 0}
+a{color:var(--pi);text-decoration:none}a:hover{text-decoration:underline}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}@media(max-width:680px){.cards{grid-template-columns:repeat(2,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}.card .num{font-size:25px;font-weight:700}.card .lab{font-size:12px;color:var(--muted);margin-top:2px}
+.note{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--pi);border-radius:8px;padding:11px 16px;margin:14px 0}.note.good{border-left-color:var(--good)}.note.warn{border-left-color:var(--warn)}.note.bad{border-left-color:var(--bad)}.note.viol{border-left-color:var(--viol)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0}table{border-collapse:collapse;width:100%;font-size:13px;min-width:640px}
+th,td{padding:8px 11px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{background:var(--card);font-weight:600;white-space:nowrap;position:sticky;top:0}td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}tr:last-child td{border-bottom:none}
+.sc{font-weight:700;padding:1px 6px;border-radius:5px;font-size:12px;font-variant-numeric:tabular-nums}.sc-hi{color:var(--good);background:color-mix(in srgb,var(--good) 16%,transparent)}.sc-mid{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}.sc-lo{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:20px;white-space:nowrap}
+.t-model{color:var(--pi);background:color-mix(in srgb,var(--pi) 15%,transparent)}.t-eval{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}.t-aced{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}.t-harness{color:var(--viol);background:color-mix(in srgb,var(--viol) 16%,transparent)}.t-mixed{color:var(--muted);background:color-mix(in srgb,var(--muted) 15%,transparent)}
+.tn{font-family:ui-monospace,Menlo,monospace;font-size:12px}code{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12.5px;font-family:ui-monospace,Menlo,monospace}
+pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:11px 13px;overflow-x:auto;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5;white-space:pre-wrap}
+ul,ol{margin:8px 0;padding-left:22px}li{margin:5px 0}footer{margin-top:38px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+.case-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:6px 0 2px}.scbig{font-size:15px;font-weight:700}
+.sec{border:1px solid var(--line);border-radius:10px;padding:2px 16px 12px;margin:14px 0;background:color-mix(in srgb,var(--card) 45%,transparent)}
+.ev{font-size:13px;color:var(--muted)}.ev li{margin:3px 0}</style></head><body><div class="wrap">
+<div class="sub"><a href="index.html">&larr; 返回 pi 汇总</a></div>
+<div class="case-head"><h1 style="margin:0">moodle_gradebook_closeout_reconciliation</h1><span class="tag t-eval">评测artifact</span></div>
+<div class="sub tn">education_info · pi / gpt-5.6-sol</div>
+<p class="scbig">OFF <span class="sc sc-hi">0.950</span> <span class="sub">(completed)</span> &nbsp; ON <span class="sc sc-hi">0.950</span> <span class="sub">(completed)</span>
+&nbsp; Δ +0.000</p>
+<div class="note good">重建的成绩册几乎全对，只因 policy.json 里把空成绩策略写成 count_as_zero、而评测器只认字面量 zero，精确字符串匹配扣掉 0.05。</div>
+<div class="sec"><h3>题目本身</h3><div><p>在一个导出的 Moodle 课程备份（.mbz）上做期末成绩册收尾对账：把缺失/空成绩按规则处理、重算各类别与总评，并把重建后的成绩册与策略写回备份结构。</p></div></div>
+<div class="sec"><h3>要求</h3><div><p>在 .mbz 的 gradebook 结构里写出对账后的成绩与一份 policy.json（含空成绩处理策略、类别聚合方式等），使重建结果与标准答案一致。</p></div></div>
+<div class="sec"><h3>评测方法</h3><div><p>评测器对重建的成绩册和 policy 做精确比对。其中 canonical_policy() 对 empty_grade_behavior 这个字段做字面量字符串相等判断，要求恰好是 &quot;zero&quot;；成绩单元格逐格比对。总分按各项加权，满分 1.0。</p></div></div>
+<div class="sec"><h3>模型执行过程（逐帧）</h3><div><p>OFF 与 ON 的行为一致：都正确解析了 .mbz、把空成绩当作 0 计入、重算了类别与总评，所有下游成绩单元格都与标准答案吻合。两条运行在收尾前都自查了文件结构。唯一分歧点不在计算，而在一个策略字段的取值写法。</p></div></div>
+<div class="sec"><h3>哪里做错了</h3><div><p>把 empty_grade_behavior 写成了语义正确但字面不符的 count_as_zero，而评测器的 canonical_policy() 只接受字面量 zero。空成绩确实被按 0 处理了（下游全对），所以这是纯粹的 token 不匹配，不是逻辑错。OFF 和 ON 犯的是同一个错，扣掉同样的 0.05。</p></div></div>
+<div class="sec"><h3>怎样才能做对</h3><div><p>要拿满这 0.05，得恰好写出评测器认的 canonical token zero。但这个字面量并不在 agent 可见的输入里明确声明，属于评测器私有约定；模型写的 count_as_zero 是完全合理的同义表达。真正该修的是评测器放宽到接受同义值，而不是要求模型去猜一个未公开的字符串。所以这 0.05 是评测严苛，不是能力问题。</p></div></div>
+<div class="sec"><h3>harness（ON）的效应</h3><div><p>无影响。OFF/ON 同分同错。提醒类 harness 帮不上：模型本来就自查了文件与成绩，M3 也无法触发（标准答案不在 input 里），没有任何提醒能让模型猜到评测器要的那个字面量。</p></div></div>
+<div class="sec"><h3>证据</h3><ul class='ev'><li>OFF=0.95, ON=0.95，两条运行 policy.json 里都是 empty_grade_behavior=&quot;count_as_zero&quot;</li><li>评测器 canonical_policy() 要求字面量 &quot;zero&quot;，做精确字符串相等</li><li>所有成绩单元格与标准答案一致（空成绩确实被按 0 处理）</li><li>扣分点仅此一个字段的字面写法，属评测器私有约定、输入里未声明</li><li>M3 无法触发：标准答案在评测器侧，不在 agent 的 input 目录</li></ul></div>
+<footer>pi · gpt-5.6-sol · haoxiang · 2026-07-15 · 逐题 forensics</footer>
+</div></body></html>

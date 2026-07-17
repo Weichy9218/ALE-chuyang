@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 from typing import Any, Dict, Optional
 
@@ -31,6 +32,10 @@ logger = logging.getLogger(__name__)
 
 BOYUE_API_KEY_ENV = "ale_api_key"
 BOYUE_BASE_URL_ENV = "ale_url"
+# By default gateway traffic bypasses the ambient proxy (see _build_sdk_client).
+# Set this truthy to opt back into the http_proxy/all_proxy env from .env, e.g.
+# on a network where apirx.boyuerichdata.com is only reachable through the proxy.
+BOYUE_USE_PROXY_ENV = "ale_use_proxy"
 
 _DEFAULT_MAX_RETRIES = 3
 _RETRYABLE_ERROR_MARKERS = (
@@ -127,6 +132,42 @@ class BoyueAPIClient(OpenAIClient):
             reasoning_effort=reasoning_effort,
             async_mode=async_mode,
             **kwargs,
+        )
+
+    def _build_sdk_client(self, *, timeout_seconds: int):
+        """Build the SDK client with a direct (unproxied) HTTP transport.
+
+        ``load_env`` propagates the local Clash proxy (``http_proxy`` /
+        ``all_proxy`` = ``127.0.0.1:7897`` in .env) into the process environment,
+        so httpx would otherwise tunnel every gateway call through it.  The
+        apirx.boyuerichdata.com gateway is directly reachable, and that personal
+        proxy is frequently down — routing through it just turns each call into a
+        ``Connection error``.  We therefore build the SDK's httpx client with
+        ``trust_env=False`` so gateway traffic bypasses the ambient proxy.
+
+        Set ``ale_use_proxy=1`` to opt back into the ambient proxy env.
+        """
+        use_proxy = str(os.getenv(BOYUE_USE_PROXY_ENV, "")).strip().lower() in {
+            "1", "true", "yes", "on",
+        }
+        if use_proxy:
+            return super()._build_sdk_client(timeout_seconds=timeout_seconds)
+
+        from openai import DefaultAsyncHttpxClient, DefaultHttpxClient
+
+        if self.async_mode:
+            http_client = DefaultAsyncHttpxClient(trust_env=False, timeout=timeout_seconds)
+        else:
+            http_client = DefaultHttpxClient(trust_env=False, timeout=timeout_seconds)
+
+        async_cls, sync_cls = self._sdk_client_classes()
+        client_cls = async_cls if self.async_mode else sync_cls
+        return client_cls(
+            api_key=self.api_key,
+            base_url=self.base_url,
+            default_headers=self.default_headers or None,
+            timeout=timeout_seconds,
+            http_client=http_client,
         )
 
     async def _create_response(self, params: Dict[str, Any]):

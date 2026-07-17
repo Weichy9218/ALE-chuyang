@@ -20,7 +20,8 @@ ul,ol{margin:8px 0;padding-left:22px}li{margin:6px 0}a{color:var(--pi)}
 footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
 .tag{font-size:11px;color:var(--muted);background:color-mix(in srgb,var(--muted) 14%,transparent);border-radius:16px;padding:1px 8px}
 </style></head><body><div class="wrap">
-<h1>通用 harness 设计（待你评审）</h1>
+<h1>通用 harness 设计（历史文档）</h1>
+<div class="red"><b>结论更新（2026-07-15）：这套提醒类 harness 经消融证明没用，已废弃。</b>pi 关→开 0.593→0.588、ale_claw 0.544→0.571，都在噪声内；模型本来就在做这些自查，镜子不产生新信息，M3 还在 ct_geometry 上诱导了作弊。代码已改成 no-op 并归档为 history。本文保留为设计与推理的历史记录。最终结论见仓库根 <code>README</code> 与 <a href="pi-cases/index.html">pi-cases</a>。</div>
 <div class="sub">基于 <a href="case-study/index.html">26 题逐题轨迹分析</a> 的失败模式，设计一套通用、不泄露、pi 与 ale_claw 通用的 harness。本文是设计稿，先给你看清楚每个干预来自哪个失败、注入什么、为什么不泄露、怎么挂到两套 harness、怎么验证。评审通过再实现。</div>
 
 <div class="red"><b>不泄露红线（最高约束，先立在这里）。</b>harness 只能读三样东西：题目的输入文件（agent 自己也能看到的 input 和 software）、agent 自己的产出（output 目录、工具结果和观察）、以及步数和 token 计数。harness <b>绝不</b>读 reference 目录、绝不调用官方评测器、绝不接触任何隐藏答案。所有干预只注入两类内容：一是<b>客观事实</b>（文件缺哪个、当前指标是多少、这条命令第几步失败过），二是<b>控制信号</b>（停、拦、放行）。绝不注入答案、解法、领域提示。判断一个干预合不合规，就问一句：它注入的东西，agent 靠自己的输入和观察能不能推出来。能，才放行。</div>
@@ -105,6 +106,8 @@ footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:v
             if gaps:  return DONT_STOP, f"收尾被拦：{gaps}"      # 反射缺口
         return (STOP if wants_to_stop else CONTINUE), None</pre>
 <p><span class="pill p-pi">pi 适配器</span> 一个 extension，把 <code>beforeToolCall/afterToolCall/shouldStopAfterTurn</code> 三个钩子转发到上面三个方法。<span class="pill p-claw">ale_claw 适配器</span> 在 <code>agent_loop.py</code> 的工具执行前、结果回填前、DONE 判定处调同样三个方法。两边构造的是同一个 <code>HarnessPolicy</code>。</p>
+
+<div class="red"><b>实现说明（2026-07-15，与上面的伪代码有出入）。</b>实际落地的不是上面这套逐轮钩子加 <code>should_stop</code> 硬门槛，而是一份<b>一次性的 launch 注入契约</b>，代码在 <code>ale_run/agents/harness_policy.py</code>。<code>wrap_prompt()</code> 在每套 deployer 的 <code>launch()</code> 里只调一次，把 M1 到 M4 合成一个 operating-contract 块追加到任务正文之后。没有逐轮钩子，没有 <code>should_stop</code>，也没有循环，所以不存在死循环风险。<br><br>为什么没上 <code>should_stop</code> 硬门槛：一，收尾前拦截、缺口未补就不放行，若缺口是内容错（agent 补不上），会反复想收尾反复被拦，必须加重试上限兜底；二，架构不对称，ale_claw 是宿主机 Python 主循环、能干净插收尾判定，pi 是沙箱里的不透明子进程（<code>--mode json</code>）、没有逐轮 Python 钩子，要做硬门槛得另写并接线一个 pi 扩展，两边做法不一致就破坏第五节的公平性红线；三，M2 能救的空输出题已被 100 轮上限先救回，硬门槛边际空间小。所以 M1 成了预算提醒文本（真正的杠杆是把上限从 30 提到 100，在配置里），M2/M3/M4 都成了注入块里的一段，只重述 agent 题面里的事实，凭构造不含答案。消融结果见 <a href="harness-study/index.html">harness-study</a>。</div>
 
 <h2>四、每个模块能救哪些题（预期）</h2>
 <div class="tablewrap"><table>

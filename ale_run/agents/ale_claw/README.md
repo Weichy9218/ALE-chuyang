@@ -44,7 +44,8 @@ Out of the box, the harness supports:
 - Memory lookup: `memory_search`, `memory_get`
 - Delegation: `delegate_general`, `delegate_gui`
 
-> Note: `web_search` is disabled by default because it needs `BRAVE_API_KEY`.
+> Note: `web_search` is disabled by default because it needs a search API key
+> (`EXA_API_KEY`, or `Firecrawl_API_KEY` for the fallback).
 
 ## Running it
 
@@ -71,8 +72,9 @@ At least one LLM provider key must be present in the environment:
 - `ANTHROPIC_API_KEY`
 - `OPENAI_API_KEY`
 
-To enable `web_search`, also export `BRAVE_API_KEY` and remove
-`web_search` from `disabled_tools`.
+To enable `web_search`, also export at least one of `EXA_API_KEY` (primary
+provider) or `Firecrawl_API_KEY` (fallback provider), and remove `web_search`
+from `disabled_tools`.
 
 ## The config knobs that matter first
 

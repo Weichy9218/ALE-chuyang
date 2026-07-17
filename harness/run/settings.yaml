@@ -1,0 +1,52 @@
+# ============================================================================
+# Harness control panel — the ONE file you edit to control a run.
+# After editing, on the run box:
+#   .venv/bin/python harness/run/launch.py --stack .            # prints launch cmd
+#   .venv/bin/python harness/run/launch.py --stack . --launch   # generates + runs
+# It regenerates the arm presets + the experiment yaml + the launch env from the
+# values below. No other file needs hand-editing, and results are read back with
+#   python3 harness/run/summarize.py <output_root>/harness_compare
+# ============================================================================
+
+# --- arms: the comparison matrix. Each arm = (skills on/off) x (prep on/off). ---
+# Pick any subset of:
+#   base         skills off, prep off   (no-harness baseline)
+#   skills       skills on,  prep off
+#   prep         skills off, prep on
+#   skills_prep  skills on,  prep on
+arms: [base, skills, prep, skills_prep]
+
+# --- agent runtime (shared by every arm; the only place these are set) ---
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000        # effectively uncapped. COGNITION forbids turn/time caps:
+                           # an unequal budget silently manufactures fake effects.
+  thinking_level: medium
+
+# --- skills (capability: injected method playbooks, read from harness/skills/) ---
+skills:
+  which: [deliverable-contract, evidence-audit]
+
+# --- prep (capability B: the domain-notes pre-step) ---
+prep:
+  search: false            # allow an Exa/Firecrawl doc lookup during prep (needs keys on the box)
+  max_tokens: 3000         # prep model generation budget (the real notes-length limit)
+  max_notes_chars: 12000   # post-hoc char cap on the notes
+  digest_chars: 4000       # size of the input digest fed to the prep model
+
+# --- run ---
+run:
+  tasks: selected_tasks/research_batch_26.txt
+  concurrency: 3           # with launch.py --per-arm this is PER ARM (4 arms x 3 = 12 total).
+                           # NOTE: 4x6=24 collapsed provisioning (Computer API Server readiness
+                           # timeouts). The ceiling is concurrent SANDBOX BOOTS, not API throughput.
+  cleanup_mode: delete     # delete each unit's container when it ends. 'keep' piles up one live
+                           # sandbox per unit and starves the box; outputs are pulled before cleanup.
+  # (key, base) shell prefixes rotated one-per-arm so no single endpoint bottlenecks.
+  # Verified: gpt_sub2api (2 keys) and ale_url BOTH serve gpt-5.6-sol. Note ale_api_key
+  # only works with ale_url as its base -- it is NOT valid against the gpt_sub2api base.
+  # ale_url ALREADY INCLUDES /v1 -- do NOT append another one (that yields /v1/v1 -> 404).
+  # Empty list -> every arm uses the secret/.env defaults.
+  api_endpoints: [OPENAI_API_KEY=$GPT_sub2api_apikey_2, OPENAI_API_KEY=$GPT_sub2api_apikey, OPENAI_API_KEY=$ale_api_key OPENAI_API_BASE=${ale_url%/}]
+  output_root: .logs/ale/harness_compare
+  wall_time_s: 86400
