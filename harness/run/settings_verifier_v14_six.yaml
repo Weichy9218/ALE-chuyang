@@ -1,0 +1,22 @@
+arms: [base, verifier]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000
+  thinking_level: medium
+
+prep:
+  max_steps: 30
+
+verifier:
+  max_steps: 30
+  max_review_rounds: 1
+
+run:
+  name: verifier_v14_six
+  tasks: docs/harness/results/prep_v11_six/tasks.txt
+  concurrency: 2
+  cleanup_mode: delete
+  api_endpoints: []
+  output_root: .logs/ale/verifier_v14_six
+  wall_time_s: 86400

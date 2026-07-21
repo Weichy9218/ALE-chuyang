@@ -60,6 +60,8 @@ async def run_general_subagent(
     max_steps: int = DEFAULT_MAX_STEPS,
     thinking_params: dict[str, Any] | None = None,
     initial_screenshot_paths: list[str] | None = None,
+    api_key: str | None = None,
+    api_base: str | None = None,
 ) -> None:
     """Run a general subagent as a persistent session.
 
@@ -102,6 +104,8 @@ async def run_general_subagent(
             max_steps=max_steps,
             thinking_params=thinking_params,
             initial_screenshot_paths=initial_screenshot_paths,
+            api_key=api_key,
+            api_base=api_base,
         )
         registry.attach_inbox(run_id, session.inbox)
         result_text = await session.run()

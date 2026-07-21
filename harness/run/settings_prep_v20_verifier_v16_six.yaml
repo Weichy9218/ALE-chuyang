@@ -1,0 +1,37 @@
+# Prep v20 / Verifier v16 六题机制 canary — 只跑 treatment 两臂。
+# base 不重跑（实验纪律：treatment 对历史多轮 base 配对；最新同 endpoint base
+# 是 2026-07-21 v18 six-pair 那一轮，见 docs/harness/results/prep_v18_six/）。
+# combine（prep_verifier）本轮不跑。
+#
+# 生成与启动（在 pgl 的 stack 目录）：
+#   .venv/bin/python harness/run/launch.py --stack . \
+#     --settings harness/run/settings_prep_v20_verifier_v16_six.yaml
+# 读数入口：
+#   prep 臂  — task_prep_meta.json（self_check、contract、dropped）+ transcript 采用链
+#   verifier 臂 — verifier_meta.json（writer_checks_used、repairs、disputes）
+#                + verifier_suite.json（located/blocking 分布）+ writer_check/round 文件
+
+arms: [prep, verifier]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000        # COGNITION 禁止 turn/时间上限：不等预算凭空制造假效应
+  thinking_level: medium
+
+prep:
+  max_steps: 30
+  timeout_s: 1800
+
+verifier:
+  max_steps: 30
+  max_review_rounds: 1
+  writer_checks: 2
+
+run:
+  name: prep_v20_verifier_v16_six
+  tasks: docs/harness/results/prep_v18_six/tasks.txt
+  concurrency: 3
+  cleanup_mode: delete
+  api_endpoints: []        # 两臂同一默认 endpoint，避免端点混杂
+  output_root: .logs/ale/prep_v20_verifier_v16_six
+  wall_time_s: 86400

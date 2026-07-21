@@ -1,0 +1,4 @@
+endpoint,task,arm,prep_status,raw_decision,raw_findings,retained_findings,writer_tool_calls,report_read_call,report_sources,sources_revisited,parse_error
+task_prep_v9_outcome_canary,health_medicine__flusight_offline_hosp_forecast_2024_12_14,prep,completed,use,3,3,15,6,3,3,
+task_prep_v9_outcome_canary,health_medicine__healthcare_variant_annotation_pipeline,prep,completed,use,3,3,15,2,3,3,
+task_prep_v9_outcome_canary,legal__agora_governance_classify_instance_1,prep,completed,use,1,1,25,4,1,1,

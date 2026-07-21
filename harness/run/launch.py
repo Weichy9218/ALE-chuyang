@@ -3,12 +3,13 @@
 surface), generates one ale_claw preset per requested arm + one experiment yaml
 into the stack, and prints (or runs with --launch) the exact launch command.
 
-Arms map (skills, prep):
-  base=(off,off)  skills=(on,off)  prep=(off,on)  skills_prep=(on,on)
+Default arms map (task-specific prep, independent verifier):
+  base=(off,off)  prep=(on,off)  verifier=(off,on)
+  prep_verifier=(on,on)
 
-The prep on/off is carried per-agent (config.domain_prep) so all arms live in ONE
-run with ONE output root. Prep hyperparameters travel as env vars set by the
-printed command; domain_prep.py reads them (defaults preserved if unset).
+The prep on/off and its bounds are carried per-agent
+(``config.task_specific_prep``), so all arms can share one output root while
+remaining explicit experimental conditions.
 
 Stdlib only (no PyYAML) — runs with any python3. See harness/run/README.md.
 
@@ -27,15 +28,17 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import presets as brc  # noqa: E402  (stdlib-only helper library; see presets.py)
 
-# arm_id -> (with_skills, domain_prep)
+# arm_id -> (with_skills, task_specific_prep, verifier)
+# Skills remain code-compatible but are intentionally absent from this experiment
+# after the v2 run showed no positive signal despite 26/26 successful loads.
 ARMS = {
-    "base":        (False, False),
-    "skills":      (True,  False),
-    "prep":        (False, True),
-    "skills_prep": (True,  True),
+    "base":          (False, False, False),
+    "prep":          (False, True,  False),
+    "verifier":      (False, False, True),
+    "prep_verifier": (False, True,  True),
 }
 
-EXP_NAME = "harness_compare"
+DEFAULT_EXP_NAME = "verifier_compare"
 
 
 def _scalar(v: str):
@@ -115,10 +118,12 @@ def main() -> int:
     which = (st.get("skills") or {}).get("which") or list(all_skills)
     skills = {k: all_skills[k] for k in which if k in all_skills}
     prep = st.get("prep") or {}
+    verifier = st.get("verifier") or {}
     run = st.get("run") or {}
+    exp_name = str(run.get("name", DEFAULT_EXP_NAME))
     tasks = run.get("tasks", "selected_tasks/research_batch_26.txt")
     concurrency = int(run.get("concurrency", 8))
-    out_root = run.get("output_root", ".logs/ale/harness_compare")
+    out_root = run.get("output_root", ".logs/ale/verifier_compare")
     wall = int(run.get("wall_time_s", 86400))
     cleanup = run.get("cleanup_mode", "delete")
     api_eps = run.get("api_endpoints") or []
@@ -132,29 +137,39 @@ def main() -> int:
         if arm not in ARMS:
             print(f"warn: unknown arm {arm!r} (skip); valid: {list(ARMS)}", file=sys.stderr)
             continue
-        with_skills, domain_prep = ARMS[arm]
+        with_skills, task_specific_prep, with_verifier = ARMS[arm]
         aid = f"ale_claw_{arm}"
-        y = brc.ale_claw_agent_yaml(skills, with_skills=with_skills,
-                                    agent_id=aid, domain_prep=domain_prep,
-                                    model=model, max_turns=max_turns,
-                                    thinking_level=thinking)
+        y = brc.ale_claw_agent_yaml(
+            skills,
+            with_skills=with_skills,
+            agent_id=aid,
+            task_specific_prep=task_specific_prep,
+            prep_max_steps=int(prep.get("max_steps", 30)),
+            prep_timeout_s=int(prep.get("timeout_s", 1800)),
+            verifier=with_verifier,
+            verifier_max_steps=int(verifier.get("max_steps", 30)),
+            verifier_max_review_rounds=int(
+                verifier.get("max_review_rounds", verifier.get("max_repairs", 1))
+            ),
+            verifier_writer_checks=int(verifier.get("writer_checks", 2)),
+            model=model,
+            max_turns=max_turns,
+            thinking_level=thinking,
+        )
         (stack / f"configs/agents/{aid}.yaml").write_text(y, encoding="utf-8")
         agent_ids.append(aid)
     if not agent_ids:
         print("error: no valid arms", file=sys.stderr)
         return 2
 
-    env_lines = [
-        f'export ALE_DOMAIN_PREP_SEARCH={"1" if prep.get("search") else "0"}',
-        f'export ALE_DOMAIN_PREP_MAX_TOKENS={int(prep.get("max_tokens", 3000))}',
-        f'export ALE_DOMAIN_PREP_MAX_NOTES_CHARS={int(prep.get("max_notes_chars", 12000))}',
-        f'export ALE_DOMAIN_PREP_MAX_DIGEST_CHARS={int(prep.get("digest_chars", 4000))}',
-    ]
     env_block = (
         "unset http_proxy https_proxy all_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY\n"
         "set -a; . secret/.env; set +a\n"
         "export PATH=$HOME/.local/bin:$PATH\n"
-        + "\n".join(env_lines) + "\n"
+        "GPT_SUB2API_OPENAI_BASE=${GPT_sub2api_URL%/}\n"
+        "BOYUE_OPENAI_BASE=${ale_url%/}\n"
+        "case $BOYUE_OPENAI_BASE in */v1) ;; *) BOYUE_OPENAI_BASE=$BOYUE_OPENAI_BASE/v1 ;; esac\n"
+        "export GPT_SUB2API_OPENAI_BASE BOYUE_OPENAI_BASE\n"
     )
 
     if args.per_arm:
@@ -163,7 +178,7 @@ def main() -> int:
         # reads the shared root and groups by arm id.
         runs = []
         for aid in agent_ids:
-            nm = f"{EXP_NAME}_{aid.replace('ale_claw_', '')}"
+            nm = f"{exp_name}_{aid.replace('ale_claw_', '')}"
             (stack / f"exp_{nm}.yaml").write_text(
                 experiment_yaml(nm, [aid], brc.INVARIANT, tasks, out_root, concurrency, wall, cleanup),
                 encoding="utf-8")
@@ -177,20 +192,39 @@ def main() -> int:
         target = out_root
         mode = f"per-arm ({len(runs)} runs x concurrency {concurrency} = {len(runs) * concurrency} total)"
     else:
-        (stack / f"exp_{EXP_NAME}.yaml").write_text(
-            experiment_yaml(EXP_NAME, agent_ids, brc.INVARIANT, tasks, out_root, concurrency, wall, cleanup),
+        (stack / f"exp_{exp_name}.yaml").write_text(
+            experiment_yaml(exp_name, agent_ids, brc.INVARIANT, tasks, out_root, concurrency, wall, cleanup),
             encoding="utf-8")
         launch = env_block + (
-            f"nohup .venv/bin/python -m ale_run run exp_{EXP_NAME}.yaml > {EXP_NAME}.log 2>&1 & disown\n")
-        target = f"{out_root}/{EXP_NAME}"
+            f"nohup .venv/bin/python -m ale_run run exp_{exp_name}.yaml > {exp_name}.log 2>&1 & disown\n")
+        target = f"{out_root}/{exp_name}"
         mode = f"combined (1 run x concurrency {concurrency})"
 
     print(f"# agent:  model={model} max_turns={max_turns} thinking={thinking}")
     print(f"# arms:   {agent_ids}")
     print(f"# mode:   {mode}   cleanup_mode={cleanup}")
-    print(f"# api:    {len(api_eps) or 1} endpoint(s) rotated across arms")
-    print(f"# skills: {list(skills)}   prep: search={bool(prep.get('search'))} "
-          f"max_tokens={prep.get('max_tokens', 3000)} notes_chars={prep.get('max_notes_chars', 12000)}")
+    if args.per_arm and len(agent_ids) > 1 and len(api_eps) > 1:
+        print(
+            "warning: api_endpoints are fixed by arm; this confounds arm effects "
+            "with endpoint effects. Use one shared endpoint for causal comparisons.",
+            file=sys.stderr,
+        )
+    api_mode = (
+        f"{len(api_eps)} endpoint(s) rotated across arms"
+        if api_eps
+        else "one shared endpoint from secret/.env"
+    )
+    print(f"# api:    {api_mode}")
+    print("# skills: hidden from default experiment axes")
+    print(
+        f"# prep:   max_steps={prep.get('max_steps', 30)} "
+        f"timeout_s={prep.get('timeout_s', 1800)}"
+    )
+    print(
+        f"# verify: max_steps={verifier.get('max_steps', 30)} "
+        f"max_review_rounds={verifier.get('max_review_rounds', verifier.get('max_repairs', 1))} "
+        f"writer_checks={verifier.get('writer_checks', 2)}"
+    )
     print("# ---- launch command (run from the stack dir) ----")
     print(launch)
     print("# ---- inspect results ----")

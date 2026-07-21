@@ -1,0 +1,7 @@
+# Prep v11 pre-registered base/prep comparison set.
+business_finance/bpmn_supply_disruption_l3
+business_finance/digital_marketing_audience_segmentation_1
+business_finance/sse_northbound_programmatic_trading_01
+education_info/homework_grading_numerical_pdes_instance_02
+health_medicine/crf_sdtm_mapping_4
+health_medicine/flusight_offline_hosp_forecast_2024_12_14

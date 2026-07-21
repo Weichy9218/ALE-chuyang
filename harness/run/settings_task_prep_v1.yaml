@@ -1,0 +1,23 @@
+# Task-specific prep v1 full experiment. Reuses the completed 2026-07-17 base;
+# deliberately runs only the three changed intervention arms (26 x 3 = 78 units).
+arms: [skills, prep, skills_prep]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000
+  thinking_level: medium
+
+skills:
+  which: [deliverable-contract, evidence-audit]
+
+prep:
+  max_steps: 50
+
+run:
+  name: task_prep_v1
+  tasks: docs/harness/results/latest/tasks.txt
+  concurrency: 3
+  cleanup_mode: delete
+  api_endpoints: [OPENAI_API_KEY=$GPT_sub2api_apikey_2 OPENAI_API_BASE=$GPT_SUB2API_OPENAI_BASE OPENAI_BASE_URL=$GPT_SUB2API_OPENAI_BASE, OPENAI_API_KEY=$GPT_sub2api_apikey OPENAI_API_BASE=$GPT_SUB2API_OPENAI_BASE OPENAI_BASE_URL=$GPT_SUB2API_OPENAI_BASE, OPENAI_API_KEY=$ale_api_key OPENAI_API_BASE=$BOYUE_OPENAI_BASE OPENAI_BASE_URL=$BOYUE_OPENAI_BASE]
+  output_root: .logs/ale/task_prep_v1
+  wall_time_s: 86400

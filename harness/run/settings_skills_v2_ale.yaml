@@ -1,0 +1,22 @@
+# 2026-07-19 four-arm rerun, shard B. Launch without --per-arm.
+arms: [base, skills, prep, skills_prep]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000
+  thinking_level: medium
+
+skills:
+  which: [deliverable-contract, evidence-audit]
+
+prep:
+  max_steps: 50
+
+run:
+  name: task_prep_skills_v2_ale
+  tasks: docs/harness/archive/2026-07-20/research_batch_v2_ale.txt
+  concurrency: 3
+  cleanup_mode: delete
+  api_endpoints: []
+  output_root: .logs/ale/task_prep_skills_v2
+  wall_time_s: 86400

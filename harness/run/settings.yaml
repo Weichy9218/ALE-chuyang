@@ -5,16 +5,16 @@
 #   .venv/bin/python harness/run/launch.py --stack . --launch   # generates + runs
 # It regenerates the arm presets + the experiment yaml + the launch env from the
 # values below. No other file needs hand-editing, and results are read back with
-#   python3 harness/run/summarize.py <output_root>/harness_compare
+#   python3 harness/run/summarize.py <output_root> --baseline ale_claw_base
 # ============================================================================
 
-# --- arms: the comparison matrix. Each arm = (skills on/off) x (prep on/off). ---
+# --- arms: each arm = (task-specific prep on/off) x (verifier on/off). ---
 # Pick any subset of:
-#   base         skills off, prep off   (no-harness baseline)
-#   skills       skills on,  prep off
-#   prep         skills off, prep on
-#   skills_prep  skills on,  prep on
-arms: [base, skills, prep, skills_prep]
+#   base           prep off, verifier off
+#   prep           prep on,  verifier off
+#   verifier       prep off, verifier on
+#   prep_verifier  prep on,  verifier on
+arms: [base, prep, verifier, prep_verifier]
 
 # --- agent runtime (shared by every arm; the only place these are set) ---
 agent:
@@ -23,30 +23,26 @@ agent:
                            # an unequal budget silently manufactures fake effects.
   thinking_level: medium
 
-# --- skills (capability: injected method playbooks, read from harness/skills/) ---
-skills:
-  which: [deliverable-contract, evidence-audit]
-
-# --- prep (capability B: the domain-notes pre-step) ---
+# --- task-specific prep agent (default-off outside explicit experiment arms) ---
 prep:
-  search: false            # allow an Exa/Firecrawl doc lookup during prep (needs keys on the box)
-  max_tokens: 3000         # prep model generation budget (the real notes-length limit)
-  max_notes_chars: 12000   # post-hoc char cap on the notes
-  digest_chars: 4000       # size of the input digest fed to the prep model
+  max_steps: 15            # v2 observed range was 3-12 LLM turns
+
+# --- independent verifier (pre-freeze Builder/Auditor + isolated Executor) ---
+verifier:
+  max_steps: 30
+  max_review_rounds: 1
 
 # --- run ---
 run:
-  tasks: selected_tasks/research_batch_26.txt
+  tasks: docs/harness/results/latest/tasks.txt
   concurrency: 3           # with launch.py --per-arm this is PER ARM (4 arms x 3 = 12 total).
                            # NOTE: 4x6=24 collapsed provisioning (Computer API Server readiness
                            # timeouts). The ceiling is concurrent SANDBOX BOOTS, not API throughput.
   cleanup_mode: delete     # delete each unit's container when it ends. 'keep' piles up one live
                            # sandbox per unit and starves the box; outputs are pulled before cleanup.
-  # (key, base) shell prefixes rotated one-per-arm so no single endpoint bottlenecks.
-  # Verified: gpt_sub2api (2 keys) and ale_url BOTH serve gpt-5.6-sol. Note ale_api_key
-  # only works with ale_url as its base -- it is NOT valid against the gpt_sub2api base.
-  # ale_url ALREADY INCLUDES /v1 -- do NOT append another one (that yields /v1/v1 -> 404).
-  # Empty list -> every arm uses the secret/.env defaults.
-  api_endpoints: [OPENAI_API_KEY=$GPT_sub2api_apikey_2, OPENAI_API_KEY=$GPT_sub2api_apikey, OPENAI_API_KEY=$ale_api_key OPENAI_API_BASE=${ale_url%/}]
-  output_root: .logs/ale/harness_compare
+  # Keep one endpoint shared across arms in causal comparisons. Fixed per-arm
+  # endpoint rotation confounds the intervention with gateway/account effects.
+  # Non-empty prefixes remain available for throughput-only operational runs.
+  api_endpoints: []
+  output_root: .logs/ale/verifier_compare
   wall_time_s: 86400

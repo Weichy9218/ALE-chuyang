@@ -1,0 +1,142 @@
+{
+  "arms": {
+    "base": {
+      "completed": 26,
+      "cost_usd_mean": 0.4957635,
+      "duration_s_mean": 982.4461538461538,
+      "failed": 0,
+      "input_tokens_mean": 252466.76923076922,
+      "llm_turns_mean": 11.346153846153847,
+      "output_tokens_mean": 6648.846153846154,
+      "runs": 26,
+      "score_mean": 0.6178603022026452,
+      "score_n": 26,
+      "score_total": 16.064367857268774,
+      "steps_mean": 31.307692307692307,
+      "tool_calls_mean": 18.96153846153846
+    },
+    "prep": {
+      "completed": 26,
+      "cost_usd_mean": 0.5295328846153846,
+      "duration_s_mean": 1122.8834615384615,
+      "failed": 0,
+      "input_tokens_mean": 285045.8846153846,
+      "llm_turns_mean": 11.73076923076923,
+      "output_tokens_mean": 6349.115384615385,
+      "runs": 26,
+      "score_mean": 0.6191122177060012,
+      "score_n": 26,
+      "score_total": 16.09691766035603,
+      "steps_mean": 32.69230769230769,
+      "tool_calls_mean": 19.96153846153846
+    },
+    "skills": {
+      "completed": 26,
+      "cost_usd_mean": 0.5363061538461539,
+      "duration_s_mean": 1089.4465384615385,
+      "failed": 0,
+      "input_tokens_mean": 272188.23076923075,
+      "llm_turns_mean": 12.538461538461538,
+      "output_tokens_mean": 6943.153846153846,
+      "runs": 26,
+      "score_mean": 0.6055107352037364,
+      "score_n": 26,
+      "score_total": 15.743279115297149,
+      "steps_mean": 33.80769230769231,
+      "tool_calls_mean": 20.26923076923077
+    },
+    "skills_prep": {
+      "completed": 26,
+      "cost_usd_mean": 0.48699653846153845,
+      "duration_s_mean": 1045.936153846154,
+      "failed": 0,
+      "input_tokens_mean": 265249.23076923075,
+      "llm_turns_mean": 10.76923076923077,
+      "output_tokens_mean": 6192.115384615385,
+      "runs": 26,
+      "score_mean": 0.5966010235939944,
+      "score_n": 26,
+      "score_total": 15.511626613443854,
+      "steps_mean": 30.53846153846154,
+      "tool_calls_mean": 18.76923076923077
+    }
+  },
+  "expected_units": 104,
+  "factorial_effects": {
+    "prep_main_effect": {
+      "mean": -0.0038288980531930327,
+      "n": 26,
+      "negative": 7,
+      "positive": 5,
+      "sd": 0.06331745328479949,
+      "se": 0.012417574225007392,
+      "t": -0.30834509090206413,
+      "zero": 14
+    },
+    "skills_main_effect": {
+      "mean": -0.017430380555457797,
+      "n": 26,
+      "negative": 8,
+      "positive": 3,
+      "sd": 0.045517845434744915,
+      "se": 0.008926783926479408,
+      "t": -1.9525935318938634,
+      "zero": 15
+    },
+    "skills_prep_interaction": {
+      "mean": -0.01016162711309821,
+      "n": 26,
+      "negative": 6,
+      "positive": 5,
+      "sd": 0.13461436679994873,
+      "se": 0.02640004935087982,
+      "t": -0.38490939838942234,
+      "zero": 15
+    }
+  },
+  "paired_vs_base": {
+    "prep": {
+      "mean_delta": 0.0012519155033560735,
+      "n": 26,
+      "negative": 4,
+      "positive": 5,
+      "sd": 0.07207446763926845,
+      "se": 0.014134966035555443,
+      "t": 0.08856869554599384,
+      "zero": 17
+    },
+    "skills": {
+      "mean_delta": -0.012349566998908691,
+      "n": 26,
+      "negative": 7,
+      "positive": 4,
+      "sd": 0.09601966661247285,
+      "se": 0.018831005913295104,
+      "t": -0.6558102660989356,
+      "zero": 15
+    },
+    "skills_prep": {
+      "mean_delta": -0.02125927860865083,
+      "n": 26,
+      "negative": 7,
+      "positive": 3,
+      "sd": 0.065046837421089,
+      "se": 0.012756734357985775,
+      "t": -1.6665141729899253,
+      "zero": 16
+    }
+  },
+  "skills": {
+    "enabled_completed_units": 52,
+    "load_calls_by_skill": {
+      "deliverable-contract": 48,
+      "evidence-audit": 5
+    },
+    "units_by_skill": {
+      "deliverable-contract": 47,
+      "evidence-audit": 5
+    },
+    "units_with_any_load": 51
+  },
+  "tasks": 26
+}

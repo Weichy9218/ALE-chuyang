@@ -108,11 +108,15 @@ class AnalyzeImageTool(BaseTool):
         interface: "BaseComputerInterface",
         model: str | None = None,
         thinking_params: Optional[dict[str, Any]] = None,
+        api_key: str | None = None,
+        api_base: str | None = None,
         cfg: Optional[dict] = None,
     ):
         self.interface = interface
         self.model = model or "anthropic/claude-sonnet-4-20250514"
         self.thinking_params = thinking_params or {}
+        self.api_key = api_key
+        self.api_base = api_base
         super().__init__(cfg)
 
     @property
@@ -336,12 +340,19 @@ class AnalyzeImageTool(BaseTool):
 
         # Call VLM
         try:
-            response = await litellm.acompletion(
-                model=self.model,
-                messages=messages,
-                max_tokens=1024,
-                timeout=60,
+            kwargs = {
+                "model": self.model,
+                "messages": messages,
+                "max_tokens": 1024,
+                "timeout": 60,
                 **self.thinking_params,
+            }
+            if self.api_key is not None:
+                kwargs["api_key"] = self.api_key
+            if self.api_base is not None:
+                kwargs["api_base"] = self.api_base
+            response = await litellm.acompletion(
+                **kwargs,
             )
             return response.choices[0].message.content
         except Exception as e:

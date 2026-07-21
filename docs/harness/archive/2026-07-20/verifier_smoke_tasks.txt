@@ -1,0 +1,6 @@
+# Verifier/prep mechanism smoke: one positive or negative control per failure mode.
+business_finance/sec_10k_financial_parsing
+health_medicine/healthcare_tcga_luad_survival_kras
+health_medicine/healthcare_variant_annotation_pipeline
+health_medicine/flusight_offline_hosp_forecast_2024_12_14
+health_medicine/ct_geometry_calibration_catphan

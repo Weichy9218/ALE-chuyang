@@ -158,6 +158,8 @@ class DelegateGeneralTool(BaseTool):
         parent_session_dir: Path,
         thinking_params: dict[str, Any] | None = None,
         auxiliary_model: str | None = None,
+        api_key: str | None = None,
+        api_base: str | None = None,
         cfg: dict | None = None,
     ) -> None:
         self._registry = registry
@@ -168,6 +170,8 @@ class DelegateGeneralTool(BaseTool):
         self._parent_session_dir = Path(parent_session_dir)
         self._thinking_params = thinking_params
         self._auxiliary_model = auxiliary_model
+        self._api_key = api_key
+        self._api_base = api_base
         super().__init__(cfg)
 
     @property
@@ -272,6 +276,8 @@ class DelegateGeneralTool(BaseTool):
             max_steps=max_steps,
             thinking_params=self._thinking_params,
             initial_screenshot_paths=screenshot_paths,
+            api_key=self._api_key,
+            api_base=self._api_base,
         )
 
         loop = asyncio.get_running_loop()
@@ -653,5 +659,4 @@ class SubagentsTool(BaseTool):
 
         inbox.put_nowait(message)
         return {"status": "ok", "steered": run.run_id}
-
 

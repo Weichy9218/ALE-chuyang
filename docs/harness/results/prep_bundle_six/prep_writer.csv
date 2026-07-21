@@ -1,0 +1,7 @@
+endpoint,task,arm,prep_status,raw_decision,raw_findings,raw_entries,raw_deliverables,retained_findings,writer_tool_calls,report_read_call,report_sources,sources_revisited,report_modified,initial_report_sha256,final_report_sha256,artifact_count,artifact_chars,parse_error
+prep_bundle_six,business_finance__bpmn_supply_disruption_l3,prep,completed,use,1,1,1,1,23,1,4,3,,,,1,4302,
+prep_bundle_six,business_finance__digital_marketing_audience_segmentation_1,prep,completed,use,1,1,1,1,14,1,4,3,,,,1,1612,
+prep_bundle_six,business_finance__sse_northbound_programmatic_trading_01,prep,completed,use,1,1,1,1,12,1,4,2,,,,1,2646,
+prep_bundle_six,education_info__homework_grading_numerical_pdes_instance_02,prep,completed,use,1,1,1,1,26,1,5,4,,,,1,6768,
+prep_bundle_six,health_medicine__crf_sdtm_mapping_4,prep,completed,use,2,2,2,2,38,2,6,5,,,,2,16686,
+prep_bundle_six,health_medicine__flusight_offline_hosp_forecast_2024_12_14,prep,completed,use,1,1,1,1,14,3,2,1,,,,1,2333,

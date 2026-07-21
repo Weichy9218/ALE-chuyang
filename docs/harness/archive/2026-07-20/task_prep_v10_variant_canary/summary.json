@@ -1,0 +1,138 @@
+{
+  "arms": {
+    "base": {
+      "completed": 1,
+      "cost_usd_mean": 0.560701,
+      "duration_s_mean": 393.54,
+      "failed": 0,
+      "input_tokens_mean": 232071.0,
+      "llm_turns_mean": 11.0,
+      "output_tokens_mean": 6861.0,
+      "runs": 1,
+      "score_mean": 0.7930000000000001,
+      "score_n": 1,
+      "score_total": 0.7930000000000001,
+      "steps_mean": 25.0,
+      "tool_calls_mean": 13.0
+    },
+    "prep": {
+      "completed": 1,
+      "cost_usd_mean": 0.309948,
+      "duration_s_mean": 391.53,
+      "failed": 0,
+      "input_tokens_mean": 124310.0,
+      "llm_turns_mean": 7.0,
+      "output_tokens_mean": 4543.0,
+      "runs": 1,
+      "score_mean": 0.9990000000000001,
+      "score_n": 1,
+      "score_total": 0.9990000000000001,
+      "steps_mean": 18.0,
+      "tool_calls_mean": 10.0
+    },
+    "prep_verifier": {
+      "completed": 0,
+      "cost_usd_mean": null,
+      "duration_s_mean": null,
+      "failed": 0,
+      "input_tokens_mean": null,
+      "llm_turns_mean": null,
+      "output_tokens_mean": null,
+      "runs": 0,
+      "score_mean": null,
+      "score_n": 0,
+      "score_total": 0,
+      "steps_mean": null,
+      "tool_calls_mean": null
+    },
+    "verifier": {
+      "completed": 0,
+      "cost_usd_mean": null,
+      "duration_s_mean": null,
+      "failed": 0,
+      "input_tokens_mean": null,
+      "llm_turns_mean": null,
+      "output_tokens_mean": null,
+      "runs": 0,
+      "score_mean": null,
+      "score_n": 0,
+      "score_total": 0,
+      "steps_mean": null,
+      "tool_calls_mean": null
+    }
+  },
+  "expected_units": 4,
+  "factorial_effects": {
+    "prep_main_effect": {
+      "mean": null,
+      "n": 0,
+      "negative": 0,
+      "positive": 0,
+      "sd": null,
+      "se": null,
+      "t": null,
+      "zero": 0
+    },
+    "verifier_main_effect": {
+      "mean": null,
+      "n": 0,
+      "negative": 0,
+      "positive": 0,
+      "sd": null,
+      "se": null,
+      "t": null,
+      "zero": 0
+    },
+    "verifier_prep_interaction": {
+      "mean": null,
+      "n": 0,
+      "negative": 0,
+      "positive": 0,
+      "sd": null,
+      "se": null,
+      "t": null,
+      "zero": 0
+    }
+  },
+  "paired_vs_base": {
+    "prep": {
+      "mean_delta": 0.20599999999999996,
+      "n": 1,
+      "negative": 0,
+      "positive": 1,
+      "sd": null,
+      "se": null,
+      "t": null,
+      "zero": 0
+    },
+    "prep_verifier": {
+      "mean_delta": null,
+      "n": 0,
+      "negative": 0,
+      "positive": 0,
+      "sd": null,
+      "se": null,
+      "t": null,
+      "zero": 0
+    },
+    "verifier": {
+      "mean_delta": null,
+      "n": 0,
+      "negative": 0,
+      "positive": 0,
+      "sd": null,
+      "se": null,
+      "t": null,
+      "zero": 0
+    }
+  },
+  "prep": {
+    "duration_s_mean": 123.68348848691676,
+    "input_tokens_mean": 68934.0,
+    "runs": 1,
+    "statuses": {
+      "completed": 1
+    }
+  },
+  "tasks": 1
+}

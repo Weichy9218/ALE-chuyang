@@ -1,0 +1,30 @@
+{
+  "status": "completed",
+  "fingerprint": "4048102473068235aed6fd9eb6e59af07c3b88a8d98a6d493f812364f678f8ca",
+  "cached": false,
+  "input_tokens": 89733,
+  "output_tokens": 3784,
+  "duration_s": 100.94665924995206,
+  "llm_turns": 5,
+  "tool_calls": 8,
+  "tool_call_counts": {
+    "exec": 4,
+    "read": 4
+  },
+  "compactions": 0,
+  "quality_gate": null,
+  "error": null,
+  "protocol": "task-prep-v13",
+  "report_chars": 3287,
+  "report_sha256": "ad62ae92915aafec2a880f93170c5608b86f034ac9fd3d0fb77158dd6237844d",
+  "artifact_count": 1,
+  "artifact_chars": 4302,
+  "artifact_manifest": [
+    {
+      "path": "artifacts/topological_dataflow_check.py",
+      "chars": 4302,
+      "sha256": "a70fdfc25d5528aa481cb757fea562571a20fe84e94e65c910fc1308bcdb7179"
+    }
+  ],
+  "report_role": "subordinate_single_blocker_prep_bundle"
+}

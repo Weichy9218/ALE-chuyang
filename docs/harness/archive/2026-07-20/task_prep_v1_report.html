@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Task-Specific Prep v1 - 26题实跑报告</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f7f8f9;
+    --text: #181a1d;
+    --muted: #62676e;
+    --line: #dfe2e5;
+    --accent: #155e75;
+    --positive: #176b3a;
+    --negative: #a52a2a;
+    --warning: #8a5a00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151617;
+      --surface: #1d1f21;
+      --text: #eceeef;
+      --muted: #a8adb3;
+      --line: #373a3d;
+      --accent: #72bdd1;
+      --positive: #79d29d;
+      --negative: #ff9c95;
+      --warning: #e9bf68;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 30px 18px 60px;
+    color: var(--text);
+    background: var(--bg);
+    font: 15px/1.68 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC", "PingFang SC", sans-serif;
+    letter-spacing: 0;
+  }
+  main { max-width: 1120px; margin: 0 auto; }
+  h1 { margin: 0 0 6px; font-size: 27px; line-height: 1.25; }
+  h2 { margin: 38px 0 14px; padding-bottom: 7px; border-bottom: 2px solid var(--line); font-size: 20px; }
+  h3 { margin: 24px 0 8px; font-size: 16px; }
+  p { margin: 8px 0; }
+  ul, ol { margin: 8px 0; padding-left: 22px; }
+  li { margin: 5px 0; }
+  code, .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.92em;
+  }
+  code { padding: 1px 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); }
+  .subtitle { margin: 0 0 24px; color: var(--muted); font-size: 14px; }
+  .lead { margin: 18px 0 24px; padding: 14px 17px; border-left: 4px solid var(--accent); background: var(--surface); }
+  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+  .metric { min-height: 90px; padding: 13px 15px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+  .metric .label { display: block; color: var(--muted); font-size: 12px; }
+  .metric .value { display: block; margin-top: 4px; font: 600 23px/1.25 ui-monospace, Menlo, monospace; }
+  .metric .detail { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+  .note { padding: 13px 15px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+  .positive { color: var(--positive); font-weight: 600; }
+  .negative { color: var(--negative); font-weight: 600; }
+  .warning { color: var(--warning); font-weight: 600; }
+  .muted { color: var(--muted); }
+  .scroll { overflow-x: auto; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 7px 9px; border: 1px solid var(--line); text-align: right; vertical-align: top; white-space: nowrap; }
+  th { background: var(--surface); font-weight: 600; }
+  th:first-child, td:first-child { text-align: left; white-space: normal; }
+  tr.focus td { background: color-mix(in srgb, var(--surface) 74%, var(--accent) 6%); }
+  .wide td:first-child { min-width: 320px; }
+  .case { margin: 18px 0 28px; padding: 0 0 2px 15px; border-left: 3px solid var(--line); }
+  .case h3 { margin-top: 0; }
+  .flow { margin: 12px 0; padding: 12px 14px; overflow-x: auto; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); white-space: pre; }
+  .footer { margin-top: 34px; color: var(--muted); font-size: 12px; }
+  @media (max-width: 760px) {
+    body { padding: 20px 12px 44px; }
+    h1 { font-size: 23px; }
+    .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .metric .value { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Task-Specific Prep v1: 26题实跑报告</h1>
+  <p class="subtitle">ale_claw + gpt-5.6-sol，pgl，2026-07-18。三个新臂共 78 个 unit；历史 base 未重跑。</p>
+
+  <div class="lead">
+    <strong>结论先行：</strong>新 prep 的总体均分是 <strong>0.6438</strong>，历史 base 是
+    <strong>0.6415</strong>，差值只有 <strong>+0.0023</strong>，不能视为净提分证据。
+    但它不再是“没有任何作用”：SSE、CRF4、Flusight、TCGA 出现了可追踪的机制收益；
+    Variant 出现了同样清晰的机制回归；CT 则证明真实 feedback 能判断失败，却不能自动发现
+    未进入搜索空间的离散边界。
+  </div>
+
+  <div class="metrics">
+    <div class="metric"><span class="label">task-specific prep</span><span class="value">0.6438</span><span class="detail">vs historical base +0.0023</span></div>
+    <div class="metric"><span class="label">new skills</span><span class="value">0.6115</span><span class="detail">vs historical base -0.0300</span></div>
+    <div class="metric"><span class="label">skills + prep</span><span class="value">0.6153</span><span class="detail">vs historical base -0.0262</span></div>
+    <div class="metric"><span class="label">execution health</span><span class="value">78/78</span><span class="detail">completed, score_valid=true</span></div>
+  </div>
+
+  <h2>1. 实验口径</h2>
+  <div class="note">
+    <ul>
+      <li>运行三个新臂：<code>skills</code>、<code>prep</code>、<code>skills_prep</code>，每臂 26 题，并发 3，<code>cleanup_mode: delete</code>。</li>
+      <li>模型、主 agent turn budget、任务表和常驻反作弊不变量一致。prep 最多 50 个 research step，注入上限约 4,000 字符。</li>
+      <li>base 按要求没有重跑，引用 2026-07-17 的 0.6415。因此本报告只能做描述性历史配对，不能把 t 值当作同轮随机实验。</li>
+      <li>prep-agent 只在 evaluator staging 前运行，工具面为公开 task root 的 read/exec/web/image；没有读取隐藏 reference、grader、历史答案或本报告。</li>
+      <li>完整配置：<code>harness/run/settings_task_prep_v1.yaml</code>；机器分数：<code>docs/harness/task_prep_v1_scores.csv</code>。</li>
+    </ul>
+  </div>
+
+  <h2>2. 总体结果</h2>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>臂</th><th>均分</th><th>总分</th><th>相对历史 base</th><th>配对 t</th><th>去 CT 后差值</th><th>去 CT 后 t</th></tr></thead>
+      <tbody>
+        <tr><td>historical base</td><td class="mono">0.6415</td><td class="mono">16.679</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+        <tr><td>old general prep</td><td class="mono">0.6094</td><td class="mono">15.844</td><td class="negative mono">-0.0321</td><td class="mono">-0.75</td><td class="positive mono">+0.0066</td><td class="mono">+0.34</td></tr>
+        <tr><td>new skills</td><td class="mono">0.6115</td><td class="mono">15.900</td><td class="negative mono">-0.0300</td><td class="mono">-0.76</td><td class="positive mono">+0.0088</td><td class="mono">+1.03</td></tr>
+        <tr><td>task-specific prep</td><td class="mono">0.6438</td><td class="mono">16.740</td><td class="positive mono">+0.0023</td><td class="mono">+0.05</td><td class="positive mono">+0.0424</td><td class="mono">+1.44</td></tr>
+        <tr><td>skills + task-specific prep</td><td class="mono">0.6153</td><td class="mono">15.997</td><td class="negative mono">-0.0262</td><td class="mono">-0.61</td><td class="positive mono">+0.0127</td><td class="mono">+0.67</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>没有一个全量配对差能与 0 分开。新版 prep 相对旧 prep 的均分高 <strong>0.0345</strong>，
+  去 CT 后历史差也从 +0.0066 增至 +0.0424，但单次、跨日期比较仍不足以证明稳定效应。
+  能下结论的是逐题机制，而不是 +0.0023 的总均分。</p>
+
+  <h3>26题逐题分数</h3>
+  <div class="scroll">
+    <table class="wide">
+      <thead><tr><th>task</th><th>base</th><th>old prep</th><th>new skills</th><th>new prep</th><th>new combined</th><th>prep - base</th></tr></thead>
+      <tbody>
+        <tr><td>american_option_pricing_ls</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td><td>0.000</td></tr>
+        <tr class="focus"><td>bpmn_category_governance_restructuring_l3</td><td>0.000</td><td>0.000</td><td>0.000</td><td>0.000</td><td>0.000</td><td>0.000</td></tr>
+        <tr><td>bpmn_supply_disruption_l3</td><td>0.840</td><td>0.854</td><td>0.835</td><td>0.822</td><td>0.851</td><td class="negative">-0.018</td></tr>
+        <tr><td>digital_marketing_ab_test_analysis_1</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td><td>0.000</td></tr>
+        <tr><td>digital_marketing_audience_segmentation_1</td><td>0.904</td><td>0.725</td><td>0.904</td><td>0.867</td><td>0.871</td><td class="negative">-0.038</td></tr>
+        <tr><td>financial_stmt_reconstruction_aapl_fy2024</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td><td>0.000</td></tr>
+        <tr><td>internal_employee_agent_instance_1</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td><td>0.000</td></tr>
+        <tr class="focus"><td>legal_ma_consistency_audit_01</td><td>0.000</td><td>0.000</td><td>0.000</td><td>0.000</td><td>0.000</td><td>0.000</td></tr>
+        <tr><td>llm_ecosystem_privacy_audit_realdata_1</td><td>0.500</td><td>0.500</td><td>0.500</td><td>0.500</td><td>0.500</td><td>0.000</td></tr>
+        <tr><td>pe_screening_memo_1</td><td>0.981</td><td>0.938</td><td>0.981</td><td>0.981</td><td>1.000</td><td>0.000</td></tr>
+        <tr><td>sec_10k_financial_parsing</td><td>0.692</td><td>0.637</td><td>0.649</td><td>0.706</td><td>0.695</td><td class="positive">+0.014</td></tr>
+        <tr class="focus"><td>sse_northbound_programmatic_trading_01</td><td>0.333</td><td>0.667</td><td>0.333</td><td>1.000</td><td>0.667</td><td class="positive">+0.667</td></tr>
+        <tr><td>homework_grading_numerical_pdes_instance_02</td><td>0.660</td><td>0.674</td><td>0.642</td><td>0.715</td><td>0.655</td><td class="positive">+0.055</td></tr>
+        <tr><td>marc_remediation_folio_overlay</td><td>0.200</td><td>0.200</td><td>0.200</td><td>0.200</td><td>0.200</td><td>0.000</td></tr>
+        <tr><td>moodle_gradebook_closeout_reconciliation</td><td>0.885</td><td>0.885</td><td>0.860</td><td>0.950</td><td>0.950</td><td class="positive">+0.065</td></tr>
+        <tr><td>crf_sdtm_mapping_1</td><td>0.000</td><td>0.000</td><td>0.000</td><td>0.000</td><td>0.000</td><td>0.000</td></tr>
+        <tr class="focus"><td>crf_sdtm_mapping_4</td><td>0.450</td><td>0.414</td><td>0.455</td><td>0.615</td><td>0.646</td><td class="positive">+0.165</td></tr>
+        <tr class="focus"><td>ct_geometry_calibration_catphan</td><td>1.000</td><td>0.000</td><td>0.000</td><td>0.000</td><td>0.000</td><td class="negative">-1.000</td></tr>
+        <tr><td>epidemiology_forecast</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td><td>0.000</td></tr>
+        <tr><td>flusight_offline_hosp_forecast_2024_12_14</td><td>0.663</td><td>0.749</td><td>0.650</td><td>0.775</td><td>0.740</td><td class="positive">+0.112</td></tr>
+        <tr><td>healthcare_bias_audit_27a_public_replication_v1</td><td>0.000</td><td>0.000</td><td>0.000</td><td>0.000</td><td>0.000</td><td>0.000</td></tr>
+        <tr><td>healthcare_sap_group_sequential_nsclc</td><td>0.250</td><td>0.340</td><td>0.379</td><td>0.350</td><td>0.240</td><td class="positive">+0.100</td></tr>
+        <tr class="focus"><td>healthcare_tcga_luad_survival_kras</td><td>0.840</td><td>0.840</td><td>1.000</td><td>0.985</td><td>0.840</td><td class="positive">+0.145</td></tr>
+        <tr class="focus"><td>healthcare_variant_annotation_pipeline</td><td>0.999</td><td>0.794</td><td>0.999</td><td>0.793</td><td>0.793</td><td class="negative">-0.206</td></tr>
+        <tr><td>agora_governance_classify_instance_1</td><td>0.483</td><td>0.629</td><td>0.513</td><td>0.482</td><td>0.350</td><td>-0.001</td></tr>
+        <tr><td>legal_dr_fees_01</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td><td>0.000</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>3. Prep 机制是否真的升级</h2>
+  <div class="metrics">
+    <div class="metric"><span class="label">prep instances</span><span class="value">52</span><span class="detail">49 completed / 3 failed</span></div>
+    <div class="metric"><span class="label">real research sessions</span><span class="value">42</span><span class="detail">10 cache hits</span></div>
+    <div class="metric"><span class="label">prep input tokens</span><span class="value">9.76M</span><span class="detail">uncached median 180,922</span></div>
+    <div class="metric"><span class="label">tool calls</span><span class="value">629</span><span class="detail">527 exec / 69 web</span></div>
+  </div>
+  <p>这次 prep 不再是“一次 completion + 五个文件头”。42 次实际 research session 使用了
+  527 次 exec、18 次 read、35 次 web search、34 次 web fetch 和 15 次 image analysis。
+  它完整解析 XML/PDF/CSV/JSONL，检查安装包源码和版本，也运行了 synthetic probe。这个能力升级是真实的。</p>
+  <p>代价也很高：共 9,763,850 input tokens、179,478 output tokens，注入 notes 共
+  170,190 字符；所有 52 个实例都产生了 notes，<code>NO_TASK_SPECIFIC_PREP</code> 一次也没有触发。
+  三次 context compaction 恰好对应三次 prep protocol failure，错误都是孤立 tool result；
+  solver 随后无 prep 降级继续。实验后已修复 compaction 的 tool-call 配对边界。</p>
+
+  <div class="flow">public input/software
+        |
+        v
+task-specific research agent -- sourced findings --> main agent
+        |                                      |
+        +-- no evaluator / no hidden refs      +-- public checker + final artifacts
+                                                       |
+                                                       v
+                                                unchanged evaluator</div>
+
+  <h2>4. 关键题目 Forensics</h2>
+
+  <div class="case">
+    <h3>CT Geometry：feedback 有了，search policy 没有</h3>
+    <p>题目明确把 <code>input/reference_image.npy</code> 作为 ground truth，要求主 agent 用它计算
+    SSIM/MSE 并迭代。这是公开 oracle，不是 evaluator 泄露。input reference 与 evaluator-owned
+    reference 的 SHA-256 都是 <code>c12f859a...</code>，但所有提交数组 hash 均不同，且
+    <code>np.array_equal=false</code>。</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>臂</th><th>SAD</th><th>SDD</th><th>offset</th><th>angular span</th><th>MSE</th><th>SSIM</th><th>score</th></tr></thead>
+        <tbody>
+          <tr><td>historical base</td><td>786.0</td><td>1218.0</td><td>-2.0</td><td class="positive">359.999</td><td>7.11e-8</td><td class="positive">0.99394</td><td>1</td></tr>
+          <tr><td>new skills</td><td>786.28</td><td>1217.95</td><td>-1.99</td><td>-360.0</td><td>1.05e-6</td><td class="negative">0.90330</td><td>0</td></tr>
+          <tr><td>new prep</td><td>785.0</td><td>1216.0</td><td>-1.98</td><td>-360.0</td><td>1.06e-6</td><td class="negative">0.90242</td><td>0</td></tr>
+          <tr><td>new combined</td><td>778.95</td><td>1203.08</td><td>-1.99</td><td>-360.0</td><td>1.83e-6</td><td class="negative">0.84864</td><td>0</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>阈值是 SSIM ≥ 0.95 且 MSE ≤ 4e-6。三个新臂都运行真实指标闭环，skills 和 prep 的
+    MSE 甚至已过，但都没有测试总角跨度略小于 360 的离散边界。历史 base 的扫描显示
+    359.90→SSIM 0.9436、359.92→0.9615、359.98→0.9942、360.001→0.9033，存在明显
+    LEAP weighting 分支。组合臂还把会话中更好的候选丢掉，最终落盘只剩 0.8486。</p>
+    <p><strong>经验：</strong>checker 的职责是拒绝假完成；平台期后的职责是枚举离散模式、约定和
+    边界。两者不能靠增加 contract 文本混为一谈。</p>
+  </div>
+
+  <div class="case">
+    <h3>SSE：prep 的完整读取把 1/3 变成 3/3</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>命题</th><th>正确标签</th><th>skills</th><th>prep</th><th>combined</th></tr></thead>
+        <tbody>
+          <tr><td>同一 LEI 的多券商杠杆信息是否必须分别填报</td><td>No</td><td>No（引用不直接）</td><td>No</td><td>No</td></tr>
+          <tr><td>材料能否确定流量费、撤单费的具体数额</td><td class="positive">Unknown</td><td class="negative">No</td><td class="positive">Unknown</td><td class="negative">No</td></tr>
+          <tr><td>软件名能否只用法文原名填报</td><td>No</td><td>No</td><td>No</td><td>No</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>prep 找到了 Q1 的直接段落，并把“存在收费机制”与“具体数额可确定”分开，输出
+    <code>No / Unknown / No</code>，得 1.0。skills 和 combined 都把缺失具体数额错误标成 No。
+    实验后只精修一条通用规则：requested fact 无法由材料确定时用 Unknown，No 只用于命题被反证。</p>
+  </div>
+
+  <div class="case">
+    <h3>Variant：更专业的上游语义反而违反 task-local 规则</h3>
+    <p>skills-only 得 0.999；prep 与 combined 使用同一缓存 findings，均得 0.793。post-hoc
+    scorer 显示 gene 50/50、consequence 50/50、reportable flag 50/50，只有 3 个 AF 和
+    1 个 ClinVar 不同，却让 exact reportable 子表整块 20 分归零。</p>
+    <p>prep 建议用 VEP normalized allele 的 <code>-</code> 频率，并按
+    <code>clin_sig_allele</code> 选 submitted allele；这在领域语义上有依据，但题目的
+    <code>source_manifest.json</code> 明确规定了本题自己的 ALT/priority 解释。prep 不应重解释它。
+    实验后加入的是 precedence 边界，不是新的 verifier：task-local convention 控制实现，
+    upstream 只报告冲突。</p>
+  </div>
+
+  <div class="case">
+    <h3>CRF4 与 TCGA：task-specific research 的正确形态</h3>
+    <p>CRF4 的 prep 完整解析 XML/PDF 后发现：真正的 AE/SUPPAE metadata 在
+    <code>sdtm_define.xml</code>，名为 <code>supp_define.xml</code> 的文件其实是 ADaM define；
+    它还定位了 aCRF 11–12 页、8 个 SUPPAE QNAM 及其中仅 5 个来自 AE form。分数从历史
+    base 0.450 提到 prep 0.615、combined 0.646。</p>
+    <p>TCGA 的 prep 查清了实时 GDC 的重复 file/sample、versioned KRAS ID，以及安装版
+    TCGAbiolinks 2.38.0 的 assay 实名是 <code>tpm_unstrand</code> 而不是源 TSV 的
+    <code>tpm_unstranded</code>。prep 得 0.985、skills 得 1.0；combined 却回到 0.84。
+    这两题证明 prep 的价值来自模型原本拿不到的输入/API/版本事实，不来自重述题目。</p>
+  </div>
+
+  <div class="case">
+    <h3>BPMN Category：行为更深入，但公开约束本身冲突</h3>
+    <p>三个新臂仍为 0。post-hoc criterion 审计显示它们都缺 A23/A24 的两类 coordination
+    userTask，此外各自还差少量 A25/A37/A42/D03。问题不只是“不认真”：公开 a23/a24 要求新增
+    coordination tasks，公开 a50 又要求每个 userTask 出现在 scenario task_outputs 或固定 exemption；
+    60 个 scenarios 没有这两项输出，exemption 也没有它们。prep 正确识别了该冲突，solver
+    一度创建任务后又为满足 a50 删除。</p>
+    <p>这说明 harness 不能通过猜 grader 来解决公开规格不一致。数据集和评分方式保持不变；
+    当前能做的只有让 agent 显式选择 task-local precedence 并记录不可同时满足处，但不能保证全有或全无评分给分。</p>
+  </div>
+
+  <div class="case">
+    <h3>Legal M&amp;A：四个实质冲突都找到了，仍漏一个错字</h3>
+    <p>三个新臂仍为 0。它们都报告了 146,660,323/332 的 9 元差、45%/40%、自有资金/银行借款、
+    执行事务合伙人身份等实质冲突，却都漏掉公告第一页的 <code>空股股东</code> 应为
+    <code>控股股东</code>。评分是目标集合全覆盖，因此一项 lexical anomaly 足以归零。</p>
+    <p>prep 在这类 closed-book audit 中事实上接近第二个 solver：完整读输入就不可避免地开始解题，
+    但 58 万以上 prompt tokens 仍未保证抓到稀有错字。lexical scan 可以作为此类文本一致性任务的
+    条件策略，不应升级为所有任务强制执行的通用主干。</p>
+  </div>
+
+  <h2>5. 对系统设计的回答</h2>
+  <ol>
+    <li><strong>General prep 已删除；task-specific prep 默认开启。</strong>四臂实验仍显式写 on/off，能够保留对照。当前结果没有证明默认开启普遍提分，因此开关必须保留。</li>
+    <li><strong>Skills 继续只属于 main agent。</strong>prep 不加载 skills，也不构建 evaluator。TCGA/SAP 的组合回落和 Variant 的 precedence 回归说明再合并只会扩大干扰面。</li>
+    <li><strong>Feedback 由 main agent 针对公开材料建立。</strong>有公开 oracle 就复算真实指标；只有 schema/invariant 就承认部分验证；语义判断不能伪装成确定性 PASS。</li>
+    <li><strong>不要再增加 contract/ledger 文件。</strong>实验后只做四个小修：compaction 配对、task-local precedence、Unknown/No 语义、最终落盘验证与平台期离散枚举。</li>
+    <li><strong>纯文档审计是 prep 边界最模糊的类型。</strong>若 prep 没有 parser/格式/来源方面的新增事实，理想行为是空输出；否则它只是高成本的第二次作答。v1 的 0 empty 表明这点仍未校准。</li>
+  </ol>
+
+  <h2>6. 下一步计划</h2>
+  <ol>
+    <li>先部署并回归已定位的 compaction tool-call 配对修复；它对应本轮全部 3 次 prep failure。</li>
+    <li>用 post-run 精修后的同一版本做小规模 canary：CT、SSE、Variant、Legal、CRF4、TCGA。检查的是机制断点是否消失，不先追全量均分。</li>
+    <li>下一次正式实验先预热并冻结 task-prep cache，确保 prep 与 combined 注入完全同一 findings；同轮补 base，至少 <code>k=3</code>。</li>
+    <li>按 headroom 与机制分层报告：环境/API research、closed-book audit、数值反馈、all-or-nothing 构造题。不要再用一个总均分遮住相反机制。</li>
+    <li>保持 dataset、task、input、reference、runner 和 evaluator 不变；所有 post-hoc grader 审计只用于研究报告，不反馈给运行中的 agent。</li>
+  </ol>
+
+  <p class="footer">实验产物：pgl <code>.logs/ale/task_prep_v1</code>。历史基线：
+  <code>.logs/ale/harness_compare</code>。本页数据快照：<code>docs/harness/task_prep_v1_scores.csv</code>。
+  三臂从 12:13 运行至 15:02；结束时 ALE runner 0、活动容器 0。</p>
+</main>
+</body>
+</html>

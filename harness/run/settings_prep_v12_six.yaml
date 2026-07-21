@@ -1,0 +1,22 @@
+arms: [base, prep]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000
+  thinking_level: medium
+
+prep:
+  max_steps: 20
+
+verifier:
+  max_steps: 30
+  max_repairs: 0
+
+run:
+  name: prep_v12_six
+  tasks: docs/harness/results/prep_v11_six/tasks.txt
+  concurrency: 3
+  cleanup_mode: delete
+  api_endpoints: []
+  output_root: .logs/ale/prep_v12_six
+  wall_time_s: 86400

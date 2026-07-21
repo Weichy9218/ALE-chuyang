@@ -1,0 +1,6 @@
+endpoint,task,base_status,base,prep_status,prep,verifier_status,verifier,prep_verifier_status,prep_verifier,prep_delta,verifier_delta,prep_verifier_delta
+verifier_smoke,business_finance__sec_10k_financial_parsing,completed,0.6973,completed,0.6971,completed,0.6919,completed,0.6319,-0.00019999999999997797,-0.005400000000000071,-0.06540000000000001
+verifier_smoke,health_medicine__ct_geometry_calibration_catphan,completed,0.0,completed,0.0,completed,0.0,completed,0.0,0.0,0.0,0.0
+verifier_smoke,health_medicine__flusight_offline_hosp_forecast_2024_12_14,completed,0.7652834478307166,completed,0.6816812409296282,completed,0.7159669375958427,completed,0.6010713830543872,-0.08360220690108833,-0.04931651023487382,-0.16421206477632933
+verifier_smoke,health_medicine__healthcare_tcga_luad_survival_kras,completed,0.84,completed,1.0,completed,0.84,completed,0.84,0.16000000000000003,0.0,0.0
+verifier_smoke,health_medicine__healthcare_variant_annotation_pipeline,completed,0.9990000000000001,completed,0.9990000000000001,completed,0.9990000000000001,completed,0.9990000000000001,0.0,0.0,0.0

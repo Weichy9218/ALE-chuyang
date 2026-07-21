@@ -1,0 +1,161 @@
+{
+  "arms": {
+    "base": {
+      "completed": 25,
+      "cost_usd_mean": 0.4883878,
+      "duration_s_mean": 939.6967999999999,
+      "failed": 1,
+      "input_tokens_mean": 235438.6,
+      "llm_turns_mean": 10.64,
+      "output_tokens_mean": 6846.96,
+      "runs": 26,
+      "score_mean": 0.6054684994382376,
+      "score_n": 25,
+      "score_total": 15.136712485955938,
+      "steps_mean": 29.04,
+      "tool_calls_mean": 17.4
+    },
+    "prep": {
+      "completed": 25,
+      "cost_usd_mean": 0.44632972,
+      "duration_s_mean": 1057.0224,
+      "failed": 1,
+      "input_tokens_mean": 212490.8,
+      "llm_turns_mean": 9.6,
+      "output_tokens_mean": 6118.72,
+      "runs": 26,
+      "score_mean": 0.5956975674851435,
+      "score_n": 25,
+      "score_total": 14.892439187128586,
+      "steps_mean": 27.72,
+      "tool_calls_mean": 17.12
+    },
+    "prep_verifier": {
+      "completed": 25,
+      "cost_usd_mean": 0.50251556,
+      "duration_s_mean": 1231.382,
+      "failed": 1,
+      "input_tokens_mean": 247473.12,
+      "llm_turns_mean": 10.96,
+      "output_tokens_mean": 6697.52,
+      "runs": 26,
+      "score_mean": 0.66943084921814,
+      "score_n": 25,
+      "score_total": 16.7357712304535,
+      "steps_mean": 30.44,
+      "tool_calls_mean": 18.48
+    },
+    "verifier": {
+      "completed": 25,
+      "cost_usd_mean": 0.51745752,
+      "duration_s_mean": 1255.472,
+      "failed": 1,
+      "input_tokens_mean": 270432.12,
+      "llm_turns_mean": 12.04,
+      "output_tokens_mean": 7003.24,
+      "runs": 26,
+      "score_mean": 0.6155649900368855,
+      "score_n": 25,
+      "score_total": 15.389124750922136,
+      "steps_mean": 32.0,
+      "tool_calls_mean": 18.96
+    }
+  },
+  "expected_units": 104,
+  "factorial_effects": {
+    "prep_main_effect": {
+      "mean": 0.022047463614080255,
+      "n": 25,
+      "negative": 4,
+      "positive": 8,
+      "sd": 0.11491879736486822,
+      "se": 0.022983759472973646,
+      "t": 0.959262719400002,
+      "zero": 13
+    },
+    "verifier_main_effect": {
+      "mean": 0.04191488616582223,
+      "n": 25,
+      "negative": 7,
+      "positive": 5,
+      "sd": 0.14406151406062845,
+      "se": 0.02881230281212569,
+      "t": 1.454756547546151,
+      "zero": 13
+    },
+    "verifier_prep_interaction": {
+      "mean": 0.06363679113434867,
+      "n": 25,
+      "negative": 4,
+      "positive": 8,
+      "sd": 0.22238973540955642,
+      "se": 0.04447794708191129,
+      "t": 1.4307492883417967,
+      "zero": 13
+    }
+  },
+  "paired_vs_base": {
+    "prep": {
+      "mean_delta": -0.009770931953094081,
+      "n": 25,
+      "negative": 6,
+      "positive": 4,
+      "sd": 0.08981526704731536,
+      "se": 0.017963053409463074,
+      "t": -0.5439460502826696,
+      "zero": 15
+    },
+    "prep_verifier": {
+      "mean_delta": 0.06396234977990249,
+      "n": 25,
+      "negative": 3,
+      "positive": 8,
+      "sd": 0.21993009687912368,
+      "se": 0.043986019375824734,
+      "t": 1.4541518120427372,
+      "zero": 14
+    },
+    "verifier": {
+      "mean_delta": 0.010096490598647891,
+      "n": 25,
+      "negative": 7,
+      "positive": 4,
+      "sd": 0.09608444954938702,
+      "se": 0.019216889909877403,
+      "t": 0.5253967029003136,
+      "zero": 14
+    }
+  },
+  "prep": {
+    "duration_s_mean": 117.94767121740733,
+    "input_tokens_mean": 49164.25,
+    "runs": 52,
+    "statuses": {
+      "completed": 50,
+      "empty": 2
+    }
+  },
+  "tasks": 26,
+  "verifier": {
+    "builder_duration_s_mean": 76.53582281043727,
+    "builder_input_tokens_mean": 27756.365384615383,
+    "builder_output_tokens_mean": 2209.3076923076924,
+    "last_overall": {
+      "error": 5,
+      "fail": 4,
+      "pass": 5,
+      "unverifiable": 38
+    },
+    "repairs_mean": 0.0,
+    "runner_duration_s_mean": 223.42499464463953,
+    "runner_input_tokens_mean": 95204.48076923077,
+    "runner_output_tokens_mean": 5796.173076923077,
+    "runs": 52,
+    "stop_reasons": {
+      "error": 5,
+      "pass": 5,
+      "repair_disabled": 4,
+      "unverifiable": 38
+    }
+  }
+}

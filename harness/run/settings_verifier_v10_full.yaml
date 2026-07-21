@@ -1,0 +1,22 @@
+arms: [base, prep, verifier, prep_verifier]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000
+  thinking_level: medium
+
+prep:
+  max_steps: 15
+
+verifier:
+  max_steps: 30
+  max_repairs: 0
+
+run:
+  name: prep_v10_verifier_v10_full
+  tasks: docs/harness/results/latest/tasks.txt
+  concurrency: 3
+  cleanup_mode: delete
+  api_endpoints: []
+  output_root: .logs/ale/prep_v10_verifier_v10_full
+  wall_time_s: 86400

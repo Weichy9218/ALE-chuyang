@@ -41,6 +41,17 @@ class AleClawConfig:
     OpenRouter routes work via the vendored ``unified_loop`` (registered for
     ``openrouter/.*`` regex)."""
 
+    api_key: str | None = None
+    """Optional solver-only API key override passed to the agent loop.
+
+    This leaves process-level provider variables available to task evaluators,
+    which may need a different OpenAI-compatible endpoint. ``None`` preserves
+    the normal environment-based routing.
+    """
+
+    api_base: str | None = None
+    """Optional solver-only OpenAI-compatible base URL override."""
+
     max_turns: int | None = 100
     """Mapped to OpenClaw's ``max_steps``. Hard ceiling on the agent run loop."""
 
@@ -83,11 +94,54 @@ class AleClawConfig:
     the model pulls with memory_get only when the skill's when-to-use matches.
     Empty default -> byte-identical to before."""
 
-    domain_prep: bool = False
-    """Enable the domain-notes prep pre-step (capability B) for THIS agent. When
-    True the orchestration runs ale_run.orchestration.domain_prep before the agent,
-    so one experiment can mix prep-on and prep-off arms via distinct presets. The
-    ALE_DOMAIN_PREP env var forces it on globally regardless of this flag."""
+    task_specific_prep: bool = True
+    """Run the task-specific prep agent in the writer's sandbox before the writer.
+
+    It brings the task's runtime up, compiles the deliverable contract from the
+    public materials, and looks up what the task does not supply. Its report is
+    inlined into the writer's first prompt. The worker has read/exec/web tools
+    but does not receive solver skills.
+    """
+
+    task_specific_prep_model: str | None = None
+    """Prep-agent model. None uses the main model, preserving full capability."""
+
+    task_specific_prep_max_steps: int = 30
+    """Maximum multi-turn tool/LLM steps for the prep agent."""
+
+    task_specific_prep_timeout_s: int = 1800
+    """Wall-clock budget for one prep session. On timeout the writer continues."""
+
+    task_specific_prep_task_id: str = ""
+    """Lifecycle-populated task identity used for audited content-addressed caching."""
+
+    task_specific_prep_task_root: str = ""
+    """Lifecycle-populated public task root containing input/ and software/."""
+
+    verifier: bool = False
+    """Freeze an independent public verifier before the solver, then run it after."""
+
+    verifier_model: str | None = None
+    """Builder/auditor model. None uses the main model."""
+
+    verifier_max_steps: int = 30
+    """Maximum tool/LLM steps for each Builder or Auditor."""
+
+    verifier_max_review_rounds: int = 1
+    """Maximum Writer review rounds after the frozen suite runs.
+
+    A round feeds the report to the Writer; it becomes a revision only when the
+    Writer actually changes output. A round with no output change stops the loop.
+    """
+
+    verifier_writer_checks: int = 2
+    """Pre-submission runs of the frozen suite the Writer may trigger itself.
+
+    When the verifier is on and this is positive, the Writer gets a ``verify``
+    tool that snapshots the current ``output/`` and runs the complete frozen
+    suite before DONE, so measurements arrive while the Writer still has budget
+    to act on them. 0 removes the tool and keeps the post-DONE-only behavior.
+    """
 
     # ---- substrate transport ----
     substrate_transport: str = "mcp"
@@ -138,6 +192,16 @@ class AleClawConfig:
     by count). OpenClaw mode reduces cache thrash on multi-screenshot turns."""
 
     def __post_init__(self) -> None:
+        if self.task_specific_prep_max_steps <= 0:
+            raise ValueError("task_specific_prep_max_steps must be positive")
+        if self.task_specific_prep_timeout_s <= 0:
+            raise ValueError("task_specific_prep_timeout_s must be positive")
+        if self.verifier_max_steps <= 0:
+            raise ValueError("verifier_max_steps must be positive")
+        if not 1 <= self.verifier_max_review_rounds <= 3:
+            raise ValueError("verifier_max_review_rounds must be between 1 and 3")
+        if not 0 <= self.verifier_writer_checks <= 8:
+            raise ValueError("verifier_writer_checks must be between 0 and 8")
         if self.disable_main_computer and self.disable_delegate_gui:
             raise ValueError(
                 "Both disable_main_computer and disable_delegate_gui set — "

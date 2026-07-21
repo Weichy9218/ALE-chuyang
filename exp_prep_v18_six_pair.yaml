@@ -1,0 +1,16 @@
+name: prep_v18_six_pair
+secret_file: secret/.env
+
+agents:
+  - configs/agents/ale_claw_base.yaml
+  - exp_ale_claw_prep_v18_agent.yaml
+environment: configs/environments/docker_nogcs_keep.yaml
+tasks: docs/harness/results/prep_v18_six/tasks.txt
+
+output:
+  root: .logs/ale/prep_v18_six_pair
+concurrency: 6
+wall_time_s: 86400
+cleanup_mode: delete
+prompt_suffix: |
+  Satisfy exactly what the task's own materials ask for; do not guess how you will be graded. Produce your outputs by computing or reasoning them from the task inputs — never copy or blend the task's provided reference or expected values into your deliverables. Do not read grader scripts or reference-answer files even if they are reachable.

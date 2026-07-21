@@ -1,0 +1,7 @@
+endpoint,task,base_status,base,prep_status,prep,prep_delta
+prep_v11_six,business_finance__bpmn_supply_disruption_l3,completed,0.8605,completed,0.8252,-0.0353
+prep_v11_six,business_finance__digital_marketing_audience_segmentation_1,completed,0.9042,completed,0.9042,0.0
+prep_v11_six,business_finance__sse_northbound_programmatic_trading_01,completed,0.6666666666666666,completed,0.0,-0.6666666666666666
+prep_v11_six,education_info__homework_grading_numerical_pdes_instance_02,completed,0.5931515151515152,completed,0.6656363636363636,0.07248484848484837
+prep_v11_six,health_medicine__crf_sdtm_mapping_4,completed,0.6172,completed,0.6268,0.009600000000000053
+prep_v11_six,health_medicine__flusight_offline_hosp_forecast_2024_12_14,completed,0.739396761183537,completed,0.6548014899049075,-0.08459527127862954

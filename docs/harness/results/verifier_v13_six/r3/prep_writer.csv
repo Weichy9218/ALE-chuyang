@@ -1,0 +1,13 @@
+endpoint,task,arm,prep_status,raw_decision,raw_findings,raw_entries,raw_deliverables,retained_findings,writer_tool_calls,report_read_call,report_inlined,report_exposed,report_sources,sources_revisited,report_modified,initial_report_sha256,final_report_sha256,artifact_count,artifact_chars,parse_error
+verifier_v13_six_r3,business_finance__bpmn_supply_disruption_l3,prep,empty,,0,0,0,0,24,,False,False,0,0,,,,0,0,
+verifier_v13_six_r3,business_finance__bpmn_supply_disruption_l3,prep_verifier,empty,,0,0,0,0,18,,False,False,0,0,,,,0,0,
+verifier_v13_six_r3,business_finance__digital_marketing_audience_segmentation_1,prep,completed,,0,0,0,1,11,,True,True,3,1,,,,0,0,
+verifier_v13_six_r3,business_finance__digital_marketing_audience_segmentation_1,prep_verifier,completed,,0,0,0,1,10,,True,True,3,1,,,,0,0,
+verifier_v13_six_r3,business_finance__sse_northbound_programmatic_trading_01,prep,empty,,0,0,0,0,7,,False,False,0,0,,,,0,0,
+verifier_v13_six_r3,business_finance__sse_northbound_programmatic_trading_01,prep_verifier,empty,,0,0,0,0,23,,False,False,0,0,,,,0,0,
+verifier_v13_six_r3,education_info__homework_grading_numerical_pdes_instance_02,prep,empty,,0,0,0,0,22,,False,False,0,0,,,,0,0,
+verifier_v13_six_r3,education_info__homework_grading_numerical_pdes_instance_02,prep_verifier,empty,,0,0,0,0,15,,False,False,0,0,,,,0,0,
+verifier_v13_six_r3,health_medicine__crf_sdtm_mapping_4,prep,empty,,0,0,0,0,20,,False,False,0,0,,,,0,0,
+verifier_v13_six_r3,health_medicine__crf_sdtm_mapping_4,prep_verifier,empty,,0,0,0,0,18,,False,False,0,0,,,,0,0,
+verifier_v13_six_r3,health_medicine__flusight_offline_hosp_forecast_2024_12_14,prep,empty,,0,0,0,0,11,,False,False,0,0,,,,0,0,
+verifier_v13_six_r3,health_medicine__flusight_offline_hosp_forecast_2024_12_14,prep_verifier,empty,,0,0,0,0,12,,False,False,0,0,,,,0,0,

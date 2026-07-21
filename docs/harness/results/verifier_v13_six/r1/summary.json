@@ -1,0 +1,158 @@
+{
+  "arms": {
+    "base": {
+      "completed": 6,
+      "cost_usd_mean": 0.42696100000000003,
+      "duration_s_mean": 524.0116666666667,
+      "failed": 0,
+      "input_tokens_mean": 185781.16666666666,
+      "llm_turns_mean": 9.833333333333334,
+      "output_tokens_mean": 6764.166666666667,
+      "runs": 6,
+      "score_mean": 0.7050000802933066,
+      "score_n": 6,
+      "score_total": 4.23000048175984,
+      "steps_mean": 28.166666666666668,
+      "tool_calls_mean": 17.333333333333332
+    },
+    "prep": {
+      "completed": 6,
+      "cost_usd_mean": 0.3987725,
+      "duration_s_mean": 507.11333333333334,
+      "failed": 0,
+      "input_tokens_mean": 184613.83333333334,
+      "llm_turns_mean": 9.166666666666666,
+      "output_tokens_mean": 6220.166666666667,
+      "runs": 6,
+      "score_mean": 0.7199905970869414,
+      "score_n": 6,
+      "score_total": 4.319943582521648,
+      "steps_mean": 27.0,
+      "tool_calls_mean": 16.833333333333332
+    },
+    "prep_verifier": {
+      "completed": 6,
+      "cost_usd_mean": 0.38358733333333334,
+      "duration_s_mean": 910.2583333333333,
+      "failed": 0,
+      "input_tokens_mean": 158058.66666666666,
+      "llm_turns_mean": 9.666666666666666,
+      "output_tokens_mean": 5828.333333333333,
+      "runs": 6,
+      "score_mean": 0.7259569505474209,
+      "score_n": 6,
+      "score_total": 4.355741703284526,
+      "steps_mean": 28.166666666666668,
+      "tool_calls_mean": 17.5
+    },
+    "verifier": {
+      "completed": 6,
+      "cost_usd_mean": 0.434903,
+      "duration_s_mean": 787.1283333333333,
+      "failed": 0,
+      "input_tokens_mean": 183264.83333333334,
+      "llm_turns_mean": 8.666666666666666,
+      "output_tokens_mean": 6572.5,
+      "runs": 6,
+      "score_mean": 0.7120851867943735,
+      "score_n": 6,
+      "score_total": 4.272511120766241,
+      "steps_mean": 24.666666666666668,
+      "tool_calls_mean": 15.0
+    }
+  },
+  "expected_units": 24,
+  "factorial_effects": {
+    "prep_main_effect": {
+      "mean": 0.014431140273341095,
+      "n": 6,
+      "negative": 2,
+      "positive": 3,
+      "sd": 0.08574216531162486,
+      "se": 0.03500409240914079,
+      "t": 0.41227008844179086,
+      "zero": 1
+    },
+    "verifier_main_effect": {
+      "mean": 0.006525729980773216,
+      "n": 6,
+      "negative": 1,
+      "positive": 4,
+      "sd": 0.045243514158832196,
+      "se": 0.01847058730992083,
+      "t": 0.3533038701627072,
+      "zero": 1
+    },
+    "verifier_prep_interaction": {
+      "mean": -0.001118753040587302,
+      "n": 6,
+      "negative": 2,
+      "positive": 3,
+      "sd": 0.07749370830265026,
+      "se": 0.03163667393626224,
+      "t": -0.03536253661940667,
+      "zero": 1
+    }
+  },
+  "paired_vs_base": {
+    "prep": {
+      "mean_delta": 0.014990516793634742,
+      "n": 6,
+      "negative": 2,
+      "positive": 2,
+      "sd": 0.06876745408338769,
+      "se": 0.028074195569095222,
+      "t": 0.5339606884457512,
+      "zero": 2
+    },
+    "prep_verifier": {
+      "mean_delta": 0.020956870254114312,
+      "n": 6,
+      "negative": 2,
+      "positive": 3,
+      "sd": 0.11835766072557549,
+      "se": 0.0483193126545181,
+      "t": 0.4337162327609132,
+      "zero": 1
+    },
+    "verifier": {
+      "mean_delta": 0.007085106501066862,
+      "n": 6,
+      "negative": 2,
+      "positive": 2,
+      "sd": 0.02877049584548561,
+      "se": 0.011745505744717173,
+      "t": 0.603218512259769,
+      "zero": 2
+    }
+  },
+  "prep": {
+    "duration_s_mean": 9.650884591828799,
+    "input_tokens_mean": 3779.6666666666665,
+    "runs": 12,
+    "statuses": {
+      "completed": 5,
+      "empty": 7
+    }
+  },
+  "tasks": 6,
+  "verifier": {
+    "agent_duration_s_mean": 403.9356019050659,
+    "agent_input_tokens_mean": 149646.66666666666,
+    "agent_output_tokens_mean": 17485.75,
+    "executor_duration_s_mean": 1.2239620237029158,
+    "last_overall": {
+      "None": 2,
+      "error": 4,
+      "pass": 4,
+      "unverifiable": 2
+    },
+    "repairs_mean": 0.0,
+    "runs": 12,
+    "stop_reasons": {
+      "error": 6,
+      "pass": 4,
+      "unverifiable": 2
+    }
+  }
+}

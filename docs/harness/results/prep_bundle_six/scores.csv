@@ -1,0 +1,8 @@
+task,base,current_prep,delta,report_read_call,artifact_python_executions
+business_finance__bpmn_supply_disruption_l3,0.8462,0.8052,-0.0410,1,4
+business_finance__digital_marketing_audience_segmentation_1,0.7620,0.9042,0.1422,1,0
+business_finance__sse_northbound_programmatic_trading_01,0.6666666666666666,0.6666666666666666,0.0,1,0
+education_info__homework_grading_numerical_pdes_instance_02,0.704969696969697,0.6496363636363637,-0.0553333333333333,1,3
+health_medicine__crf_sdtm_mapping_4,0.6029,0.6459,0.0430,2,2
+health_medicine__flusight_offline_hosp_forecast_2024_12_14,0.7278847379304958,0.7548571968902758,0.0269724589597800,3,0
+mean,0.7184368502618099,0.7377433711988843,0.0193065209370744,,

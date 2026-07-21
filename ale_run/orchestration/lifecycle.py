@@ -36,10 +36,10 @@ from ..base_interface import (
     persist_screenshots,
 )
 from ..environments.env import ALEEnv
+from ..environments.task_data import task_subdir
 from ..executors import DockerExecutor, LocalExecutor, SandboxExecutor
 from ..tasks.loader import TaskLoader
 from ..tasks.driver import TaskDriver
-from .domain_prep import maybe_prepare_domain_notes
 from .factory import EnvironmentRouter, build_config, resolve_agent
 from .run_writer import RunWriter, slug_task
 from .experiment_spec import ArtifactsSpec, RunUnit, UnitResult
@@ -277,18 +277,17 @@ async def run_one_unit(
             )
             await task_driver.setup()
 
-            # ============================================================
-            # Phase 1b — domain-notes prep pre-step (capability B, opt-in).
-            # Runs after inputs are staged + setup, BEFORE the agent and BEFORE
-            # reference/ is staged (Phase 3, stage_reference) — a structural
-            # non-leak guarantee: the answers aren't on the box yet. No-op unless
-            # ALE_DOMAIN_PREP is set; best-effort, never raises. On success it
-            # appends a pointer to task_meta["description"], which the agent
-            # prompt below (task_meta["description"]) then includes.
-            # ============================================================
-            await maybe_prepare_domain_notes(
-                env=env, config=config, task_meta=task_meta, writer=writer,
-            )
+            # ALE Claw's pre-launch research agent runs inside its deployer so it
+            # can reuse the real multi-turn tool runtime. The lifecycle supplies
+            # only public task identity/path; hidden reference data is still not
+            # staged until Phase 3.
+            if hasattr(config, "task_specific_prep_task_root"):
+                task_data = task_meta.get("task_data")
+                if task_data is not None and getattr(task_data, "requires_task_data", False):
+                    config.task_specific_prep_task_root = task_subdir(env.sandbox, task_data)
+                    config.task_specific_prep_task_id = (
+                        f"{unit.task_path}/{getattr(task_data, 'variant_name', unit.variant_index)}"
+                    )
 
             # ============================================================
             # Phase 2 — agent

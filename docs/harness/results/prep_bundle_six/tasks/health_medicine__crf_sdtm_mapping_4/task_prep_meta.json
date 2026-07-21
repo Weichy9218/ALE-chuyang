@@ -1,0 +1,34 @@
+{
+  "status": "completed",
+  "fingerprint": "d5f98f3c6c46e8470839a6e8c8f991edebffb2708536bce0bb018afb2f14426e",
+  "cached": false,
+  "input_tokens": 124914,
+  "output_tokens": 6044,
+  "duration_s": 440.5375273649115,
+  "llm_turns": 11,
+  "tool_calls": 12,
+  "tool_call_counts": {
+    "exec": 12
+  },
+  "compactions": 0,
+  "quality_gate": null,
+  "error": null,
+  "protocol": "task-prep-v13",
+  "report_chars": 4745,
+  "report_sha256": "5200616122e321c482ad7da9da8fe94155a2633a51f0c495d217835a31505e83",
+  "artifact_count": 2,
+  "artifact_chars": 16686,
+  "artifact_manifest": [
+    {
+      "path": "artifacts/ae_source_index.tsv",
+      "chars": 11517,
+      "sha256": "ba59277c3d94075e7dba70b759eb28ef3d0611fcf3dd0bc6403a5b391a83e397"
+    },
+    {
+      "path": "artifacts/build_ae_source_index.py",
+      "chars": 5169,
+      "sha256": "04dcd5979d5a086285074bbdb8cbd78dddf86176e9b12f5f7f8ee256e5c44e66"
+    }
+  ],
+  "report_role": "subordinate_single_blocker_prep_bundle"
+}

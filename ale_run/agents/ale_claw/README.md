@@ -84,6 +84,13 @@ The full config surface lives in `config.py`, but most users only need these:
 - `max_turns`: hard cap on the action loop
 - `thinking_level`: base reasoning level
 - `disabled_tools`: tools to hide from the model
+- `task_specific_prep`: run grounded pre-solve preparation (default `true`;
+  experiment arms set it explicitly)
+- `verifier`: build and run an independent frozen public-test suite (default `false`)
+- `verifier_max_review_rounds`: maximum writer review rounds after the suite runs
+  (default `1`); a round becomes a revision only when the writer changes output
+- `verifier_writer_checks`: pre-submission runs of the frozen suite the writer
+  may trigger itself via the `verify` tool (default `2`; `0` disables the tool)
 <!-- - `summary_model` / `auxiliary_model` / `gui_model`: helper models -->
 
 Minimal direct usage looks like this:
@@ -104,6 +111,13 @@ If you want to understand the harness quickly, read these files in order:
 
 - `deployer.py`: ALE entry point
 - `config.py`: runtime knobs
+- `task_prep.py`: grounded pre-solve research
+- `verifier.py`: public-source audit, test freezing, and the four-category
+  writer feedback (hard mismatches, advisory reviews, execution errors, gaps)
+- `verifier_runtime.py`: read-only snapshots, checker preflight, and execution
+- `verifier_precheck.py`: the writer-facing `verify` tool (pre-submission runs
+  of the frozen suite)
+- `verifier_sandbox.py`: Landlock/seccomp process boundary
 - `harness/agent_loop.py`: main loop
 - `harness/prompt.py`: system prompt assembly
 - `harness/tools/tools.py`: tool registry

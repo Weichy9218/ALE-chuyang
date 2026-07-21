@@ -30,3 +30,21 @@ node_modules/
 *.log
 .claude/
 /tmp/
+
+# === 题目分析页:含从隐藏 reference 复原的参考取值与评分规则,不进公开仓库 ===
+# 需要分享时用 dist/ 下打包的离线 zip 私下发送(见 docs/README.md)
+docs/task_analysis/
+docs/harness_pitfalls.html
+/dist/
+
+# === 体量过大或含题目答案的产物:不进仓库 ===
+# examples/ 是 330MB 的 agent 原始输出(SEC 抽取文本等),需要时从 pgl 取
+docs/harness/results/examples/
+# 归档的逐题分析同样含隐藏 reference 复原内容
+docs/archive/harness-general-prep-2026-07/case_by_case/
+docs/archive/harness-general-prep-2026-07/pi-cases/
+docs/new_run/
+
+# === 原始轨迹:含 writer/prep 完整对话与题目内容,不进公开仓库 ===
+docs/harness/results/*/raw/
+docs/harness/archive/*/*/raw/

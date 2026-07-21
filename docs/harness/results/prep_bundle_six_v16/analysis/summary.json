@@ -1,0 +1,57 @@
+{
+  "arms": {
+    "base": {
+      "completed": 6,
+      "cost_usd_mean": 0.4254886666666667,
+      "duration_s_mean": 1284.8366666666668,
+      "failed": 0,
+      "input_tokens_mean": 170929.66666666666,
+      "llm_turns_mean": 9.333333333333334,
+      "output_tokens_mean": 6434.0,
+      "runs": 6,
+      "score_mean": 0.732246526900251,
+      "score_n": 6,
+      "score_total": 4.3934791614015065,
+      "steps_mean": 28.166666666666668,
+      "tool_calls_mean": 17.833333333333332
+    },
+    "prep": {
+      "completed": 6,
+      "cost_usd_mean": 0.382521,
+      "duration_s_mean": 1158.7783333333332,
+      "failed": 0,
+      "input_tokens_mean": 162856.5,
+      "llm_turns_mean": 8.5,
+      "output_tokens_mean": 5905.166666666667,
+      "runs": 6,
+      "score_mean": 0.7418459568177738,
+      "score_n": 6,
+      "score_total": 4.451075740906643,
+      "steps_mean": 26.333333333333332,
+      "tool_calls_mean": 16.833333333333332
+    }
+  },
+  "expected_units": 12,
+  "paired_vs_base": {
+    "prep": {
+      "mean_delta": 0.009599429917522773,
+      "n": 6,
+      "negative": 2,
+      "positive": 3,
+      "sd": 0.032589768334892584,
+      "se": 0.013304717209333234,
+      "t": 0.7215057461566181,
+      "zero": 1
+    }
+  },
+  "prep": {
+    "duration_s_mean": 0.0,
+    "input_tokens_mean": 0.0,
+    "runs": 6,
+    "statuses": {
+      "completed": 1,
+      "empty": 5
+    }
+  },
+  "tasks": 6
+}

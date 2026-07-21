@@ -1,0 +1,57 @@
+{
+  "arms": {
+    "base": {
+      "completed": 6,
+      "cost_usd_mean": 0.4170723333333333,
+      "duration_s_mean": 689.3383333333334,
+      "failed": 0,
+      "input_tokens_mean": 211997.33333333334,
+      "llm_turns_mean": 8.833333333333334,
+      "output_tokens_mean": 5970.833333333333,
+      "runs": 6,
+      "score_mean": 0.7184368502611432,
+      "score_n": 6,
+      "score_total": 4.310621101566859,
+      "steps_mean": 27.5,
+      "tool_calls_mean": 17.666666666666668
+    },
+    "prep": {
+      "completed": 6,
+      "cost_usd_mean": 0.41261233333333336,
+      "duration_s_mean": 715.9516666666666,
+      "failed": 0,
+      "input_tokens_mean": 172555.5,
+      "llm_turns_mean": 8.666666666666666,
+      "output_tokens_mean": 6483.5,
+      "runs": 6,
+      "score_mean": 0.6864730378128527,
+      "score_n": 6,
+      "score_total": 4.118838226877116,
+      "steps_mean": 26.833333333333332,
+      "tool_calls_mean": 17.166666666666668
+    }
+  },
+  "expected_units": 12,
+  "paired_vs_base": {
+    "prep": {
+      "mean_delta": -0.03196381244829055,
+      "n": 6,
+      "negative": 3,
+      "positive": 2,
+      "sd": 0.04606821272391285,
+      "se": 0.018807269089263005,
+      "t": -1.6995456542140168,
+      "zero": 1
+    }
+  },
+  "prep": {
+    "duration_s_mean": 126.09515197066746,
+    "input_tokens_mean": 122439.66666666667,
+    "runs": 6,
+    "statuses": {
+      "completed": 4,
+      "empty": 2
+    }
+  },
+  "tasks": 6
+}

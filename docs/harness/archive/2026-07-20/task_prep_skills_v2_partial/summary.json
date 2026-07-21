@@ -1,0 +1,102 @@
+{
+  "arms": {
+    "base": {
+      "completed": 25,
+      "cost_usd_mean": 0.49411499999999997,
+      "duration_s_mean": 990.5384,
+      "failed": 1,
+      "input_tokens_mean": 250291.0,
+      "llm_turns_mean": 11.4,
+      "output_tokens_mean": 6679.04,
+      "runs": 26,
+      "score_mean": 0.606824714290751,
+      "score_n": 25,
+      "score_total": 15.170617857268775,
+      "steps_mean": 31.04,
+      "tool_calls_mean": 18.64
+    },
+    "prep": {
+      "completed": 24,
+      "cost_usd_mean": 0.5245618333333333,
+      "duration_s_mean": 1143.0866666666666,
+      "failed": 1,
+      "input_tokens_mean": 284300.5416666667,
+      "llm_turns_mean": 11.875,
+      "output_tokens_mean": 6281.583333333333,
+      "runs": 25,
+      "score_mean": 0.589194485848168,
+      "score_n": 24,
+      "score_total": 14.140667660356032,
+      "steps_mean": 32.416666666666664,
+      "tool_calls_mean": 19.541666666666668
+    },
+    "skills": {
+      "completed": 25,
+      "cost_usd_mean": 0.53057192,
+      "duration_s_mean": 1096.622,
+      "failed": 1,
+      "input_tokens_mean": 265946.56,
+      "llm_turns_mean": 12.6,
+      "output_tokens_mean": 6939.56,
+      "runs": 26,
+      "score_mean": 0.5907311646118859,
+      "score_n": 25,
+      "score_total": 14.76827911529715,
+      "steps_mean": 33.76,
+      "tool_calls_mean": 20.16
+    },
+    "skills_prep": {
+      "completed": 0,
+      "cost_usd_mean": null,
+      "duration_s_mean": null,
+      "failed": 0,
+      "input_tokens_mean": null,
+      "llm_turns_mean": null,
+      "output_tokens_mean": null,
+      "runs": 0,
+      "score_mean": null,
+      "score_n": 0,
+      "score_total": 0,
+      "steps_mean": null,
+      "tool_calls_mean": null
+    }
+  },
+  "expected_units": 104,
+  "paired_vs_base": {
+    "prep": {
+      "mean_delta": -0.0012479248713642536,
+      "n": 24,
+      "negative": 4,
+      "positive": 4,
+      "sd": 0.07400509563671519,
+      "se": 0.015106226889651833,
+      "t": -0.08260996478340434,
+      "zero": 16
+    },
+    "skills": {
+      "mean_delta": -0.016093549678865036,
+      "n": 25,
+      "negative": 7,
+      "positive": 3,
+      "sd": 0.09604319672877719,
+      "se": 0.019208639345755438,
+      "t": -0.8378287180669698,
+      "zero": 15
+    },
+    "skills_prep": {
+      "mean_delta": null,
+      "n": 0,
+      "negative": 0,
+      "positive": 0,
+      "sd": null,
+      "se": null,
+      "t": null,
+      "zero": 0
+    }
+  },
+  "skill_loads": {
+    "deliverable-contract": 24,
+    "evidence-audit": 2
+  },
+  "tasks": 26
+}

@@ -1,0 +1,22 @@
+{
+  "status": "completed",
+  "fingerprint": "013099f61d5e6f2467ca7b1d82f574f9da43ca22b6d2f8ca82fe8b7ab21baacf",
+  "cached": false,
+  "input_tokens": 66168,
+  "output_tokens": 4065,
+  "duration_s": 186.19617817201652,
+  "llm_turns": 7,
+  "tool_calls": 8,
+  "tool_call_counts": {
+    "exec": 8
+  },
+  "compactions": 0,
+  "error": null,
+  "protocol": "task-prep-v11",
+  "report_chars": 3907,
+  "report_role": "mutable_prior_not_task_input",
+  "initial_report_sha256": "150abd812c41bbd4f96cf685d13078221377a5b100772245a6bbb36f2ae401a6",
+  "final_report_sha256": "e45b5676a2e40b6dc99eacd65a546f96502950684e48d9e493bbe2a62bcfe8c4",
+  "final_report_chars": 4314,
+  "report_modified": true
+}

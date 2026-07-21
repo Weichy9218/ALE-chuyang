@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "task": "business_finance__pe_screening_memo_1",
+  "primary_analysis": {
+    "included": false,
+    "reason": "The task-native gpt-5-mini evaluator returned a transient model_not_found error for base, prep, and verifier. The combined run completed with no artifact at the runtime output path."
+  },
+  "original_artifact_posthoc_rescore": {
+    "scorer": "task-native score_screening_memo.py through the supported Boyue evaluator endpoint",
+    "passes": 1,
+    "scores": {
+      "base": 0.86875,
+      "prep": 0.8875,
+      "verifier": 0.925
+    },
+    "word_counts": {
+      "base": 2824,
+      "prep": 3114,
+      "verifier": 2495
+    },
+    "interpretation": "The same solver artifacts were rescored after the failed evaluator calls. These are sensitivity values, not completed run.json scores."
+  },
+  "combined_original_run": {
+    "status": "completed",
+    "score": 0.0,
+    "runtime_output_file_present": false,
+    "root_cause": "The staged task_brief.md named /media/user/data/agenthle/finance/... while the public runtime task root and output pull used /media/user/data/agenthle/business_finance/.... The writer created a complete memo at the former path, so the benchmark output directory remained empty.",
+    "prep_status": "empty",
+    "verifier_overall": "fail",
+    "verifier_repairs": 0
+  },
+  "sensitivity_if_used_as_26th_row": {
+    "score_means": {
+      "base": 0.6251447569631812,
+      "prep": 0.6267634926478653,
+      "verifier": 0.6139663778866377,
+      "prep_verifier": 0.5786564258477282
+    },
+    "paired_mean_delta_vs_base": {
+      "prep": 0.0016187356846840164,
+      "verifier": -0.011178379076543655,
+      "prep_verifier": -0.04648833111545312
+    },
+    "interpretation": "The prep conclusion remains near zero. The combined delta is dominated by one public path-conflict failure and must not be treated as a verifier repair effect."
+  }
+}

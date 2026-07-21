@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "task": "business_finance__pe_screening_memo_1",
+  "primary_analysis": {
+    "included": false,
+    "reason": "Original evaluator calls failed on an unavailable model. Recovery used an empty prep cache, and the combined arm did not load a skill."
+  },
+  "split_endpoint_recovery": {
+    "solver_model": "openai/gpt-5.6-sol",
+    "evaluator_model": "gpt-5-mini",
+    "scores": {
+      "base": 0.89375,
+      "skills": 0.975,
+      "prep": 0.95625,
+      "skills_prep": 0.90625
+    },
+    "run_timestamps": {
+      "base": "20260719_145959",
+      "skills": "20260719_145959",
+      "prep": "20260719_152949",
+      "skills_prep": "20260719_145959"
+    },
+    "interventions_observed": {
+      "base": [],
+      "skills": ["evidence-audit"],
+      "prep": [],
+      "skills_prep": []
+    },
+    "prep_cache": {
+      "status": "empty",
+      "cached": true,
+      "report_chars": 0,
+      "report_sha256": "bf9bd4b796bcecf629f78345168a96cf779c15ac77ef03f935b8881374e7ccc8"
+    },
+    "interpretation": "Operational completion and endpoint sensitivity only; not a valid four-arm intervention comparison."
+  },
+  "original_artifact_posthoc_rescore": {
+    "source_run_timestamp": "20260719_084452",
+    "scorer": "task-native evaluator through the supported evaluator endpoint",
+    "scores": {
+      "base": 0.80625,
+      "skills": 0.91875,
+      "prep": 0.89375,
+      "skills_prep": 0.86875
+    },
+    "details": {
+      "base": {
+        "word_count": 3065,
+        "section_group_hits": [4, 4, 4, 6, 5],
+        "specific_anchor_hits": 8
+      },
+      "skills": {
+        "word_count": 2216,
+        "section_group_hits": [4, 6, 5, 6, 6],
+        "specific_anchor_hits": 8
+      },
+      "prep": {
+        "word_count": 2259,
+        "section_group_hits": [4, 4, 6, 6, 5],
+        "specific_anchor_hits": 9
+      },
+      "skills_prep": {
+        "word_count": 2314,
+        "section_group_hits": [4, 4, 6, 6, 5],
+        "specific_anchor_hits": 8
+      }
+    },
+    "paired_mean_delta_if_used_as_26th_sensitivity_row": {
+      "skills": -0.01114764392,
+      "prep": 0.002213453965,
+      "skills_prep": -0.01933620169
+    },
+    "interpretation": "Same solver artifacts as the homogeneous original run, but post-hoc evaluator calls rather than completed run.json records. Use only as a sensitivity check."
+  }
+}

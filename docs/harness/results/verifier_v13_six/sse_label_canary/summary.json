@@ -1,0 +1,152 @@
+{
+  "arms": {
+    "base": {
+      "completed": 0,
+      "cost_usd_mean": null,
+      "duration_s_mean": null,
+      "failed": 0,
+      "input_tokens_mean": null,
+      "llm_turns_mean": null,
+      "output_tokens_mean": null,
+      "runs": 0,
+      "score_mean": null,
+      "score_n": 0,
+      "score_total": 0,
+      "steps_mean": null,
+      "tool_calls_mean": null
+    },
+    "prep": {
+      "completed": 0,
+      "cost_usd_mean": null,
+      "duration_s_mean": null,
+      "failed": 0,
+      "input_tokens_mean": null,
+      "llm_turns_mean": null,
+      "output_tokens_mean": null,
+      "runs": 0,
+      "score_mean": null,
+      "score_n": 0,
+      "score_total": 0,
+      "steps_mean": null,
+      "tool_calls_mean": null
+    },
+    "prep_verifier": {
+      "completed": 1,
+      "cost_usd_mean": 0.246677,
+      "duration_s_mean": 542.58,
+      "failed": 0,
+      "input_tokens_mean": 119045.0,
+      "llm_turns_mean": 5.0,
+      "output_tokens_mean": 2372.0,
+      "runs": 1,
+      "score_mean": 0.6666666666666666,
+      "score_n": 1,
+      "score_total": 0.6666666666666666,
+      "steps_mean": 20.0,
+      "tool_calls_mean": 14.0
+    },
+    "verifier": {
+      "completed": 1,
+      "cost_usd_mean": 0.221998,
+      "duration_s_mean": 450.87,
+      "failed": 0,
+      "input_tokens_mean": 74700.0,
+      "llm_turns_mean": 4.0,
+      "output_tokens_mean": 2106.0,
+      "runs": 1,
+      "score_mean": 0.6666666666666666,
+      "score_n": 1,
+      "score_total": 0.6666666666666666,
+      "steps_mean": 12.0,
+      "tool_calls_mean": 7.0
+    }
+  },
+  "expected_units": 4,
+  "factorial_effects": {
+    "prep_main_effect": {
+      "mean": null,
+      "n": 0,
+      "negative": 0,
+      "positive": 0,
+      "sd": null,
+      "se": null,
+      "t": null,
+      "zero": 0
+    },
+    "verifier_main_effect": {
+      "mean": null,
+      "n": 0,
+      "negative": 0,
+      "positive": 0,
+      "sd": null,
+      "se": null,
+      "t": null,
+      "zero": 0
+    },
+    "verifier_prep_interaction": {
+      "mean": null,
+      "n": 0,
+      "negative": 0,
+      "positive": 0,
+      "sd": null,
+      "se": null,
+      "t": null,
+      "zero": 0
+    }
+  },
+  "paired_vs_base": {
+    "prep": {
+      "mean_delta": null,
+      "n": 0,
+      "negative": 0,
+      "positive": 0,
+      "sd": null,
+      "se": null,
+      "t": null,
+      "zero": 0
+    },
+    "prep_verifier": {
+      "mean_delta": null,
+      "n": 0,
+      "negative": 0,
+      "positive": 0,
+      "sd": null,
+      "se": null,
+      "t": null,
+      "zero": 0
+    },
+    "verifier": {
+      "mean_delta": null,
+      "n": 0,
+      "negative": 0,
+      "positive": 0,
+      "sd": null,
+      "se": null,
+      "t": null,
+      "zero": 0
+    }
+  },
+  "prep": {
+    "duration_s_mean": 0.0,
+    "input_tokens_mean": 0.0,
+    "runs": 1,
+    "statuses": {
+      "empty": 1
+    }
+  },
+  "tasks": 1,
+  "verifier": {
+    "agent_duration_s_mean": 312.2897962984862,
+    "agent_input_tokens_mean": 186604.0,
+    "agent_output_tokens_mean": 14738.5,
+    "executor_duration_s_mean": 1.1382022359757684,
+    "last_overall": {
+      "error": 2
+    },
+    "repairs_mean": 0.0,
+    "runs": 2,
+    "stop_reasons": {
+      "error": 2
+    }
+  }
+}

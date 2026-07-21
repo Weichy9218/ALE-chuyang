@@ -1,0 +1,58 @@
+dataset	target	define_order	role	mandatory	method_oid	label	datatype	length	codelist_oid	origin_type	origin_detail	acrf_pages	acrf_exact_lines
+AE	STUDYID	1	Req	Yes		Study Identifier	text	8		Protocol		11;13;15;16;17;18;19;20;21;22;23;24;25;26;27;28;29;30;31;32;33;34;37;38;39;40;41;42;43;44;46;48;50;51;53;55;57;59;61;64;65;66;67;68;69;70;72;73;74;75;76;77;78;79;80;81;82;83;85;86;87;88;90;91;93;99;100;101;102;103;104;106;108;110;111;112;113;114;115;116;117;119	p11: STUDYID || p13: STUDYID LB=Laboratory Test Results || p15: STUDYID CM=Concomitant Medications || p16: STUDYID CM=Concomitant Medications || p17: STUDYID DS=Disposition || p18: STUDYID SV=Subject Visits || p19: STUDYID SV=Subject Visits || p20: STUDYID SV=Subject Visits || p21: STUDYID SV=Subject Visits || p22: STUDYID MB=Microbiology Specimen DI=Device Identifiers CO=Comments || p23: STUDYID MB=Microbiology Specimen DI=Device Identifiers CO=Comments || p24: STUDYID DD=Death Details || p25: STUDYID DM=Demographics || p26: STUDYID Linked to related AE record via RELREC DS=Disposition || p27: STUDYID Linked to related AE record via RELREC DS=Disposition || p28: STUDYID Linked to related AE record via RELREC DS=Disposition || p29: STUDYID Linked to related AE record via RELREC DS=Disposition || p30: STUDYID SV=Subject Visits || p31: STUDYID SV=Subject Visits || p32: STUDYID SV=Subject Visits || p33: STUDYID SV=Subject Visits || p34: STUDYID SV=Subject Visits || p37: STUDYID LB=Laboratory Test Results || p38: STUDYID HO=Healthcare Encounters FA=Findings About Events or Interventions || p39: STUDYID HO=Healthcare Encounters || p40: STUDYID CE=Clinical Events || p41: STUDYID CE=Clinical Events || p42: STUDYID CE=Clinical Events || p43: STUDYID MO=Morphology || p44: STUDYID IE=Inclusion/Exclusion Criteria Not Met || p46: STUDYID IE=Inclusion/Exclusion Criteria Not Met || p48: STUDYID IE=Inclusion/Exclusion Criteria Not Met || p50: STUDYID IE=Inclusion/Exclusion Criteria Not Met || p51: STUDYID IE=Inclusion/Exclusion Criteria Not Met || p53: STUDYID IE=Inclusion/Exclusion Criteria Not Met || p55: STUDYID IE=Inclusion/Exclusion Criteria Not Met || p57: STUDYID IE=Inclusion/Exclusion Criteria Not Met || p59: STUDYID IE=Inclusion/Exclusion Criteria Not Met || p61: STUDYID IE=Inclusion/Exclusion Criteria Not Met || p64: STUDYID LB=Laboratory Test Results MB=Microbiology Specimen || p65: STUDYID LB=Laboratory Test Results MB=Microbiology Specimen || p66: STUDYID LB=Laboratory Test Results || p67: STUDYID LB=Laboratory Test Results || p68: STUDYID LB=Laboratory Test Results || p69: STUDYID LB=Laboratory Test Results || p70: STUDYID AE=Adverse Events || p72: STUDYID MH=Medical History || p73: STUDYID LB=Laboratory Test Results || p74: STUDYID PE=Physical Examination || p75: STUDYID IS=Immunogenicity Specimen Assessment CO=Comments || p76: STUDYID CM=Concomitant Medications || p77: STUDYID PR=Procedures || p78: STUDYID VS=Vital Signs || p79: STUDYID DS=Disposition || p80: STUDYID DM=Demographics || p81: STUDYID FA=Findings About Events or Interventions || p82: STUDYID PR=Procedures || p83: STUDYID PR=Procedures || p85: STUDYID DS=Disposition || p86: STUDYID IE=Inclusion/Exclusion Criteria Not Met || p87: STUDYID MB=Microbiology Specimen CO=Comments || p88: STUDYID IS=Immunogenicity Specimen Assessment CO=Comments || p90: STUDYID MB=Microbiology Specimen CO=Comments || p91: STUDYID New version: VERSION 2: USED AFTER JULY 6, 2020 Events or Interventions CE=Clinical Events || p93: STUDYID New version: VERSION 2: USED AFTER JULY 6, 2020 Events or Interventions CE=Clinical Events || p99: STUDYID DS=Disposition || p100: STUDYID MB=Microbiology Specimen CO=Comments || p101: STUDYID MB=Microbiology Specimen DI=Device Identifiers CO=Comments || p102: STUDYID CE=Clinical Events FA=Findings About Events or Interventions AE=Adverse Events || p103: STUDYID PR=Procedures || p104: STUDYID DS=Disposition || p106: STUDYID EX=Exposure EC=Exposure as Collected || p108: STUDYID EX=Exposure EC=Exposure as Collected || p110: STUDYID CM=Concomitant Medications || p111: STUDYID VS=Vital Signs || p112: STUDYID VS=Vital Signs || p113: STUDYID VS=Vital Signs || p114: STUDYID VS=Vital Signs || p115: STUDYID VS=Vital Signs || p116: STUDYID DS=Disposition || p117: STUDYID || p119: STUDYID FACAT=REACTOGENICITY
+AE	DOMAIN	2	Req	Yes		Domain Abbreviation	text	2	CL.DOMAIN	Assigned			
+AE	USUBJID	3	Req	Yes	MT.AE.USUBJID	Unique Subject Identifier	text	22		Derived			
+AE	AESEQ	4	Req	Yes	MT.AE.AESEQ	Sequence Number	integer	8		Derived			
+AE	AEREFID	5	Perm	No		Reference ID	text	10		CRF		12;70	p12: 15. Ser ous Adverse AEREFID || p70: Number: For Pfizer Use AEREFID
+AE	AESPID	6	Perm	No		Sponsor-Defined Identifier	text	2		CRF		11	p11: 2. AE ID: AESPID
+AE	AELNKGRP	7	Perm	No	MT.AE.VSD.AELNKGRP	Link Group ID	text	57		Derived			
+AE	AETERM	8	Req	Yes		Reported Term for the Adverse Event	text	100		CRF		11;70;102	p11: (If possible specify AETERM || p70: of Medication Error): AETERM || p102: CETERM FAOBJ AETERM
+AE	AELLT	9	Exp	No		Lowest Level Term	text	57	CL.MedDRA	Assigned		12;70	p12: [hidden] AELLT || p70: [hidden] AELLT
+AE	AELLTCD	10	Exp	No		Lowest Level Term Code	integer	8	CL.MedDRA	Assigned		12;70	p12: 18. Lowest Level Term AELLTCD || p70: Code [hidden] AELLTCD
+AE	AEDECOD	11	Req	Yes		Dictionary-Derived Term	text	51	CL.MedDRA	Assigned		12;70	p12: Term [hidden] AEDECOD || p70: AEDECOD
+AE	AEPTCD	12	Exp	No		Preferred Term Code	integer	8	CL.MedDRA	Assigned		12;71	p12: AEPTCD || p71: 16. Preferred Term Code AEPTCD
+AE	AEHLT	13	Exp	No		High Level Term	text	74	CL.MedDRA	Assigned		12;71	p12: [hidden] AEHLT || p71: 17. High Level Term AEHLT
+AE	AEHLTCD	14	Exp	No		High Level Term Code	integer	8	CL.MedDRA	Assigned		12;71	p12: AEHLTCD || p71: AEHLTCD
+AE	AEHLGT	15	Exp	No		High Level Group Term	text	86	CL.MedDRA	Assigned		12;71	p12: AEHLGT || p71: AEHLGT
+AE	AEHLGTCD	16	Exp	No		High Level Group Term Code	integer	8	CL.MedDRA	Assigned		12;71	p12: AEHLGTCD || p71: 20. High Level Group Term AEHLGTCD
+AE	AECAT	17	Perm	No		Category for Adverse Event	text	16	CL.AECAT	Assigned		11;70;102	p11: 1. Category: ADVERSE EVENT AECAT || p70: [Category] AECAT || p102: Vaccination Symptoms Diary - Symptom Resolved Dates FACAT=REACTOGENICITY AECAT=REACTOGENICITY
+AE	AESCAT	18	Perm	No		Subcategory for Adverse Event	text	19	CL.AESCAT	Assigned		102	p102: 2.a FEVER CESCAT=SYSTEMIC FASCAT=SYSTEMIC AESCAT=SYSTEMIC || p102: AESCAT=ADMINISTRATION SITE
+AE	AEPRESP	19	Perm	No		Pre-Specified Adverse Event	text	1	CL.NY1	Assigned			
+AE	AEBODSYS	20	Exp	No		Body System or Organ Class	text	67	CL.MedDRA	Assigned		12;71	p12: AEBODSYS AESOC || p71: AEBODSYS AESOC
+AE	AEBDSYCD	21	Exp	No		Body System or Organ Class Code	integer	8	CL.MedDRA	Assigned		12;71	p12: AEBDSYCD AESOCCD || p71: 22. Primary System Organ AEBDSYCD
+AE	AESOC	22	Exp	No		Primary System Organ Class	text	67	CL.MedDRA	Assigned		12;71	p12: AEBODSYS AESOC || p71: AEBODSYS AESOC
+AE	AESOCCD	23	Exp	No		Primary System Organ Class Code	integer	8	CL.MedDRA	Assigned		12;71	p12: AEBDSYCD AESOCCD || p71: AESOCCD
+AE	AELOC	24	Perm	No		Location of Event	text	14	CL.LOC	CRF		102	p102: 3. Injection Site Location: DELTOID MUSCLE CELOC AELOC
+AE	AELAT	25	Perm	No		Laterality	text	5	CL.LAT	CRF		102	p102: CELAT AELAT
+AE	AESER	26	Exp	No		Serious Event	text	1	CL.NY	CRF		11	p11: 7. Is the adverse event YES AESER
+AE	AEACN	27	Exp	No		Action Taken with Study Treatment	text	16	CL.ACN	CRF		11;70	p11: 10. Latest Action Taken DRUG WITHDRAWN AEACN || p70: [Study Medication AEACN
+AE	AEREL	28	Exp	No		Causality	text	11	CL.AEREL	CRF		11	p11: 9. Is this event related NOT RELATED AEREL
+AE	AERELNST	29	Perm	No		Relationship to Non-Study Treatment	text	30	CL.AERELNST	CRF		11	p11: Study Treatment] AERELNST
+AE	AEOUT	30	Perm	No		Outcome of Adverse Event	text	32	CL.OUT	CRF		12	p12: adverse event?: AEOUT
+AE	AESCONG	31	Perm	No		Congenital Anomaly or Birth Defect	text	1	CL.NY	CRF		11	p11: If Yes, NOTIFY AESCONG
+AE	AESDISAB	32	Perm	No		Persist or Signif Disability/Incapacity	text	1	CL.NY	CRF		11	p11: signif cant AESDISAB
+AE	AESDTH	33	Perm	No		Results in Death	text	1	CL.NY	CRF		11	p11: Fatal; Life- AESDTH
+AE	AESHOSP	34	Perm	No		Requires or Prolongs Hospitalization	text	1	CL.NY	CRF		11	p11: prolongat on of AESHOSP
+AE	AESLIFE	35	Perm	No		Is Life Threatening	text	1	CL.NY	CRF		11	p11: defect; Important AESLIFE
+AE	AESMIE	36	Perm	No		Other Medically Important Serious Event	text	1	CL.NY	CRF		11	p11: subject and may YES AESMIE
+AE	AECONTRT	37	Perm	No		Concomitant or Additional Trtmnt Given	text	1	CL.NY	CRF		12;70	p12: 11. Was a Concomitant YES AECONTRT AECMGIV in SUPPAE || p12: AECONTRT AENDGIV in SUPPAE || p70: Med cation given? NO AECONTRT AECMGIV in SUPPAE || p70: Treatment given? NO AECONTRT AENDGIV in SUPPAE
+AE	AETOXGR	38	Perm	No		Standard Toxicity Grade	text	1	CL.TOXGRV4	CRF		11	p11: [Toxicity Grade] AETOXGR
+AE	EPOCH	39	Perm	No	MT.AE.EPOCH	Epoch	text	11	CL.EPOCH	Derived			
+AE	AESTDTC	40	Exp	No		Start Date/Time of Adverse Event	datetime					11;70	p11: 4. Start Date Time: / / AESTDTC || p70: [Start Date] AESTDTC
+AE	AEENDTC	41	Exp	No		End Date/Time of Adverse Event	datetime					11;70	p11: / / AEENDTC || p70: AEENDTC
+AE	AESTDY	42	Perm	No	MT.AE.AESTDY	Study Day of Start of Adverse Event	integer	8		Derived			
+AE	AEENDY	43	Perm	No	MT.AE.AEENDY	Study Day of End of Adverse Event	integer	8		Derived			
+AE	AEELTM	44		No	MT.AE.AEELTM	Planned Elapsed Time from Time Point Ref	durationDatetime			Derived			
+AE	AEDUR	45	Perm	No	MT.AE.VSD.AEDUR	Duration of Adverse Event	text	4		Derived			
+AE	AETPTREF	46	Perm	No		Time Point Reference	text	13		Assigned			
+AE	AERFTDTC	47	Perm	No	MT.AE.AERFTDTC	Date/Time of Reference Time Point	datetime			Derived			
+AE	AEENRTPT	48	Perm	No		End Relative to Reference Time Point	text	7		CRF		11;70;102	p11: 5. Is the adverse event YES AEENRTPT= ONGOING AEENTPT= LAST SUBJECT ENCOUNTER || p70: still ongoing? NO AEENRTPT= ONGOING AEENTPT= LAST SUBJECT ENCOUNTER || p102: day the Subject Diary was YES CEENRTPT= CEENTPT= ONGOING ONGNXVIS in AEENRTPT ONGOING || p102: CEENTPT= ONGOING ONGNXVIS in AEENRTPT ONGOING
+AE	AEENTPT	49	Perm	No		End Reference Time Point	text	22		Assigned		11;70;102	p11: 5. Is the adverse event YES AEENRTPT= ONGOING AEENTPT= LAST SUBJECT ENCOUNTER || p70: still ongoing? NO AEENRTPT= ONGOING AEENTPT= LAST SUBJECT ENCOUNTER || p102: AEENTPT= || p102: present on the last day the Ongoing? AEENTPT=
+SUPPAE	AECMGIV	1		Yes		Concomitant Medication Given	text	200	CL.NY	CRF		12;70	p12: 11. Was a Concomitant YES AECONTRT AECMGIV in SUPPAE || p70: Med cation given? NO AECONTRT AECMGIV in SUPPAE
+SUPPAE	DICTVER	2		Yes		Dictionary Name and Version	text	200		Assigned			
+SUPPAE	AEMEFL	3		Yes		Medication Error Associated With AE	text	200	CL.NY	CRF		70	p70: error associated with AE ID: AEMEFL in SUPPAE
+SUPPAE	AEAENO	4		Yes		Associated Adverse Event Identifier	text	200		CRF		70	p70: [Med cat on Error AEAENO in SUPPAE || p70: AEAENO in SUPPAE
+SUPPAE	AENDGIV	5		Yes		Was a Non-Drug Treatment given	text	200	CL.NY	CRF		12;70	p12: AECONTRT AENDGIV in SUPPAE || p70: Treatment given? NO AECONTRT AENDGIV in SUPPAE
+SUPPAE	AEMERES	6		Yes		Is AE a Result of a Medication Error	text	200	CL.NY	CRF		11	p11: 8. Is this adverse YES AEMERES in SUPPAE
+SUPPAE	AERELTXT	7		Yes		Event Due to Other Specify	text	200		CRF		11	p11: AERELTXT in SUPPAE
+SUPPAE	AESUBJDC	8		Yes		Discontinued because of this AE	text	200	CL.NY	CRF		12;70	p12: AESUBJDC in SUPPAE Linked to related DS record via RELREC || p70: cause the subject to be NO AESUBJDC in SUPPAE Linked to related DS record via RELREC

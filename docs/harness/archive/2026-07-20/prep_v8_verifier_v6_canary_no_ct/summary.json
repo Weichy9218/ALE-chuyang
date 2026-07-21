@@ -1,0 +1,158 @@
+{
+  "arms": {
+    "base": {
+      "completed": 9,
+      "cost_usd_mean": 0.5053973333333333,
+      "duration_s_mean": 752.838888888889,
+      "failed": 0,
+      "input_tokens_mean": 257029.77777777778,
+      "llm_turns_mean": 11.88888888888889,
+      "output_tokens_mean": 7682.777777777777,
+      "runs": 9,
+      "score_mean": 0.5058861263797129,
+      "score_n": 9,
+      "score_total": 4.552975137417416,
+      "steps_mean": 31.22222222222222,
+      "tool_calls_mean": 18.333333333333332
+    },
+    "prep": {
+      "completed": 9,
+      "cost_usd_mean": 0.701050111111111,
+      "duration_s_mean": 1088.3833333333332,
+      "failed": 0,
+      "input_tokens_mean": 379913.0,
+      "llm_turns_mean": 15.555555555555555,
+      "output_tokens_mean": 9321.444444444445,
+      "runs": 9,
+      "score_mean": 0.4864389282423681,
+      "score_n": 9,
+      "score_total": 4.377950354181313,
+      "steps_mean": 41.111111111111114,
+      "tool_calls_mean": 24.555555555555557
+    },
+    "prep_verifier": {
+      "completed": 9,
+      "cost_usd_mean": 0.7126493333333334,
+      "duration_s_mean": 1192.5433333333333,
+      "failed": 0,
+      "input_tokens_mean": 388946.77777777775,
+      "llm_turns_mean": 14.666666666666666,
+      "output_tokens_mean": 9594.444444444445,
+      "runs": 9,
+      "score_mean": 0.48653059465616233,
+      "score_n": 9,
+      "score_total": 4.378775351905461,
+      "steps_mean": 37.0,
+      "tool_calls_mean": 21.333333333333332
+    },
+    "verifier": {
+      "completed": 9,
+      "cost_usd_mean": 0.7439203333333333,
+      "duration_s_mean": 1029.5111111111112,
+      "failed": 0,
+      "input_tokens_mean": 389758.8888888889,
+      "llm_turns_mean": 15.11111111111111,
+      "output_tokens_mean": 9862.222222222223,
+      "runs": 9,
+      "score_mean": 0.4992846494022976,
+      "score_n": 9,
+      "score_total": 4.493561844620679,
+      "steps_mean": 37.333333333333336,
+      "tool_calls_mean": 21.22222222222222
+    }
+  },
+  "expected_units": 36,
+  "factorial_effects": {
+    "prep_main_effect": {
+      "mean": -0.016100626441740054,
+      "n": 9,
+      "negative": 3,
+      "positive": 3,
+      "sd": 0.05049612741390804,
+      "se": 0.01683204247130268,
+      "t": -0.9565462105499298,
+      "zero": 3
+    },
+    "verifier_main_effect": {
+      "mean": -0.003254905281810531,
+      "n": 9,
+      "negative": 4,
+      "positive": 2,
+      "sd": 0.053467376467161196,
+      "se": 0.017822458822387064,
+      "t": -0.18262941798591753,
+      "zero": 3
+    },
+    "verifier_prep_interaction": {
+      "mean": 0.0066931433912094844,
+      "n": 9,
+      "negative": 4,
+      "positive": 2,
+      "sd": 0.10560694026250471,
+      "se": 0.0352023134208349,
+      "t": 0.19013362307171747,
+      "zero": 3
+    }
+  },
+  "paired_vs_base": {
+    "prep": {
+      "mean_delta": -0.019447198137344794,
+      "n": 9,
+      "negative": 2,
+      "positive": 2,
+      "sd": 0.07105420587003045,
+      "se": 0.02368473529001015,
+      "t": -0.8210857288131617,
+      "zero": 5
+    },
+    "prep_verifier": {
+      "mean_delta": -0.019355531723550583,
+      "n": 9,
+      "negative": 4,
+      "positive": 1,
+      "sd": 0.08669161383887987,
+      "se": 0.028897204612959956,
+      "t": -0.6698063699514354,
+      "zero": 4
+    },
+    "verifier": {
+      "mean_delta": -0.006601476977415273,
+      "n": 9,
+      "negative": 2,
+      "positive": 2,
+      "sd": 0.09243429755046248,
+      "se": 0.030811432516820825,
+      "t": -0.21425414004400287,
+      "zero": 5
+    }
+  },
+  "prep": {
+    "duration_s_mean": 78.31801210355479,
+    "input_tokens_mean": 42818.0,
+    "runs": 18,
+    "statuses": {
+      "completed": 18
+    }
+  },
+  "tasks": 9,
+  "verifier": {
+    "builder_duration_s_mean": 65.76162728122047,
+    "builder_input_tokens_mean": 25483.11111111111,
+    "builder_output_tokens_mean": 2255.1666666666665,
+    "last_overall": {
+      "fail": 2,
+      "pass": 6,
+      "unverifiable": 10
+    },
+    "repairs_mean": 0.2777777777777778,
+    "runner_duration_s_mean": 252.68319673254803,
+    "runner_input_tokens_mean": 206500.5,
+    "runner_output_tokens_mean": 8612.111111111111,
+    "runs": 18,
+    "stop_reasons": {
+      "max_repairs": 2,
+      "pass": 6,
+      "unverifiable": 10
+    }
+  }
+}

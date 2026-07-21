@@ -1,0 +1,29 @@
+{
+  "status": "completed",
+  "fingerprint": "781213c11959c3f12897656260e6deea2c04b5bd82e07dd097e5c7172201fcdd",
+  "cached": false,
+  "input_tokens": 35815,
+  "output_tokens": 3249,
+  "duration_s": 143.361049070023,
+  "llm_turns": 5,
+  "tool_calls": 7,
+  "tool_call_counts": {
+    "exec": 7
+  },
+  "compactions": 0,
+  "quality_gate": null,
+  "error": null,
+  "protocol": "task-prep-v13",
+  "report_chars": 2987,
+  "report_sha256": "8b37188fffa62eb83ae3872c7d9f12a80891104545acf121c396a415386cedc2",
+  "artifact_count": 1,
+  "artifact_chars": 1612,
+  "artifact_manifest": [
+    {
+      "path": "artifacts/audience_definition_field_index.py",
+      "chars": 1612,
+      "sha256": "8640fcc63e8760d11bd8202abdd63a9cf6ca68e33d3f4498e2b6a7a4a0386cba"
+    }
+  ],
+  "report_role": "subordinate_single_blocker_prep_bundle"
+}

@@ -1,0 +1,2 @@
+endpoint,task,arm,prep_status,raw_decision,raw_findings,retained_findings,writer_tool_calls,report_read_call,report_sources,sources_revisited,parse_error
+task_prep_v10_variant_canary,health_medicine__healthcare_variant_annotation_pipeline,prep,completed,use,3,3,10,1,3,3,

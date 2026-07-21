@@ -1,0 +1,30 @@
+{
+  "status": "completed",
+  "fingerprint": "6d8d3163f035c8581d4d19eaf9e395fcf7dc346e20c97f6021f20b8ba6d2b250",
+  "cached": false,
+  "input_tokens": 37886,
+  "output_tokens": 4615,
+  "duration_s": 148.02629534795415,
+  "llm_turns": 5,
+  "tool_calls": 12,
+  "tool_call_counts": {
+    "exec": 3,
+    "read": 9
+  },
+  "compactions": 0,
+  "quality_gate": null,
+  "error": null,
+  "protocol": "task-prep-v13",
+  "report_chars": 3340,
+  "report_sha256": "ff4538b05854c5b49567a35fdc837240d6804272b2b9ab8a0c27d4a265aa6933",
+  "artifact_count": 1,
+  "artifact_chars": 6768,
+  "artifact_manifest": [
+    {
+      "path": "artifacts/check_output_contract.py",
+      "chars": 6768,
+      "sha256": "285b1d09f033c402f61925d6751eca0678aa9e799e369db20dde854dfe7eca1b"
+    }
+  ],
+  "report_role": "subordinate_single_blocker_prep_bundle"
+}

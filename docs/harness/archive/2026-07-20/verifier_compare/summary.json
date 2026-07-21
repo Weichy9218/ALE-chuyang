@@ -1,0 +1,130 @@
+{
+  "arms": {
+    "base": {
+      "completed": 25,
+      "cost_usd_mean": 0.53371572,
+      "duration_s_mean": 1115.6032,
+      "failed": 0,
+      "input_tokens_mean": 286126.76,
+      "llm_turns_mean": 12.32,
+      "output_tokens_mean": 7177.92,
+      "runs": 25,
+      "score_mean": 0.6154005472417086,
+      "score_n": 25,
+      "score_total": 15.385013681042713,
+      "steps_mean": 32.72,
+      "tool_calls_mean": 19.4
+    },
+    "prep": {
+      "completed": 25,
+      "cost_usd_mean": 0.50824352,
+      "duration_s_mean": 1072.3208,
+      "failed": 0,
+      "input_tokens_mean": 233182.32,
+      "llm_turns_mean": 11.56,
+      "output_tokens_mean": 7153.84,
+      "runs": 25,
+      "score_mean": 0.6163340323537799,
+      "score_n": 25,
+      "score_total": 15.408350808844498,
+      "steps_mean": 31.28,
+      "tool_calls_mean": 18.72
+    },
+    "prep_verifier": {
+      "completed": 25,
+      "cost_usd_mean": 0.47127304,
+      "duration_s_mean": 1217.9687999999999,
+      "failed": 0,
+      "input_tokens_mean": 233026.96,
+      "llm_turns_mean": 11.4,
+      "output_tokens_mean": 6853.44,
+      "runs": 25,
+      "score_mean": 0.6018026828816373,
+      "score_n": 25,
+      "score_total": 15.045067072040933,
+      "steps_mean": 30.0,
+      "tool_calls_mean": 17.6
+    },
+    "verifier": {
+      "completed": 25,
+      "cost_usd_mean": 0.4692934,
+      "duration_s_mean": 1131.2752,
+      "failed": 0,
+      "input_tokens_mean": 229151.24,
+      "llm_turns_mean": 11.2,
+      "output_tokens_mean": 6636.72,
+      "runs": 25,
+      "score_mean": 0.6015250330021031,
+      "score_n": 25,
+      "score_total": 15.038125825052578,
+      "steps_mean": 29.08,
+      "tool_calls_mean": 16.88
+    }
+  },
+  "expected_units": 100,
+  "paired_vs_base": {
+    "prep": {
+      "mean_delta": 0.0009334851120713772,
+      "n": 25,
+      "negative": 4,
+      "positive": 4,
+      "sd": 0.05912981239167805,
+      "se": 0.01182596247833561,
+      "t": 0.0789352337098533,
+      "zero": 17
+    },
+    "prep_verifier": {
+      "mean_delta": -0.013597864360071243,
+      "n": 25,
+      "negative": 4,
+      "positive": 4,
+      "sd": 0.0687457770975496,
+      "se": 0.01374915541950992,
+      "t": -0.9889963379696766,
+      "zero": 17
+    },
+    "verifier": {
+      "mean_delta": -0.013875514239605402,
+      "n": 25,
+      "negative": 5,
+      "positive": 4,
+      "sd": 0.06533148067611727,
+      "se": 0.013066296135223454,
+      "t": -1.0619317131654853,
+      "zero": 16
+    }
+  },
+  "prep": {
+    "duration_s_mean": 74.74090705955633,
+    "input_tokens_mean": 30288.62,
+    "runs": 50,
+    "statuses": {
+      "completed": 40,
+      "empty": 10
+    }
+  },
+  "tasks": 25,
+  "verifier": {
+    "builder_duration_s_mean": 67.43328780730255,
+    "builder_input_tokens_mean": 20595.58,
+    "builder_output_tokens_mean": 1659.52,
+    "last_overall": {
+      "None": 2,
+      "error": 4,
+      "fail": 18,
+      "pass": 22,
+      "unverifiable": 4
+    },
+    "repairs_mean": 0.0,
+    "runner_duration_s_mean": 185.70291679388174,
+    "runner_input_tokens_mean": 88141.72916666667,
+    "runner_output_tokens_mean": 4305.208333333333,
+    "runs": 50,
+    "stop_reasons": {
+      "error": 6,
+      "pass": 22,
+      "repair_disabled": 18,
+      "unverifiable": 4
+    }
+  }
+}

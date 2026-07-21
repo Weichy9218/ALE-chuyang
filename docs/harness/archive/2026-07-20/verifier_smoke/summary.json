@@ -1,0 +1,115 @@
+{
+  "arms": {
+    "base": {
+      "completed": 5,
+      "cost_usd_mean": 0.5555296,
+      "duration_s_mean": 790.198,
+      "failed": 0,
+      "input_tokens_mean": 296916.2,
+      "llm_turns_mean": 15.2,
+      "output_tokens_mean": 7319.2,
+      "runs": 5,
+      "score_mean": 0.6603166895661433,
+      "score_n": 5,
+      "score_total": 3.3015834478307164,
+      "steps_mean": 35.4,
+      "tool_calls_mean": 19.2
+    },
+    "prep": {
+      "completed": 5,
+      "cost_usd_mean": 0.5398138,
+      "duration_s_mean": 942.458,
+      "failed": 0,
+      "input_tokens_mean": 263048.4,
+      "llm_turns_mean": 15.2,
+      "output_tokens_mean": 7156.6,
+      "runs": 5,
+      "score_mean": 0.6755562481859256,
+      "score_n": 5,
+      "score_total": 3.3777812409296284,
+      "steps_mean": 35.0,
+      "tool_calls_mean": 18.8
+    },
+    "prep_verifier": {
+      "completed": 5,
+      "cost_usd_mean": 0.7492798,
+      "duration_s_mean": 1025.128,
+      "failed": 0,
+      "input_tokens_mean": 472439.6,
+      "llm_turns_mean": 22.6,
+      "output_tokens_mean": 8942.2,
+      "runs": 5,
+      "score_mean": 0.6143942766108774,
+      "score_n": 5,
+      "score_total": 3.0719713830543873,
+      "steps_mean": 51.0,
+      "tool_calls_mean": 27.4
+    },
+    "verifier": {
+      "completed": 5,
+      "cost_usd_mean": 0.6153852,
+      "duration_s_mean": 943.8919999999999,
+      "failed": 0,
+      "input_tokens_mean": 296081.4,
+      "llm_turns_mean": 18.8,
+      "output_tokens_mean": 7928.6,
+      "runs": 5,
+      "score_mean": 0.6493733875191685,
+      "score_n": 5,
+      "score_total": 3.2468669375958426,
+      "steps_mean": 43.0,
+      "tool_calls_mean": 23.2
+    }
+  },
+  "expected_units": 20,
+  "paired_vs_base": {
+    "prep": {
+      "mean_delta": 0.015239558619782346,
+      "n": 5,
+      "negative": 2,
+      "positive": 1,
+      "sd": 0.08863992929840293,
+      "se": 0.039640981486400835,
+      "t": 0.3844394878318137,
+      "zero": 2
+    },
+    "prep_verifier": {
+      "mean_delta": -0.04592241295526587,
+      "n": 5,
+      "negative": 2,
+      "positive": 0,
+      "sd": 0.07193473111080545,
+      "se": 0.03217018974138599,
+      "t": -1.4274834349574275,
+      "zero": 3
+    },
+    "verifier": {
+      "mean_delta": -0.010943302046974778,
+      "n": 5,
+      "negative": 2,
+      "positive": 0,
+      "sd": 0.021578339158110638,
+      "se": 0.009650126639816193,
+      "t": -1.1340060556120553,
+      "zero": 3
+    }
+  },
+  "tasks": 5,
+  "verifier": {
+    "last_overall": {
+      "None": 1,
+      "fail": 4,
+      "pass": 4,
+      "unverifiable": 1
+    },
+    "repairs_mean": 0.0,
+    "runs": 10,
+    "stop_reasons": {
+      "error": 1,
+      "max_repairs": 3,
+      "pass": 4,
+      "repair_disabled": 1,
+      "unverifiable": 1
+    }
+  }
+}

@@ -463,6 +463,8 @@ class OpenClawComputerAgent(ComputerAgent):
                 else None
             ),
             summary_runtime=self.summary_runtime,
+            api_key=self.api_key,
+            api_base=self.api_base,
         )
 
     def _drain_completions(self, new_items: List[Dict[str, Any]]) -> None:
@@ -676,7 +678,13 @@ class OpenClawComputerAgent(ComputerAgent):
 
         args = json.loads(item.get("arguments"))
         if isinstance(function, BaseTool):
-            tool_result: Any = function.call(args)
+            # BaseTool.call is synchronous and may block for minutes (exec,
+            # verify). Running it on the event loop thread would freeze every
+            # concurrent loop task - incremental log pulls, MCP keepalives -
+            # for the duration, so it goes to a worker thread. Tools already
+            # drive their own coroutines via fresh loops (_run_async), which
+            # behaves identically off-thread.
+            tool_result: Any = await asyncio.to_thread(function.call, args)
         else:
             assert_callable_with(function, **args)
             if inspect.iscoroutinefunction(function):
@@ -947,6 +955,8 @@ class OpenClawComputerAgent(ComputerAgent):
                 else None
             ),
             summary_runtime=self.summary_runtime,
+            api_key=self.api_key,
+            api_base=self.api_base,
         )
 
         # Persist compaction entry with firstKeptEntryId

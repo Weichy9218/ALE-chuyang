@@ -1,0 +1,2 @@
+endpoint,task,base_status,base,prep_status,prep,verifier_status,verifier,prep_verifier_status,prep_verifier,prep_delta,verifier_delta,prep_verifier_delta,verifier_main_effect,prep_main_effect,verifier_prep_interaction
+task_prep_v10_variant_canary,health_medicine__healthcare_variant_annotation_pipeline,completed,0.7930000000000001,completed,0.9990000000000001,,,,,0.20599999999999996,,,,,

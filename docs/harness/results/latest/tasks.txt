@@ -1,0 +1,38 @@
+# chuyang's run batch - 26 headless Docker-runnable tasks.
+# Two GUI-blocked tasks from the 28 owned rows remain excluded:
+# business_finance/basel_operational_risk_bia_cn
+# business_finance/ff5_public_reconstruction
+
+# business_finance (12)
+business_finance/american_option_pricing_ls
+business_finance/bpmn_category_governance_restructuring_l3
+business_finance/bpmn_supply_disruption_l3
+business_finance/digital_marketing_ab_test_analysis_1
+business_finance/digital_marketing_audience_segmentation_1
+business_finance/financial_stmt_reconstruction_aapl_fy2024
+business_finance/internal_employee_agent_instance_1
+business_finance/legal_ma_consistency_audit_01
+business_finance/llm_ecosystem_privacy_audit_realdata_1
+business_finance/pe_screening_memo_1
+business_finance/sec_10k_financial_parsing
+business_finance/sse_northbound_programmatic_trading_01
+
+# education_info (3)
+education_info/homework_grading_numerical_pdes_instance_02
+education_info/marc_remediation_folio_overlay
+education_info/moodle_gradebook_closeout_reconciliation
+
+# health_medicine (9)
+health_medicine/crf_sdtm_mapping_1
+health_medicine/crf_sdtm_mapping_4
+health_medicine/ct_geometry_calibration_catphan
+health_medicine/epidemiology_forecast
+health_medicine/flusight_offline_hosp_forecast_2024_12_14
+health_medicine/healthcare_bias_audit_27a_public_replication_v1
+health_medicine/healthcare_sap_group_sequential_nsclc
+health_medicine/healthcare_tcga_luad_survival_kras
+health_medicine/healthcare_variant_annotation_pipeline
+
+# legal (2)
+legal/agora_governance_classify_instance_1
+legal/legal_dr_fees_01

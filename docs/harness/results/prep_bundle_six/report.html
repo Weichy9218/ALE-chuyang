@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Task-Specific Prep v13 Bundle Test</title>
+  <style>
+    :root {
+      --ink: #17202a;
+      --muted: #5d6874;
+      --line: #d7dde3;
+      --line-strong: #aeb8c2;
+      --paper: #ffffff;
+      --surface: #f5f7f8;
+      --surface-2: #edf1f3;
+      --blue: #1769aa;
+      --green: #18794e;
+      --red: #b42318;
+      --amber: #9a6700;
+      --teal: #0f6b72;
+      --base: #7d8995;
+      --bundle: #1769aa;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 58px;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+      font-size: 15px;
+      line-height: 1.65;
+      letter-spacing: 0;
+    }
+
+    a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: #0d4e83; }
+    code, pre, .mono {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      letter-spacing: 0;
+    }
+    code {
+      padding: 0.08rem 0.28rem;
+      border-radius: 3px;
+      background: var(--surface-2);
+      font-size: 0.9em;
+      overflow-wrap: anywhere;
+    }
+
+    h1, h2, h3, h4, p { margin-top: 0; }
+    h1 { margin-bottom: 12px; font-size: 38px; line-height: 1.14; font-weight: 760; }
+    h2 { margin-bottom: 16px; font-size: 25px; line-height: 1.25; font-weight: 720; }
+    h3 { margin-bottom: 10px; font-size: 18px; line-height: 1.35; font-weight: 700; }
+    h4 { margin-bottom: 8px; font-size: 15px; line-height: 1.4; font-weight: 700; }
+    p { margin-bottom: 12px; }
+
+    .shell { width: min(1240px, calc(100% - 40px)); margin: 0 auto; }
+    .band { padding: 56px 0; border-top: 1px solid var(--line); }
+    .band.alt { background: var(--surface); }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+    }
+    .topbar-inner {
+      display: flex;
+      min-height: 52px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .brand { font-weight: 730; white-space: nowrap; }
+    .nav { display: flex; gap: 18px; overflow-x: auto; scrollbar-width: none; }
+    .nav a { color: var(--muted); font-size: 13px; text-decoration: none; white-space: nowrap; }
+    .nav a:hover { color: var(--ink); }
+
+    .report-header { padding: 64px 0 46px; background: var(--paper); }
+    .header-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.55fr);
+      gap: 56px;
+      align-items: end;
+    }
+    .eyebrow { margin-bottom: 12px; color: var(--teal); font-size: 13px; font-weight: 740; }
+    .lead { max-width: 780px; margin-bottom: 0; color: #38434e; font-size: 18px; }
+    .run-facts { margin: 0; padding: 0; list-style: none; border-top: 2px solid var(--ink); }
+    .run-facts li {
+      display: grid;
+      grid-template-columns: 105px 1fr;
+      gap: 16px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+    .run-facts span:first-child { color: var(--muted); }
+    .run-facts span:last-child { font-weight: 650; overflow-wrap: anywhere; }
+
+    .notice {
+      margin-top: 34px;
+      padding: 16px 18px;
+      border-left: 4px solid var(--amber);
+      background: #fff8e6;
+      color: #5e4700;
+    }
+    .notice strong { color: #493700; }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 28px;
+    }
+    .kpi {
+      min-height: 132px;
+      padding: 17px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+    }
+    .kpi-label { color: var(--muted); font-size: 12px; font-weight: 680; }
+    .kpi-value { margin: 8px 0 5px; font-size: 29px; line-height: 1; font-weight: 760; }
+    .kpi-note { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .positive { color: var(--green); }
+    .negative { color: var(--red); }
+    .caution { color: var(--amber); }
+
+    .section-intro { max-width: 840px; color: var(--muted); }
+
+    .score-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
+      gap: 44px;
+      align-items: start;
+    }
+    .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 18px; font-size: 12px; color: var(--muted); }
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .swatch { width: 18px; height: 6px; border-radius: 2px; }
+    .swatch.base { background: var(--base); }
+    .swatch.bundle { background: var(--bundle); }
+
+    .chart { border-top: 1px solid var(--line-strong); }
+    .chart-row {
+      display: grid;
+      grid-template-columns: minmax(170px, 0.7fr) minmax(240px, 1.3fr);
+      gap: 18px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line);
+      align-items: center;
+    }
+    .chart-label strong { display: block; font-size: 13px; line-height: 1.35; }
+    .chart-label span { color: var(--muted); font-size: 11px; }
+    .bar-stack { display: grid; gap: 5px; }
+    .bar-line { display: grid; grid-template-columns: minmax(0, 1fr) 48px; gap: 8px; align-items: center; }
+    .bar-track { height: 8px; background: #e4e9ed; }
+    .bar { height: 8px; min-width: 2px; }
+    .bar.base { background: var(--base); }
+    .bar.bundle { background: var(--bundle); }
+    .bar-number { font-size: 11px; font-variant-numeric: tabular-nums; text-align: right; }
+
+    .result-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .result-table th, .result-table td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: right; }
+    .result-table th:first-child, .result-table td:first-child { padding-left: 0; text-align: left; }
+    .result-table th { color: var(--muted); font-size: 11px; font-weight: 720; }
+    .result-table tfoot td { border-top: 2px solid var(--ink); font-weight: 740; }
+
+    .protocol-flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      margin: 28px 0 36px;
+      border-top: 1px solid var(--line-strong);
+      border-bottom: 1px solid var(--line-strong);
+    }
+    .flow-step { position: relative; min-height: 150px; padding: 20px 24px 18px 0; }
+    .flow-step:not(:last-child)::after {
+      content: ">";
+      position: absolute;
+      top: 54px;
+      right: 8px;
+      color: var(--line-strong);
+      font-size: 20px;
+      font-weight: 400;
+    }
+    .flow-index { color: var(--teal); font-size: 12px; font-weight: 760; }
+    .flow-step strong { display: block; margin: 6px 0; font-size: 14px; }
+    .flow-step p { margin: 0; padding-right: 16px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+    .two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 44px; }
+    .rule-list { margin: 0; padding-left: 20px; }
+    .rule-list li { margin-bottom: 9px; }
+
+    .metric-layers { border-top: 1px solid var(--line-strong); }
+    .metric-layer {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 20px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .metric-layer strong { font-size: 13px; }
+    .metric-layer span { color: var(--muted); font-size: 13px; }
+
+    .task-section { padding: 58px 0; border-top: 1px solid var(--line-strong); }
+    .task-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: start;
+      margin-bottom: 30px;
+    }
+    .task-number { margin-bottom: 6px; color: var(--teal); font-size: 12px; font-weight: 760; }
+    .task-title { margin-bottom: 6px; font-size: 26px; }
+    .task-slug { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+    .verdict {
+      min-width: 150px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      text-align: right;
+    }
+    .verdict-label { display: block; color: var(--muted); font-size: 11px; }
+    .verdict strong { display: block; margin-top: 2px; font-size: 14px; }
+    .verdict.harm { border-color: #e6a8a1; background: #fff5f4; }
+    .verdict.mixed { border-color: #dfc277; background: #fffaec; }
+    .verdict.neutral { background: var(--surface); }
+
+    .score-strip {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: 34px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .score-cell { padding: 12px 14px 12px 0; }
+    .score-cell + .score-cell { padding-left: 14px; border-left: 1px solid var(--line); }
+    .score-cell span { display: block; color: var(--muted); font-size: 11px; }
+    .score-cell strong { font-size: 20px; font-variant-numeric: tabular-nums; }
+
+    .task-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
+      gap: 48px;
+      align-items: start;
+    }
+    .subsection { margin-bottom: 30px; }
+    .subsection:last-child { margin-bottom: 0; }
+    .fact-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+    .fact-list li {
+      display: grid;
+      grid-template-columns: 115px 1fr;
+      gap: 16px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+    .fact-list .label { color: var(--muted); }
+
+    .prep-focus {
+      margin-bottom: 15px;
+      padding: 14px 16px;
+      border-left: 4px solid var(--blue);
+      background: #f1f7fb;
+    }
+    .prep-focus .kind { color: var(--blue); font-size: 11px; font-weight: 760; }
+    .prep-focus strong { display: block; margin: 3px 0 6px; }
+    .prep-focus p { margin: 0; color: #425261; font-size: 13px; }
+
+    .boundary {
+      padding: 12px 14px;
+      border-left: 3px solid var(--amber);
+      background: #fff9ea;
+      color: #604b0d;
+      font-size: 13px;
+    }
+
+    .timeline { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line-strong); }
+    .timeline li {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 18px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .call { color: var(--teal); font-size: 11px; font-weight: 760; }
+    .timeline strong { display: block; margin-bottom: 3px; font-size: 13px; }
+    .timeline p { margin: 0; color: var(--muted); font-size: 13px; }
+
+    .analysis-box { margin-top: 22px; padding: 16px 18px; border: 1px solid var(--line-strong); background: var(--surface); }
+    .analysis-box strong { display: block; margin-bottom: 5px; }
+    .analysis-box p { margin-bottom: 0; font-size: 13px; }
+
+    .source-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .source-links a {
+      display: inline-block;
+      padding: 5px 8px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--paper);
+      color: #34414d;
+      font-size: 11px;
+      text-decoration: none;
+    }
+    .source-links a:hover { border-color: var(--blue); color: var(--blue); }
+
+    .insight-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 26px; }
+    .insight { padding-top: 14px; border-top: 3px solid var(--line-strong); }
+    .insight:nth-child(1) { border-color: var(--red); }
+    .insight:nth-child(2) { border-color: var(--amber); }
+    .insight:nth-child(3) { border-color: var(--green); }
+    .insight h3 { font-size: 15px; }
+    .insight p { color: var(--muted); font-size: 13px; }
+
+    .file-table { width: 100%; border-collapse: collapse; }
+    .file-table th, .file-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; }
+    .file-table th { color: var(--muted); font-size: 11px; }
+    .file-table td { font-size: 13px; }
+
+    .footer { padding: 32px 0 48px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+
+    @media (max-width: 980px) {
+      .header-grid, .score-layout, .task-grid { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .protocol-flow { grid-template-columns: 1fr; }
+      .flow-step { min-height: 0; padding: 15px 0; border-bottom: 1px solid var(--line); }
+      .flow-step:last-child { border-bottom: 0; }
+      .flow-step:not(:last-child)::after { display: none; }
+      .flow-step p { padding-right: 0; }
+      .insight-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 680px) {
+      body { font-size: 14px; }
+      .shell { width: min(100% - 24px, 1240px); }
+      .topbar-inner { align-items: flex-start; flex-direction: column; gap: 5px; padding: 9px 0; }
+      .nav { width: 100%; gap: 14px; }
+      .report-header { padding: 42px 0 34px; }
+      h1 { font-size: 31px; }
+      .lead { font-size: 16px; }
+      .band, .task-section { padding: 42px 0; }
+      .kpi-grid, .two-col { grid-template-columns: 1fr; }
+      .chart-row { grid-template-columns: 1fr; gap: 8px; }
+      .task-head { grid-template-columns: 1fr; }
+      .verdict { width: 100%; text-align: left; }
+      .score-strip { grid-template-columns: 1fr; }
+      .score-cell + .score-cell { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
+      .fact-list li, .metric-layer, .timeline li { grid-template-columns: 1fr; gap: 4px; }
+      .result-scroll, .file-scroll { overflow-x: auto; }
+      .result-table, .file-table { min-width: 660px; }
+    }
+
+    @media print {
+      .topbar { display: none; }
+      .band, .task-section { break-inside: avoid; }
+      a { color: var(--ink); }
+    }
+  </style>
+</head>
+<body>
+  <nav class="topbar" aria-label="报告导航">
+    <div class="shell topbar-inner">
+      <div class="brand">Prep v13 Bundle Test</div>
+      <div class="nav">
+        <a href="#summary">结论</a>
+        <a href="#scores">分数</a>
+        <a href="#design">设计</a>
+        <a href="#tasks">六题轨迹</a>
+        <a href="#insights">Insights</a>
+        <a href="#evidence">证据文件</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="report-header" id="summary">
+    <div class="shell">
+      <div class="header-grid">
+        <div>
+          <div class="eyebrow">TASK-SPECIFIC PREP / 2026-07-20</div>
+          <h1>求解前的不确定性消减和能力准备层</h1>
+          <p class="lead">v13 将 Prep 从宽泛研究报告改成一个方法阻塞点和一组可复核附件。本页记录六题实际运行、writer 采用链、得分和新暴露的反向引导风险。</p>
+        </div>
+        <ul class="run-facts">
+          <li><span>协议</span><span>task-prep-v13</span></li>
+          <li><span>模型</span><span>openai/gpt-5.6-sol</span></li>
+          <li><span>运行</span><span>6 tasks / concurrency 6</span></li>
+          <li><span>时间戳</span><span>20260720_131433</span></li>
+          <li><span>状态</span><span>6/6 completed</span></li>
+        </ul>
+      </div>
+
+      <div class="notice">
+        <strong>实验限制：</strong>本轮只运行当前 Prep arm。Base 来自此前同任务的单次运行，不是同期交错配对。以下分数用于发现机制，不能证明因果 uplift。
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-label">V13 BUNDLE MEAN</div>
+          <div class="kpi-value">0.7377</div>
+          <div class="kpi-note">历史 Base 为 0.7184</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">DESCRIPTIVE DELTA</div>
+          <div class="kpi-value positive">+0.0193</div>
+          <div class="kpi-note">t=0.665，n=6，不能与噪声区分</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">REPORT EXPOSURE</div>
+          <div class="kpi-value">6 / 6</div>
+          <div class="kpi-note">报告均在第 1 至 3 次工具调用读取</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">CODE REUSE</div>
+          <div class="kpi-value">3 / 6</div>
+          <div class="kpi-note">BPMN、PDE、CRF 共执行附件 9 次</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="band alt" id="scores">
+    <div class="shell">
+      <h2>六题分数</h2>
+      <p class="section-intro">蓝色是当前 Prep，灰色是历史 Base。Digital 的大幅提高和 BPMN 的下降都来自单次 rollout，必须结合轨迹判断，不能只看方向。</p>
+
+      <div class="score-layout">
+        <div>
+          <div class="legend">
+            <span><i class="swatch base"></i>Base</span>
+            <span><i class="swatch bundle"></i>当前 Prep</span>
+          </div>
+          <div class="chart" aria-label="六题三臂分数条形图">
+            <div class="chart-row">
+              <div class="chart-label"><strong>BPMN supply</strong><span>workflow / XML</span></div>
+              <div class="bar-stack">
+                <div class="bar-line"><div class="bar-track"><div class="bar base" style="width:84.62%"></div></div><div class="bar-number">.8462</div></div>
+                <div class="bar-line"><div class="bar-track"><div class="bar bundle" style="width:80.52%"></div></div><div class="bar-number">.8052</div></div>
+              </div>
+            </div>
+            <div class="chart-row">
+              <div class="chart-label"><strong>Digital audience</strong><span>data / governance</span></div>
+              <div class="bar-stack">
+                <div class="bar-line"><div class="bar-track"><div class="bar base" style="width:76.2%"></div></div><div class="bar-number">.7620</div></div>
+                <div class="bar-line"><div class="bar-track"><div class="bar bundle" style="width:90.42%"></div></div><div class="bar-number">.9042</div></div>
+              </div>
+            </div>
+            <div class="chart-row">
+              <div class="chart-label"><strong>SSE reporting</strong><span>closed-book regulation</span></div>
+              <div class="bar-stack">
+                <div class="bar-line"><div class="bar-track"><div class="bar base" style="width:66.67%"></div></div><div class="bar-number">.6667</div></div>
+                <div class="bar-line"><div class="bar-track"><div class="bar bundle" style="width:66.67%"></div></div><div class="bar-number">.6667</div></div>
+              </div>
+            </div>
+            <div class="chart-row">
+              <div class="chart-label"><strong>PDE grading</strong><span>rubric / structured output</span></div>
+              <div class="bar-stack">
+                <div class="bar-line"><div class="bar-track"><div class="bar base" style="width:70.50%"></div></div><div class="bar-number">.7050</div></div>
+                <div class="bar-line"><div class="bar-track"><div class="bar bundle" style="width:64.96%"></div></div><div class="bar-number">.6496</div></div>
+              </div>
+            </div>
+            <div class="chart-row">
+              <div class="chart-label"><strong>CRF SDTM</strong><span>XML / annotated PDF</span></div>
+              <div class="bar-stack">
+                <div class="bar-line"><div class="bar-track"><div class="bar base" style="width:60.29%"></div></div><div class="bar-number">.6029</div></div>
+                <div class="bar-line"><div class="bar-track"><div class="bar bundle" style="width:64.59%"></div></div><div class="bar-number">.6459</div></div>
+              </div>
+            </div>
+            <div class="chart-row">
+              <div class="chart-label"><strong>FluSight</strong><span>offline forecast</span></div>
+              <div class="bar-stack">
+                <div class="bar-line"><div class="bar-track"><div class="bar base" style="width:72.79%"></div></div><div class="bar-number">.7279</div></div>
+                <div class="bar-line"><div class="bar-track"><div class="bar bundle" style="width:75.49%"></div></div><div class="bar-number">.7549</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="result-scroll">
+          <table class="result-table">
+            <thead><tr><th>Task</th><th>Base</th><th>当前 Prep</th><th>Delta</th></tr></thead>
+            <tbody>
+              <tr><td>BPMN</td><td>.8462</td><td>.8052</td><td class="negative">-.0410</td></tr>
+              <tr><td>Digital</td><td>.7620</td><td>.9042</td><td class="positive">+.1422</td></tr>
+              <tr><td>SSE</td><td>.6667</td><td>.6667</td><td>0</td></tr>
+              <tr><td>PDE</td><td>.7050</td><td>.6496</td><td class="negative">-.0553</td></tr>
+              <tr><td>CRF</td><td>.6029</td><td>.6459</td><td class="positive">+.0430</td></tr>
+              <tr><td>FluSight</td><td>.7279</td><td>.7549</td><td class="positive">+.0270</td></tr>
+            </tbody>
+            <tfoot><tr><td>Mean</td><td>.7184</td><td>.7377</td><td>+.0193</td></tr></tfoot>
+          </table>
+          <div class="analysis-box">
+            <strong>统计解释</strong>
+            <p>对历史 Base 的差值标准差为 0.0711，SE 为 0.0290。3 正、1 平、2 负。n=6 且每格只有一次 rollout，均值不能用于启用决策。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="design">
+    <div class="shell">
+      <h2>当前设计如何工作</h2>
+      <p class="section-intro">Prep 只处理一个方法 blocker。任务题面和 <code>/input</code> 始终高于报告，writer 负责复核并完成最终决策。</p>
+
+      <div class="protocol-flow" aria-label="Prep bundle 生命周期">
+        <div class="flow-step"><span class="flow-index">01</span><strong>公开任务表面</strong><p>fresh session 读取题面、input 和 software，不读取 writer 轨迹。</p></div>
+        <div class="flow-step"><span class="flow-index">02</span><strong>选择一个 blocker</strong><p>普通阅读足够时 skip；禁止领域综述和最终答案。</p></div>
+        <div class="flow-step"><span class="flow-index">03</span><strong>生成 bundle</strong><p>1 至 3 个 observation 或文本 artifact，附边界、来源和 recheck。</p></div>
+        <div class="flow-step"><span class="flow-index">04</span><strong>机械 gate</strong><p>检查 schema、source、网络、路径、大小、hash 和 staging 完整性。</p></div>
+        <div class="flow-step"><span class="flow-index">05</span><strong>Writer 复核</strong><p>规划前读取；直接材料冲突时修改或丢弃。当前不做 solve 后报告维护。</p></div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <h3>权威顺序</h3>
+          <ol class="rule-list">
+            <li>任务题面和 <code>/input</code></li>
+            <li>writer 对任务材料的直接核验</li>
+            <li>已重新执行的 Prep artifact 或 observation</li>
+            <li>未复核的 Prep 报告</li>
+            <li>外部一般惯例</li>
+          </ol>
+        </div>
+        <div>
+          <h3>本轮测量分层</h3>
+          <div class="metric-layers">
+            <div class="metric-layer"><strong>Report exposure</strong><span>writer 是否读取报告。本轮 6/6。</span></div>
+            <div class="metric-layer"><strong>Evidence use</strong><span>是否回查报告指向的任务材料。</span></div>
+            <div class="metric-layer"><strong>Capability reuse</strong><span>是否执行附件代码。本轮 3/6。</span></div>
+            <div class="metric-layer"><strong>Decision consequence</strong><span>报告如何改变字段、候选或算法选择。</span></div>
+            <div class="metric-layer"><strong>Score</strong><span>最终结果；单次差值不等于因果效果。</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="analysis-box">
+        <strong>当前实现仍有边界缺口</strong>
+        <p><code>contract_checker</code> 目前可以输出退出码和 <code>unmatched_count</code>。BPMN writer 将它当作局部完成目标。下一版应限制为诊断关系和 evidence，不提供总分、ok 或可追逐的 pass/fail；candidate index 也必须机械区分 candidate 与 selected。</p>
+      </div>
+    </div>
+  </section>
+
+  <main id="tasks">
+    <section class="task-section" id="task-bpmn">
+      <div class="shell">
+        <div class="task-head">
+          <div><div class="task-number">TASK 01</div><h2 class="task-title">BPMN Supply Disruption L3</h2><div class="task-slug">business_finance__bpmn_supply_disruption_l3</div></div>
+          <div class="verdict harm"><span class="verdict-label">机制判断</span><strong class="negative">观察到反向引导</strong></div>
+        </div>
+        <div class="score-strip">
+          <div class="score-cell"><span>Base</span><strong>0.8462</strong></div>
+          <div class="score-cell"><span>当前 Prep</span><strong class="negative">0.8052</strong></div>
+        </div>
+        <div class="task-grid">
+          <div>
+            <div class="subsection">
+              <h3>题目</h3>
+              <p>在 Flowable BPMN 6.5.0 中重构月度生产排程流程，处理原料短缺和来料质量 hold。要求保留原始锚点与 ID，输出 BPMN 和三份 JSON，并尝试部署和场景验证。</p>
+              <ul class="fact-list">
+                <li><span class="label">评分</span><span>静态 evaluator 解析 XML，检查拓扑、场景、合规、anti-gaming、data flow 和 role coupling。</span></li>
+                <li><span class="label">关键合同</span><span>每个新 task 的 <code>in_*</code> 必须有可达的拓扑前驱 <code>out_*</code> producer。</span></li>
+                <li><span class="label">输出</span><span>modified BPMN、structural changes、business rules compliance、test results。</span></li>
+              </ul>
+            </div>
+            <div class="subsection">
+              <h3>Prep bundle</h3>
+              <div class="prep-focus"><span class="kind">CONTRACT_CHECKER</span><strong>Topological form-property producer validation</strong><p>比较原始与候选 BPMN，列出新 userTask 的每个 <code>in_*</code>、匹配 producer 和可达 producer。</p></div>
+              <ul class="fact-list">
+                <li><span class="label">Artifact</span><span><code>topological_dataflow_check.py</code>，4302 chars。</span></li>
+                <li><span class="label">Recheck</span><span>候选 XML 加 <code>--original</code>，输出逐 input JSON findings。</span></li>
+                <li><span class="label">报告边界</span><span>零 finding 不证明完整 evaluator 合规、runtime 初始化、分支必达、类型或 JSON 正确。</span></li>
+              </ul>
+            </div>
+          </div>
+          <div>
+            <div class="subsection">
+              <h3>ALE-Claw 轨迹</h3>
+              <ol class="timeline">
+                <li><span class="call">CALL 1</span><div><strong>先读 Prep</strong><p>随后并行读取 task prompt、原始 BPMN、业务规则、组织结构、67 个场景和 compose 文件。</p></div></li>
+                <li><span class="call">CALL 13</span><div><strong>首次执行 checker</strong><p>检查 25 个新 task input，发现两个 <code>in_supplier_risk_level</code> 没有拓扑可达 producer。</p></div></li>
+                <li><span class="call">CALL 14</span><div><strong>为清零 finding 删除 consumer input</strong><p>Writer 从 Executive Waiver 和 Expedited Decision 删除这两个 input，再运行得到 23 checks、0 unmatched。</p></div></li>
+                <li><span class="call">CALL 16-21</span><div><strong>Docker 和 Flowable 不可用</strong><p>daemon socket 不可用，REST 返回 000。Writer 转为静态 XML 和自生成 JSON 验证。</p></div></li>
+                <li><span class="call">CALL 22-23</span><div><strong>将局部数字写成完成凭据</strong><p>再次得到 0 unmatched，并把它写进 <code>deployment_log.json</code> 的 static_validation。</p></div></li>
+              </ol>
+              <div class="analysis-box"><strong>为什么这是有害采用链</strong><p>Checker 找到真实问题，但 writer 优化了 checker 的观测面，而非任务的数据依赖。报告只说 0 不代表完整合规，没有禁止删除 task-required consumer 来消除诊断。分数下降不能完全归因于 Prep，但“finding 触发删除字段”可由连续轨迹直接确认。</p></div>
+            </div>
+            <div class="source-links">
+              <a href="tasks/business_finance__bpmn_supply_disruption_l3/task_prompt.md">完整题面</a>
+              <a href="tasks/business_finance__bpmn_supply_disruption_l3/task_prep.md">task_prep.md</a>
+              <a href="tasks/business_finance__bpmn_supply_disruption_l3/artifacts/topological_dataflow_check.py">checker.py</a>
+              <a href="tasks/business_finance__bpmn_supply_disruption_l3/task_prep_meta.json">metadata</a>
+              <a href="tasks/business_finance__bpmn_supply_disruption_l3/run.json">run.json</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="task-section" id="task-digital">
+      <div class="shell">
+        <div class="task-head">
+          <div><div class="task-number">TASK 02</div><h2 class="task-title">Digital Marketing Audience Segmentation</h2><div class="task-slug">business_finance__digital_marketing_audience_segmentation_1</div></div>
+          <div class="verdict mixed"><span class="verdict-label">机制判断</span><strong class="caution">高分但边界未守住</strong></div>
+        </div>
+        <div class="score-strip">
+          <div class="score-cell"><span>Base</span><strong>0.7620</strong></div>
+          <div class="score-cell"><span>当前 Prep</span><strong class="positive">0.9042</strong></div>
+        </div>
+        <div class="task-grid">
+          <div>
+            <div class="subsection">
+              <h3>题目</h3>
+              <p>从 10000 个客户 profile 构建高交易、邮件不活跃的 re-engagement audience，执行 support suppression、SMS/push eligibility、PII 删除，并计算与六个既有 audience 的 overlap。</p>
+              <ul class="fact-list">
+                <li><span class="label">输入</span><span>Parquet profile、segmentation brief、governance YAML、dictionary、existing audiences。</span></li>
+                <li><span class="label">输出</span><span>segment JSON、customer roster CSV、overlap TSV。</span></li>
+                <li><span class="label">易错点</span><span>AUD-005 使用数据中不存在的 <code>has_cart_abandonment</code>。</span></li>
+              </ul>
+            </div>
+            <div class="subsection">
+              <h3>Prep bundle</h3>
+              <div class="prep-focus"><span class="kind">INPUT_INDEX</span><strong>Resolve existing-audience definition fields</strong><p>解析六条 audience definition 的 identifier，分别核对 Parquet schema 和 dictionary。</p></div>
+              <ul class="fact-list">
+                <li><span class="label">Artifact</span><span><code>audience_definition_field_index.py</code>，1612 chars。</span></li>
+                <li><span class="label">Observation</span><span>只有 AUD-005 的 <code>has_cart_abandonment</code> 同时缺于 profile 与 dictionary。</span></li>
+              </ul>
+              <div class="boundary"><strong>Do not infer：</strong>字段缺失不授权 overlap 值、替代值、省略规则或 AUD-005 handling policy。</div>
+            </div>
+          </div>
+          <div>
+            <div class="subsection">
+              <h3>ALE-Claw 轨迹</h3>
+              <ol class="timeline">
+                <li><span class="call">CALL 1</span><div><strong>先读 Prep</strong><p>随后读取 brief、governance、dictionary 和既有 audience。</p></div></li>
+                <li><span class="call">CALL 8-11</span><div><strong>看到附件但没有执行 indexer</strong><p>Writer 列出附件并 grep <code>task_prep</code>，然后自行读取 Parquet 和计算支持字段的 overlap。</p></div></li>
+                <li><span class="call">CALL 12</span><div><strong>仍将 AUD-005 处理成全 False</strong><p>代码注释称“no supplied customer can be established as a member”，随后创建 <code>pd.Series(False)</code>，输出 overlap 0。</p></div></li>
+                <li><span class="call">CALL 13</span><div><strong>完成 449 行 roster 和三份输出</strong><p>检查 PII、support suppression、eligibility 和 overlap schema。</p></div></li>
+              </ol>
+              <div class="analysis-box"><strong>结果解释</strong><p>当前分数是六题最高，但不能证明 Prep 导致提升。轨迹反而证明文字版 <code>do_not_infer</code> 没有阻止无依据 policy；writer 仍独立选择了 0。</p></div>
+            </div>
+            <div class="source-links">
+              <a href="tasks/business_finance__digital_marketing_audience_segmentation_1/task_prompt.md">完整题面</a>
+              <a href="tasks/business_finance__digital_marketing_audience_segmentation_1/task_prep.md">task_prep.md</a>
+              <a href="tasks/business_finance__digital_marketing_audience_segmentation_1/artifacts/audience_definition_field_index.py">indexer.py</a>
+              <a href="tasks/business_finance__digital_marketing_audience_segmentation_1/task_prep_meta.json">metadata</a>
+              <a href="tasks/business_finance__digital_marketing_audience_segmentation_1/run.json">run.json</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="task-section" id="task-sse">
+      <div class="shell">
+        <div class="task-head">
+          <div><div class="task-number">TASK 03</div><h2 class="task-title">SSE Northbound Reporting</h2><div class="task-slug">business_finance__sse_northbound_programmatic_trading_01</div></div>
+          <div class="verdict neutral"><span class="verdict-label">机制判断</span><strong>被读取但可替代</strong></div>
+        </div>
+        <div class="score-strip">
+          <div class="score-cell"><span>Base</span><strong>0.6667</strong></div>
+          <div class="score-cell"><span>当前 Prep</span><strong>0.6667</strong></div>
+        </div>
+        <div class="task-grid">
+          <div>
+            <div class="subsection">
+              <h3>题目</h3>
+              <p>Closed-book 监管研究，只能使用 staged SSE 材料。回答同 LEI 多券商杠杆报告、流量费/撤单费是否有具体金额、法国公司能否只用原外文软件名三题。</p>
+              <ul class="fact-list">
+                <li><span class="label">输出</span><span>一个 JSON；每题必须给 Yes、No 或 Unknown、简体中文文档名、原文摘录和英文解释。</span></li>
+                <li><span class="label">网络</span><span>明确禁止外部 web 和监管背景知识。</span></li>
+                <li><span class="label">难点</span><span>多个文档镜像、manifest alias、原文证据与结论边界。</span></li>
+              </ul>
+            </div>
+            <div class="subsection">
+              <h3>Prep bundle</h3>
+              <div class="prep-focus"><span class="kind">INPUT_INDEX</span><strong>Manifest-resolved concordance for exact regulatory terms</strong><p>搜索 <code>流量费</code> 和 <code>撤单费</code>，输出上下文、行号、字符位置、附近数字、manifest 文档和 hash。</p></div>
+              <ul class="fact-list">
+                <li><span class="label">Artifact</span><span><code>corpus_concordance.py</code>，2646 chars。</span></li>
+                <li><span class="label">Validated</span><span>两条 occurrence 都定位到 doc_08 第 115 行。</span></li>
+                <li><span class="label">边界</span><span>hit、附近数字或无货币符号都不能单独确定金额和结论。</span></li>
+              </ul>
+            </div>
+          </div>
+          <div>
+            <div class="subsection">
+              <h3>ALE-Claw 轨迹</h3>
+              <ol class="timeline">
+                <li><span class="call">CALL 1</span><div><strong>先读 Prep</strong><p>Prep exposure 已发生。</p></div></li>
+                <li><span class="call">CALL 3-6</span><div><strong>读取任务合同与 manifest</strong><p>Writer 直接打开 brief、questions、output contract 和 document manifest。</p></div></li>
+                <li><span class="call">CALL 7-10</span><div><strong>自行 grep 和读取原文</strong><p>未运行 concordance；用一条 regex 搜索 LEI、费用、外文和软件名称，再打开三份命中文档。</p></div></li>
+                <li><span class="call">CALL 11-12</span><div><strong>三题全部输出 No</strong><p>Schema 检查通过，最终得分仍为 0.6667。</p></div></li>
+              </ol>
+              <div class="analysis-box"><strong>结果解释</strong><p>报告进入了上下文，但能力文件没有改变可观测路径。Writer 的普通检索已足够定位同一原文。该题更符合 skip，而不是为了每题都生成 artifact。</p></div>
+            </div>
+            <div class="source-links">
+              <a href="tasks/business_finance__sse_northbound_programmatic_trading_01/task_prompt.md">完整题面</a>
+              <a href="tasks/business_finance__sse_northbound_programmatic_trading_01/task_prep.md">task_prep.md</a>
+              <a href="tasks/business_finance__sse_northbound_programmatic_trading_01/artifacts/corpus_concordance.py">concordance.py</a>
+              <a href="tasks/business_finance__sse_northbound_programmatic_trading_01/task_prep_meta.json">metadata</a>
+              <a href="tasks/business_finance__sse_northbound_programmatic_trading_01/run.json">run.json</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="task-section" id="task-pde">
+      <div class="shell">
+        <div class="task-head">
+          <div><div class="task-number">TASK 04</div><h2 class="task-title">Numerical PDE Homework Grading</h2><div class="task-slug">education_info__homework_grading_numerical_pdes_instance_02</div></div>
+          <div class="verdict neutral"><span class="verdict-label">机制判断</span><strong>工具有效，目标次要</strong></div>
+        </div>
+        <div class="score-strip">
+          <div class="score-cell"><span>Base</span><strong>0.7050</strong></div>
+          <div class="score-cell"><span>当前 Prep</span><strong class="negative">0.6496</strong></div>
+        </div>
+        <div class="task-grid">
+          <div>
+            <div class="subsection">
+              <h3>题目</h3>
+              <p>依据公开 protocol、rubric 和 solution key，逐部分批改五份 numerical PDE 作业，分配 error tags，并输出 grades、tags、逐生反馈、共性错误和 manifest 五个文件。</p>
+              <ul class="fact-list">
+                <li><span class="label">核心难点</span><span>正确理解离散 Laplacian、稳定性界、弱形式、部分分和错误标签。</span></li>
+                <li><span class="label">结构合同</span><span>固定文件名、CSV header、ID、分数范围、总分和 feedback 限长。</span></li>
+              </ul>
+            </div>
+            <div class="subsection">
+              <h3>Prep bundle</h3>
+              <div class="prep-focus"><span class="kind">CONTRACT_CHECKER</span><strong>Grading output contract checker</strong><p>联合 output contract、rubric 和题面，检查文件、header、ID、分数范围、总分、tag、feedback key 和 manifest。</p></div>
+              <ul class="fact-list">
+                <li><span class="label">Artifact</span><span><code>check_output_contract.py</code>，6768 chars。</span></li>
+                <li><span class="label">Probe</span><span>baseline 为 0 findings；篡改 S01 total 后能报 total 与 part sum 不一致。</span></li>
+                <li><span class="label">边界</span><span>零 finding 不证明评分正确、反馈充分或 tag 选择正确。</span></li>
+              </ul>
+            </div>
+          </div>
+          <div>
+            <div class="subsection">
+              <h3>ALE-Claw 轨迹</h3>
+              <ol class="timeline">
+                <li><span class="call">CALL 1-17</span><div><strong>先读报告，再读完整 rubric 和五份提交</strong><p>Prep 没有替代内容审阅。</p></div></li>
+                <li><span class="call">CALL 20</span><div><strong>生成五份输出并首次执行 checker</strong><p>结构检查通过。</p></div></li>
+                <li><span class="call">CALL 25</span><div><strong>修改 part scores 后再次执行</strong><p>Checker 验证 total 与 part sum 和五个文件数量。</p></div></li>
+                <li><span class="call">CALL 26</span><div><strong>修改反馈后第三次执行</strong><p>最终结构仍通过。</p></div></li>
+              </ol>
+              <div class="analysis-box"><strong>结果解释</strong><p>附件确实被复用，也降低了结构错误风险，但 evaluator 主要差异仍来自实质评分。当前分数低于 Base 0.0553。简单 contract 容易由 writer 自行编码，这个 focus 的边际价值不足。</p></div>
+            </div>
+            <div class="source-links">
+              <a href="tasks/education_info__homework_grading_numerical_pdes_instance_02/task_prompt.md">完整题面</a>
+              <a href="tasks/education_info__homework_grading_numerical_pdes_instance_02/task_prep.md">task_prep.md</a>
+              <a href="tasks/education_info__homework_grading_numerical_pdes_instance_02/artifacts/check_output_contract.py">checker.py</a>
+              <a href="tasks/education_info__homework_grading_numerical_pdes_instance_02/task_prep_meta.json">metadata</a>
+              <a href="tasks/education_info__homework_grading_numerical_pdes_instance_02/run.json">run.json</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="task-section" id="task-crf">
+      <div class="shell">
+        <div class="task-head">
+          <div><div class="task-number">TASK 05</div><h2 class="task-title">CRF to SDTM Mapping 4</h2><div class="task-slug">health_medicine__crf_sdtm_mapping_4</div></div>
+          <div class="verdict mixed"><span class="verdict-label">机制判断</span><strong class="caution">强复用，候选锚定</strong></div>
+        </div>
+        <div class="score-strip">
+          <div class="score-cell"><span>Base</span><strong>0.6029</strong></div>
+          <div class="score-cell"><span>当前 Prep</span><strong class="positive">0.6459</strong></div>
+        </div>
+        <div class="task-grid">
+          <div>
+            <div class="subsection">
+              <h3>题目</h3>
+              <p>为 C4591001 创建 Adverse Events 的字段级 CRF-to-SDTM mapping。需要联合 sample CRF、annotated CRF、SDTM define.xml 和 supplemental metadata，输出一个符合合同的 <code>ae_mapping.csv</code>。</p>
+              <ul class="fact-list">
+                <li><span class="label">范围</span><span>AE 变量和适用的 SUPPAE qualifier。</span></li>
+                <li><span class="label">合同</span><span>固定列顺序；AE 的 goes_to_suppqual 为 NO，SUPPAE 为 YES。</span></li>
+                <li><span class="label">网络</span><span>只允许可见本地文件。</span></li>
+              </ul>
+            </div>
+            <div class="subsection">
+              <h3>Prep bundle</h3>
+              <div class="prep-focus"><span class="kind">INPUT_INDEX / 2 DELIVERABLES</span><strong>AE source index builder and prebuilt index</strong><p>解析 AE ItemRef、SUPPAE QNAM value list 与 WhereClause，调用 pdftotext 定位 aCRF exact token。</p></div>
+              <ul class="fact-list">
+                <li><span class="label">Artifacts</span><span><code>build_ae_source_index.py</code> 和 <code>ae_source_index.tsv</code>。</span></li>
+                <li><span class="label">Index</span><span>57 rows：49 个 AE metadata variables 和 8 个 SUPPAE QNAM candidates。</span></li>
+                <li><span class="label">边界</span><span>metadata row 或 token occurrence 不证明最终 mapping 应包含该行。</span></li>
+              </ul>
+            </div>
+          </div>
+          <div>
+            <div class="subsection">
+              <h3>ALE-Claw 轨迹</h3>
+              <ol class="timeline">
+                <li><span class="call">CALL 2</span><div><strong>读取 Prep</strong><p>随后读取 task brief、output contract 并列出 source documents。</p></div></li>
+                <li><span class="call">CALL 7-8</span><div><strong>运行 builder 并读取 TSV</strong><p>验证输入 hash，重建 source index，再打开 57 行结果。</p></div></li>
+                <li><span class="call">CALL 9-32</span><div><strong>大量回查 XML 与 PDF</strong><p>Writer 检查 AE ItemGroup、CodeList、MethodDef、comments、aCRF 页和 SUPPAE value list。</p></div></li>
+                <li><span class="call">CALL 33-38</span><div><strong>最终采用 57 行</strong><p>输出恰好 49 AE + 8 SUPPAE，修改表单标签后进行 schema 和唯一性验证。</p></div></li>
+              </ol>
+              <div class="analysis-box"><strong>结果解释</strong><p>这是能力文件被直接复用最强的题，分数对 Base 提高 0.0430。与此同时，最终行数与 candidate index 完全一致，说明候选集合形成强锚点。下一版 index 必须在数据结构和 handoff 中明确 candidate 不能直接升级为 selected。</p></div>
+            </div>
+            <div class="source-links">
+              <a href="tasks/health_medicine__crf_sdtm_mapping_4/task_prompt.md">完整题面</a>
+              <a href="tasks/health_medicine__crf_sdtm_mapping_4/task_prep.md">task_prep.md</a>
+              <a href="tasks/health_medicine__crf_sdtm_mapping_4/artifacts/build_ae_source_index.py">builder.py</a>
+              <a href="tasks/health_medicine__crf_sdtm_mapping_4/artifacts/ae_source_index.tsv">index.tsv</a>
+              <a href="tasks/health_medicine__crf_sdtm_mapping_4/task_prep_meta.json">metadata</a>
+              <a href="tasks/health_medicine__crf_sdtm_mapping_4/run.json">run.json</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="task-section" id="task-flu">
+      <div class="shell">
+        <div class="task-head">
+          <div><div class="task-number">TASK 06</div><h2 class="task-title">FluSight Offline Forecast</h2><div class="task-slug">health_medicine__flusight_offline_hosp_forecast_2024_12_14</div></div>
+          <div class="verdict mixed"><span class="verdict-label">机制判断</span><strong class="caution">事实有用，归因不确定</strong></div>
+        </div>
+        <div class="score-strip">
+          <div class="score-cell"><span>Base</span><strong>0.7279</strong></div>
+          <div class="score-cell"><span>当前 Prep</span><strong class="positive">0.7549</strong></div>
+        </div>
+        <div class="task-grid">
+          <div>
+            <div class="subsection">
+              <h3>题目</h3>
+              <p>使用截至 2024-12-14 的离线历史快照，对 53 个 jurisdiction 预测四周 influenza hospital admissions，填充固定 template，输出 212 行非负整数 point 和 95% interval。</p>
+              <ul class="fact-list">
+                <li><span class="label">输入</span><span>7950 行历史 weekly admissions、locations、schema、template 和 provenance。</span></li>
+                <li><span class="label">输出</span><span>只允许一个 <code>submission.csv</code>，严格 212 行。</span></li>
+                <li><span class="label">网络</span><span>禁止 internet 和外部数据。</span></li>
+              </ul>
+            </div>
+            <div class="subsection">
+              <h3>Prep bundle</h3>
+              <div class="prep-focus"><span class="kind">INPUT_INDEX</span><strong>Deterministic historical-panel gap and blank-value index</strong><p>检查 hash、重复 location-date、缺失周和 present-but-blank 数值。</p></div>
+              <ul class="fact-list">
+                <li><span class="label">Artifact</span><span><code>history_gap_index.py</code>，2333 chars。</span></li>
+                <li><span class="label">Observation</span><span>0 个 absent week、0 duplicate；36 个 blank row，集中在 MA 17、MN 14、WV 5。</span></li>
+              </ul>
+              <div class="boundary"><strong>Do not infer：</strong>不能从 blank 位置推出插值、删除、补零、排除 jurisdiction、forecast、interval 或评分政策。</div>
+            </div>
+          </div>
+          <div>
+            <div class="subsection">
+              <h3>ALE-Claw 轨迹</h3>
+              <ol class="timeline">
+                <li><span class="call">CALL 1-3</span><div><strong>先读 task prompt 和 output contract，再读 Prep</strong><p>Prep 在第 3 次工具调用进入上下文。</p></div></li>
+                <li><span class="call">CALL 10</span><div><strong>独立复查 hash 和 missingness</strong><p>未运行附件，但自行读取 CSV，确认 53 locations 和 36 blank values。</p></div></li>
+                <li><span class="call">CALL 12-13</span><div><strong>分析历史季节并做 rolling-origin backtest</strong><p>比较 log trend、前一年 analog 和 US trend 的权重组合。</p></div></li>
+                <li><span class="call">CALL 14</span><div><strong>Writer 自行选择下游政策</strong><p>对 panel 插值，使用 trend 模型、分组 residual 和 pooled interval，生成并验证 212 行。</p></div></li>
+              </ol>
+              <div class="analysis-box"><strong>结果解释</strong><p>Missingness 是准确且可复核的前置事实，writer 也确实重新检查。插值和模型不是 Prep 的结论。新分数提高 0.0270，但预测题单次方差大，不能建立因果采用链。</p></div>
+            </div>
+            <div class="source-links">
+              <a href="tasks/health_medicine__flusight_offline_hosp_forecast_2024_12_14/task_prompt.md">完整题面</a>
+              <a href="tasks/health_medicine__flusight_offline_hosp_forecast_2024_12_14/task_prep.md">task_prep.md</a>
+              <a href="tasks/health_medicine__flusight_offline_hosp_forecast_2024_12_14/artifacts/history_gap_index.py">gap index.py</a>
+              <a href="tasks/health_medicine__flusight_offline_hosp_forecast_2024_12_14/task_prep_meta.json">metadata</a>
+              <a href="tasks/health_medicine__flusight_offline_hosp_forecast_2024_12_14/run.json">run.json</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <section class="band alt" id="insights">
+    <div class="shell">
+      <h2>这轮同步到设计中的 Insight</h2>
+      <p class="section-intro">v13 已经解决 bundle 的生成、校验、归档和读取问题。下一步不应继续扩大研究，而应控制 Prep 信息如何改变 writer 行为。</p>
+      <div class="insight-grid">
+        <div class="insight"><h3>局部 checker 会诱发 Goodhart</h3><p>BPMN 的 2 到 0 finding 路径说明，不完整检查器如果输出 pass-like scalar，writer 会修改观测面。Prep artifact 应输出诊断关系，不输出完成证书。</p></div>
+        <div class="insight"><h3>Do not infer 不能机械执法</h3><p>Digital 的 0 和 CRF 的 57 行都越过了文字边界。任何 handling policy、字段删除和 candidate selection 都需要独立 task-local rule。</p></div>
+        <div class="insight"><h3>价值来自不可替代能力</h3><p>CRF 的跨 XML/PDF resolver 最接近高边际价值；SSE grep 和 PDE schema check 容易由 writer 完成。Value gate 应允许更多 skip。</p></div>
+      </div>
+
+      <div class="two-col" style="margin-top:42px">
+        <div>
+          <h3>分数与资源</h3>
+          <table class="result-table">
+            <thead><tr><th>指标</th><th>Base</th><th>当前 Prep</th><th>变化</th></tr></thead>
+            <tbody>
+              <tr><td>Mean score</td><td>0.7184</td><td>0.7377</td><td class="positive">+0.0193</td></tr>
+              <tr><td>Writer input</td><td>1,271,984</td><td>1,563,591</td><td>+22.9%</td></tr>
+              <tr><td>Prep input</td><td>0</td><td>374,050</td><td>新增研究成本</td></tr>
+              <tr><td>Total input</td><td>1,271,984</td><td>1,937,641</td><td>+52.3%</td></tr>
+              <tr><td>Writer steps</td><td>165</td><td>198</td><td>+20.0%</td></tr>
+              <tr><td>Report read</td><td>0</td><td>6/6</td><td>全部进入上下文</td></tr>
+              <tr><td>Artifact execution</td><td>0</td><td>9</td><td>发生于 3 题</td></tr>
+            </tbody>
+          </table>
+          <p style="margin-top:12px;color:var(--muted);font-size:12px">两组不是同期运行，token 和 steps 只描述本次成本，不能作为因果估计。</p>
+        </div>
+        <div>
+          <h3>当前工程决策</h3>
+          <ol class="rule-list">
+            <li>保持默认关闭。六题均值没有达到启用证据门槛。</li>
+            <li>限制 contract artifact：无总分、ok、pass/fail 和可追逐退出码。</li>
+            <li>在 candidate index 中机械区分 candidate 与 selected。</li>
+            <li>Writer 基于 Prep 采取 handling policy 时，记录 task-local rule。</li>
+            <li>修复后使用同 endpoint、交错执行和每格 k&gt;=3。</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="evidence">
+    <div class="shell">
+      <h2>证据文件</h2>
+      <p class="section-intro">页面中的数字和轨迹结论都可回到以下机器文件。完整 transcript 留在 pgl，路径记录在 manifest。</p>
+      <div class="file-scroll">
+        <table class="file-table">
+          <thead><tr><th>文件</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><a href="scores.csv">scores.csv</a></td><td>三组历史对照分数、报告读取位置和附件执行次数</td></tr>
+            <tr><td><a href="summary.json">summary.json</a></td><td>实验级统计、成本和比较限制</td></tr>
+            <tr><td><a href="behavior.csv">behavior.csv</a></td><td>Analyzer 生成的 writer 和 Prep usage</td></tr>
+            <tr><td><a href="prep_findings.csv">prep_findings.csv</a></td><td>结构化 focus、deliverable、source、applies_if、do_not_infer</td></tr>
+            <tr><td><a href="prep_writer.csv">prep_writer.csv</a></td><td>报告读取 call、source revisit 和 artifact 数</td></tr>
+            <tr><td><a href="trajectory_calls.tsv">trajectory_calls.tsv</a></td><td>六题 127 次 writer 工具调用及参数</td></tr>
+            <tr><td><a href="trajectory_evidence.csv">trajectory_evidence.csv</a></td><td>人工复核的关键采用链</td></tr>
+            <tr><td><a href="run_manifest.csv">run_manifest.csv</a></td><td>pgl run、writer transcript、Prep transcript 绝对路径</td></tr>
+            <tr><td><a href="README.md">README.md</a></td><td>目录说明和统计口径</td></tr>
+            <tr><td><a href="../../PREP.md">PREP.md</a></td><td>当前 Prep 角色、协议、限制和后续验收门槛</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="shell">Source run: pgl /home/ubuntu/ale/agents-last-exam/.logs/ale/prep_bundle_six · Protocol: task-prep-v13 · Analysis date: 2026-07-20</div>
+  </footer>
+</body>
+</html>

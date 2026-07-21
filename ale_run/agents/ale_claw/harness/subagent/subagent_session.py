@@ -28,6 +28,8 @@ from __future__ import annotations
 
 import asyncio
 import base64
+from collections import Counter
+from collections.abc import Collection
 import json as _json
 import logging
 import os
@@ -103,8 +105,20 @@ EXCLUDED_TOOL_NAMES = frozenset({
 })
 
 
-def _filter_tools(tools: list) -> list[BaseTool]:
-    """Keep only BaseTool instances whose name is in ``ALLOWED_TOOL_NAMES``."""
+def _filter_tools(
+    tools: list,
+    allowed_tool_names: Collection[str] | None = None,
+) -> list[BaseTool]:
+    """Keep only explicitly allowed BaseTool instances.
+
+    The default preserves the focused main-agent delegation policy. Pre-launch
+    workers may pass a separate allowlist without broadening normal subagents.
+    """
+    allowed = (
+        ALLOWED_TOOL_NAMES
+        if allowed_tool_names is None
+        else frozenset(allowed_tool_names)
+    )
     filtered: list[BaseTool] = []
     for tool in tools:
         if not isinstance(tool, BaseTool):
@@ -114,7 +128,7 @@ def _filter_tools(tools: list) -> list[BaseTool]:
             continue
         if name in EXCLUDED_TOOL_NAMES:
             continue
-        if name in ALLOWED_TOOL_NAMES:
+        if name in allowed:
             filtered.append(tool)
     return filtered
 
@@ -122,6 +136,30 @@ def _filter_tools(tools: list) -> list[BaseTool]:
 def _tools_to_litellm_schema(tools: list[BaseTool]) -> list[dict[str, Any]]:
     """Convert BaseTool instances to litellm function-calling schema."""
     return [{"type": "function", "function": tool.function} for tool in tools]
+
+
+def _rewind_kept_index_to_tool_call_boundary(
+    messages: list[dict[str, Any]],
+    kept_index: int,
+) -> int:
+    """Keep an assistant tool call with any retained tool result."""
+    if kept_index < 0 or kept_index >= len(messages):
+        return kept_index
+    first = messages[kept_index]
+    if first.get("role") != "tool":
+        return kept_index
+
+    call_id = first.get("tool_call_id")
+    if not call_id:
+        return kept_index
+    for index in range(kept_index - 1, -1, -1):
+        message = messages[index]
+        if message.get("role") != "assistant":
+            continue
+        calls = message.get("tool_calls") or []
+        if any(call.get("id") == call_id for call in calls):
+            return index
+    return kept_index
 
 
 def _build_initial_user_content(
@@ -201,6 +239,11 @@ class GeneralSubagentSession:
         thinking_params: dict[str, Any] | None = None,
         summary_runtime: ResolvedModel | None = None,
         initial_screenshot_paths: list[str] | None = None,
+        allowed_tool_names: Collection[str] | None = None,
+        max_tool_result_chars_per_turn: int | None = None,
+        system_prompt: str | None = None,
+        api_key: str | None = None,
+        api_base: str | None = None,
     ) -> None:
         self._run_id = run_id
         self._task = task
@@ -212,10 +255,21 @@ class GeneralSubagentSession:
         self._max_compactions = max_compactions
         self._thinking_params = thinking_params or {}
         self._summary_runtime = summary_runtime
+        self._api_key = api_key
+        self._api_base = api_base
+        self._max_tool_result_chars_per_turn = max_tool_result_chars_per_turn
+        if (
+            max_tool_result_chars_per_turn is not None
+            and max_tool_result_chars_per_turn <= 0
+        ):
+            raise ValueError("max_tool_result_chars_per_turn must be positive")
 
         # Public counters / handles.
         self.usage = SubagentUsage()
         self.compaction_count = 0
+        self.llm_turns = 0
+        self.tool_call_count = 0
+        self.tool_call_counts: Counter[str] = Counter()
         self._inbox: asyncio.Queue[str] = asyncio.Queue()
 
         # Subagent-scoped session — transcript at
@@ -227,7 +281,7 @@ class GeneralSubagentSession:
         self.session_mgr.init_session(model=model)
 
         # Build system prompt + initial messages.
-        self._system_prompt = _build_subagent_system_prompt(task)
+        self._system_prompt = system_prompt or _build_subagent_system_prompt(task)
         initial_user_content = _build_initial_user_content(
             task, initial_screenshot_paths
         )
@@ -251,7 +305,7 @@ class GeneralSubagentSession:
         )
 
         # Filtered tool list + litellm schema built once; reused every turn.
-        self._filtered_tools = _filter_tools(tools)
+        self._filtered_tools = _filter_tools(tools, allowed_tool_names)
         self._tool_schemas = _tools_to_litellm_schema(self._filtered_tools)
         self._tool_map = {t.name: t for t in self._filtered_tools}
 
@@ -333,6 +387,10 @@ class GeneralSubagentSession:
             choice = response.choices[0]
             assistant_content = choice.message.content or ""
             tool_calls = choice.message.tool_calls
+            self.llm_turns += 1
+            for tool_call in tool_calls or []:
+                self.tool_call_count += 1
+                self.tool_call_counts[str(tool_call.function.name)] += 1
 
             # 5. Append assistant message to transcript + in-memory list.
             self._append_assistant(assistant_content, tool_calls)
@@ -342,8 +400,13 @@ class GeneralSubagentSession:
                 return assistant_content.strip()
 
             # 7. Execute each tool call inline.
+            result_limit = None
+            if self._max_tool_result_chars_per_turn is not None:
+                result_limit = max(
+                    1, self._max_tool_result_chars_per_turn // len(tool_calls)
+                )
             for tc in tool_calls:
-                tool_result = self._execute_tool_call(tc)
+                tool_result = self._execute_tool_call(tc, result_limit=result_limit)
                 self._append_tool_result(tc, tool_result)
 
         # Loop exhausted.
@@ -359,13 +422,17 @@ class GeneralSubagentSession:
         }
         if self._tool_schemas:
             kwargs["tools"] = self._tool_schemas
+        if self._api_key is not None:
+            kwargs["api_key"] = self._api_key
+        if self._api_base is not None:
+            kwargs["api_base"] = self._api_base
         return await litellm_mod.acompletion(**kwargs)
 
     # ------------------------------------------------------------------
     # Tool execution + transcript helpers
     # ------------------------------------------------------------------
 
-    def _execute_tool_call(self, tc: Any) -> str:
+    def _execute_tool_call(self, tc: Any, *, result_limit: int | None = None) -> str:
         """Run a single tool call inline and return its string result."""
         tool_name = tc.function.name
         tool_args = tc.function.arguments
@@ -377,6 +444,13 @@ class GeneralSubagentSession:
             result = tool.call(tool_args)
             if not isinstance(result, str):
                 result = _json.dumps(result)
+            if result_limit is not None and len(result) > result_limit:
+                marker = f"\n...[truncated {len(result)} chars]...\n"
+                if len(marker) >= result_limit:
+                    return result[:result_limit]
+                remaining = result_limit - len(marker)
+                head = remaining * 3 // 4
+                result = result[:head] + marker + result[-(remaining - head):]
             return result
         except Exception as e:
             return f"Error executing {tool_name}: {e}"
@@ -479,13 +553,20 @@ class GeneralSubagentSession:
             instructions_tokens=len(self._system_prompt) // 4,
             thinking_params=self._thinking_params or None,
             summary_runtime=self._summary_runtime,
+            api_key=self._api_key,
+            api_base=self._api_base,
+        )
+
+        kept_index = _rewind_kept_index_to_tool_call_boundary(
+            body,
+            result.first_kept_message_index,
         )
 
         # Persist compaction entry to transcript with firstKeptEntryId.
         history = self.session_mgr.load_history()
         msg_entries = [e for e in history if e.type == "message"]
-        if result.first_kept_message_index < len(msg_entries):
-            first_kept_id = msg_entries[result.first_kept_message_index].id
+        if kept_index < len(msg_entries):
+            first_kept_id = msg_entries[kept_index].id
         elif msg_entries:
             first_kept_id = msg_entries[-1].id
         else:
@@ -497,7 +578,7 @@ class GeneralSubagentSession:
         )
 
         # Rebuild in-memory messages: system + summary user msg + kept body.
-        kept = body[result.first_kept_message_index:]
+        kept = body[kept_index:]
         rebuilt: list[dict[str, Any]] = []
         if system_msg is not None:
             rebuilt.append(system_msg)

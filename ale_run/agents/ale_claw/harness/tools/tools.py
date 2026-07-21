@@ -168,6 +168,8 @@ def build_tools(
     context_window_tokens: int | None = None,
     computer_handler: Any = None,
     mcp_runtime: Any = None,
+    api_key: str | None = None,
+    api_base: str | None = None,
 ) -> list:
     """Assemble the canonical tool list for the OpenClaw agent.
 
@@ -237,6 +239,8 @@ def build_tools(
         session.interface,
         model=summary_model,
         thinking_params=vision_thinking_params,
+        api_key=api_key,
+        api_base=api_base,
     )
     # `vm` target: route through the vm MCP bridge when an MCPRuntime is supplied,
     # else the legacy direct session RPC. Same `name="vm"` either way, so the
@@ -314,6 +318,8 @@ def build_tools(
             parent_session_dir=parent_session_dir,
             thinking_params=thinking_params,
             auxiliary_model=auxiliary_model,
+            api_key=api_key,
+            api_base=api_base,
         )
         gui_tool_kwargs: dict[str, Any] = {
             "registry": registry,

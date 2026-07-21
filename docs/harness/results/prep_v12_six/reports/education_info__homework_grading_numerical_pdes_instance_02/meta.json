@@ -1,0 +1,25 @@
+{
+  "status": "empty",
+  "fingerprint": "2ce38c6f671de29d1c62a26d30b4cbcbff958233abbba04a1e8e57d829adc4e4",
+  "cached": false,
+  "input_tokens": 65423,
+  "output_tokens": 1800,
+  "duration_s": 85.54595658299513,
+  "llm_turns": 5,
+  "tool_calls": 8,
+  "tool_call_counts": {
+    "exec": 4,
+    "web_fetch": 2,
+    "web_search": 2
+  },
+  "compactions": 0,
+  "quality_gate": null,
+  "error": null,
+  "protocol": "task-prep-v12",
+  "report_chars": 0,
+  "report_role": "mutable_prior_not_task_input",
+  "initial_report_sha256": null,
+  "final_report_sha256": null,
+  "final_report_chars": null,
+  "report_modified": null
+}

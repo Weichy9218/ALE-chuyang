@@ -1,0 +1,7 @@
+task,base_score,prep_v15_score,delta,prep_status,prep_cached
+business_finance__bpmn_supply_disruption_l3,0.8505,0.9324,0.0819,completed,true
+business_finance__digital_marketing_audience_segmentation_1,0.8667,0.9042,0.0375,empty,true
+business_finance__sse_northbound_programmatic_trading_01,0.6666666667,0.6666666667,0.0,completed,false
+education_info__homework_grading_numerical_pdes_instance_02,0.6316363636,0.6649696970,0.0333333333,empty,false
+health_medicine__crf_sdtm_mapping_4,0.6746,0.6722,-0.0024,completed,false
+health_medicine__flusight_offline_hosp_forecast_2024_12_14,0.7033761311,0.7615985644,0.0582224333,empty,false

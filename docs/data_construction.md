@@ -134,7 +134,7 @@ python3 data/extract_pi_training_data.py \
 
 ### 6.1 参数化变体,不复制原题
 
-选判分确定、参数可换的题型,把题面里的数值、实例、随机种子换掉,生成同分布但不同实例的新题。chuyang 的 26 题批次(`docs/new_run/research_batch_wcy.txt`)里有现成的可参数化题型:
+选判分确定、参数可换的题型,把题面里的数值、实例、随机种子换掉,生成同分布但不同实例的新题。chuyang 的 26 题批次(`docs/harness/results/latest/tasks.txt`)里有现成的可参数化题型:
 
 - american_option_pricing_ls(蒙特卡洛期权定价):换期权参数(行权价、波动率、到期、利率)、随机种子,判分仍是数值容差,答案由参数唯一确定。
 - capacitated_vehicle_routing_problems(CVRP):换客户坐标、需求、车容量,判分是解的成本对最优的比值,可用求解器算参考。

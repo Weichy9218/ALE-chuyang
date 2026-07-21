@@ -1,0 +1,22 @@
+arms: [verifier, prep_verifier]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000
+  thinking_level: medium
+
+prep:
+  max_steps: 15
+
+verifier:
+  max_steps: 30
+  max_repairs: 3
+
+run:
+  name: verifier_v13_sse_label_canary
+  tasks: docs/harness/results/verifier_v13_six/sse_label_canary_tasks.txt
+  concurrency: 2
+  cleanup_mode: delete
+  api_endpoints: []
+  output_root: .logs/ale/verifier_v13_sse_label_canary
+  wall_time_s: 86400

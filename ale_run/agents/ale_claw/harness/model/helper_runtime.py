@@ -25,6 +25,8 @@ async def call_helper_model(
     temperature: float,
     timeout: int | None = None,
     thinking_params: dict[str, Any] | None = None,
+    api_key: str | None = None,
+    api_base: str | None = None,
 ) -> HelperCallResult:
     """Call a helper model using the resolved transport defaults for the purpose."""
     import litellm
@@ -44,6 +46,10 @@ async def call_helper_model(
             kwargs["timeout"] = timeout
         if tools:
             kwargs["tools"] = [_to_responses_function_tool(tool) for tool in tools]
+        if api_key is not None:
+            kwargs["api_key"] = api_key
+        if api_base is not None:
+            kwargs["api_base"] = api_base
         response = await litellm.aresponses(**kwargs)
         payload = response.model_dump()
         return HelperCallResult(
@@ -62,6 +68,10 @@ async def call_helper_model(
         kwargs["timeout"] = timeout
     if tools:
         kwargs["tools"] = tools
+    if api_key is not None:
+        kwargs["api_key"] = api_key
+    if api_base is not None:
+        kwargs["api_base"] = api_base
     response = await litellm.acompletion(**kwargs)
     choice = response.choices[0]
     return HelperCallResult(

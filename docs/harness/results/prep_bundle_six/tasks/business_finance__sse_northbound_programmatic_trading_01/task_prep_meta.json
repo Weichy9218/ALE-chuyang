@@ -1,0 +1,29 @@
+{
+  "status": "completed",
+  "fingerprint": "713c1e7ae5846b298bafc65831aab861f33e75669ab67904f548ad6b660d9a5c",
+  "cached": false,
+  "input_tokens": 47503,
+  "output_tokens": 2783,
+  "duration_s": 73.76981541002169,
+  "llm_turns": 4,
+  "tool_calls": 4,
+  "tool_call_counts": {
+    "exec": 4
+  },
+  "compactions": 0,
+  "quality_gate": null,
+  "error": null,
+  "protocol": "task-prep-v13",
+  "report_chars": 3184,
+  "report_sha256": "297d89dc0c859a6fe6a854473c7152fbce646df9fee918cdf9cfc2f94a52d1cb",
+  "artifact_count": 1,
+  "artifact_chars": 2646,
+  "artifact_manifest": [
+    {
+      "path": "artifacts/corpus_concordance.py",
+      "chars": 2646,
+      "sha256": "924c5bdb2a11f6b5aad0c69249f3018fef9b81a6293fb4a9a2c3128a31159b14"
+    }
+  ],
+  "report_role": "subordinate_single_blocker_prep_bundle"
+}

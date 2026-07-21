@@ -15,7 +15,7 @@
 ### 1.1【高危】rsync --files-from 把 task-data 同步成空壳,远程题目在 stage_inputs 假失败
 
 - **复现**:本地 rsync 3.2.7 实测(临时目录 `/tmp/claude-1000/rsync-verify`):建 `task-data/<域>/<题>/base/{input,reference}` 小树,清单每行一个题目目录,跑 `env.md:186` 原样命令 `rsync -a --files-from=list task-data/ dst/`,结果 `find dst -type f` 为 0,目标端只建出题目那一层空目录,`total size is 0`;加 `-r` 后 base/input、base/reference 全部拷到。
-- **根因**:`docs/new_run/env.md:186`。rsync 一旦用 `--files-from`,会隐含 `-r`,但同时**取消 `-a` 对 `-r` 的隐含**——即 `-a` 不再意味着递归。清单里每行是目录(如 `business_finance/american_option_pricing_ls`,无末尾斜杠),只被非递归地"创建目录本身",其下内容全不拷。
+- **根因**:`docs/archive/harness-general-prep-2026-07/env.md:186`。rsync 一旦用 `--files-from`,会隐含 `-r`,但同时**取消 `-a` 对 `-r` 的隐含**——即 `-a` 不再意味着递归。清单里每行是目录(如 `business_finance/american_option_pricing_ls`,无末尾斜杠),只被非递归地"创建目录本身",其下内容全不拷。
 - **影响**:远程机走 `local_docker_nogcs.yaml` 的 `task_data_source: local:task-data`,`local_host.py:70` 检查 `input/` 目录不存在 → 抛 RuntimeError → `lifecycle.py:257` 的 stage_inputs 阶段冒泡到 `:545` 记 status=failed。凡需 host 拷入 input 的题(cli_nogui_24 全 24 题都需要,input 文件数 3 到 113 不等)整批假失败。与已知的 13 题假失败吻合,也和 env.md 第 2 节"24 题数据已 rsync 约 1.8G"自相矛盾(按第 8 节命令实拷 0 字节)。
 - **修复**:命令补显式递归 `rsync -ar --files-from=... task-data/ ...:.../task-data/`(实测加 `-r` 后文件数正确);或改用整机重下脚本 `download_ale_task_data_only.sh`。同步后逐题 `test -d task-data/<域>/<题>/<变体>/input` 且非空校验。
 
@@ -118,7 +118,7 @@
 
 ### 6.3【高危】两个 HF token 明文进文档,一个已随文档 rsync 到远程
 
-- **根因**:`docs/new_run/env.md:48` 把 HF token 完整值写进交接文档(644);`download_ale_task_data_only.sh` 硬编码第二枚独立 HF token,且同类脚本已复制到远程机。
+- **根因**:`docs/archive/harness-general-prep-2026-07/env.md:48` 曾把 HF token 完整值写进交接文档(644);`download_ale_task_data_only.sh` 硬编码第二枚独立 HF token,且同类脚本已复制到远程机。
 - **影响**:token 至少存在于本机文档、本机 .env、远程副本三处。远程副本存在系文档自述推断(未碰远程机核实)。
 - **修复**:吊销两枚 token;文档里改写成"见 secret/.env";新 token 只落 600 文件;下次登远程时清理远程副本。
 
@@ -192,8 +192,8 @@
 
 大部分核心技术声明经核对准确:pi 三钩子行号(types.ts:213/267/281、agent-loop.ts:248/621/722)、index.html 的 unified_loop.py:529、pi 0.404/gpt_claw 0.399 均分(用附带脚本复算得 0.4035/0.3989)、cli_nogui_24(24)/gpt56_full(25) 计数、并发 4/wall_time 2400 全部通过。不一致集中在清单文件名:
 
-- 【中危】文档四处引用的 `selected_tasks/research_batch_p1.txt` 在仓库不存在,实际是 `research_batch_wcy.txt`。
-- 【中危】`research_batch_wcy.txt` 一名对应两份内容不同的文件:`docs/new_run` 版是 26 题、`selected_tasks` 版是 36 题,用途不同易混。
+- 【中危】文档四处引用的 `selected_tasks/research_batch_p1.txt` 在仓库不存在,实际清单现存于 `docs/harness/results/latest/tasks.txt`。
+- 【中危】`research_batch_wcy.txt` 曾对应两份内容不同的文件；当前 26 题事实源已迁移为 `docs/harness/results/latest/tasks.txt`，历史副本留在 archive。
 - 【低危】`hf://` task_data_source 是未实现桩,配置里启用会每题 staging 直接崩;`config_loader` 文档说环境 yaml 在 `configs/environments/`,但主推的 `local_docker_nogcs.yaml` 在仓库根。
 - 修:统一清单文件名,给两份 wcy 批次改不同名;文档引用改到实际路径;hf:// 桩要么实现要么在选择时报明确错误。
 

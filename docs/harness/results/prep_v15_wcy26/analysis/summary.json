@@ -1,0 +1,58 @@
+{
+  "arms": {
+    "base": {
+      "completed": 0,
+      "cost_usd_mean": null,
+      "duration_s_mean": null,
+      "failed": 0,
+      "input_tokens_mean": null,
+      "llm_turns_mean": null,
+      "output_tokens_mean": null,
+      "runs": 0,
+      "score_mean": null,
+      "score_n": 0,
+      "score_total": 0,
+      "steps_mean": null,
+      "tool_calls_mean": null
+    },
+    "prep": {
+      "completed": 25,
+      "cost_usd_mean": 0.46673068,
+      "duration_s_mean": 2181.3696,
+      "failed": 1,
+      "input_tokens_mean": 212919.84,
+      "llm_turns_mean": 10.48,
+      "output_tokens_mean": 6693.76,
+      "runs": 26,
+      "score_mean": 0.6157749687394299,
+      "score_n": 25,
+      "score_total": 15.39437421848575,
+      "steps_mean": 30.76,
+      "tool_calls_mean": 19.28
+    }
+  },
+  "expected_units": 52,
+  "paired_vs_base": {
+    "prep": {
+      "mean_delta": null,
+      "n": 0,
+      "negative": 0,
+      "positive": 0,
+      "sd": null,
+      "se": null,
+      "t": null,
+      "zero": 0
+    }
+  },
+  "prep": {
+    "duration_s_mean": 404.22474339200954,
+    "input_tokens_mean": 79981.15384615384,
+    "runs": 26,
+    "statuses": {
+      "completed": 19,
+      "empty": 6,
+      "failed": 1
+    }
+  },
+  "tasks": 26
+}

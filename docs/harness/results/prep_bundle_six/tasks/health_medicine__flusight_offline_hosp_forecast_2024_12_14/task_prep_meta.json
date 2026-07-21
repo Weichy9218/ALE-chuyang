@@ -1,0 +1,30 @@
+{
+  "status": "completed",
+  "fingerprint": "91dddfb9cbc95ee2f9e4bfb372e01be3f91a58fdd8cb20449290e98a874c71dc",
+  "cached": false,
+  "input_tokens": 38199,
+  "output_tokens": 3240,
+  "duration_s": 100.9442657000618,
+  "llm_turns": 5,
+  "tool_calls": 8,
+  "tool_call_counts": {
+    "exec": 3,
+    "read": 5
+  },
+  "compactions": 0,
+  "quality_gate": null,
+  "error": null,
+  "protocol": "task-prep-v13",
+  "report_chars": 3199,
+  "report_sha256": "993c530213bcc5dfe6c847350c768f2cc5905b0e716a742d290ff23f42a5e392",
+  "artifact_count": 1,
+  "artifact_chars": 2333,
+  "artifact_manifest": [
+    {
+      "path": "artifacts/history_gap_index.py",
+      "chars": 2333,
+      "sha256": "c407bf8ee73cb16992536d85462eda33b9251d1f30a0c8f9cb7e6f7a28f0bfac"
+    }
+  ],
+  "report_role": "subordinate_single_blocker_prep_bundle"
+}

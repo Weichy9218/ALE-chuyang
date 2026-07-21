@@ -18,13 +18,16 @@ copied from ``cua_bench/agents/openclaw/`` upstream).
 """
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 import os
 import sys
 import time
 import uuid
 from contextlib import AsyncExitStack
-from pathlib import Path
+from dataclasses import asdict
+from pathlib import Path, PurePosixPath
 from typing import Any, ClassVar
 
 from ale_run.base_interface import (
@@ -34,6 +37,30 @@ from ale_run.base_interface import (
 )
 
 from .config import AleClawConfig
+from .contract_crosscheck import crosscheck_contract, render_crosscheck_note
+from .task_prep import (
+    NO_PREP_SENTINEL,
+    TaskPrepResult,
+    build_prep_digest,
+    run_task_specific_prep,
+)
+from .verifier import (
+    VERIFIER_PROTOCOL_VERSION,
+    VerificationResult,
+    VerifierBuildResult,
+    build_candidate_suite,
+    build_feedback_prompt,
+    finalize_candidate_suite,
+    parse_disputes,
+)
+from .verifier_precheck import WriterVerifyTool
+from .verifier_runtime import (
+    execute_test_suite,
+    snapshot_manifest,
+    snapshot_output,
+    stage_test_suite,
+    stage_verifier_report,
+)
 from .transcript_to_trajectory import parse_transcripts_into
 
 # Harness imports (all in-tree under harness/).
@@ -68,6 +95,36 @@ logger = logging.getLogger(__name__)
 _HARNESS_AGENTS_MD = Path(__file__).resolve().parent / "harness" / "AGENTS.md"
 
 
+def _prep_artifact_parts(relative: str) -> tuple[str, ...]:
+    candidate = PurePosixPath(relative)
+    if (
+        "\\" in relative
+        or candidate.is_absolute()
+        or not candidate.parts
+        or candidate.parts[0] != "artifacts"
+        or any(part in {"", ".", ".."} for part in candidate.parts)
+    ):
+        raise ValueError(f"invalid prep artifact path: {relative!r}")
+    return candidate.parts
+
+
+def _assistant_text(output: list[dict[str, Any]]) -> str:
+    parts: list[str] = []
+    for item in output:
+        if item.get("type") != "message":
+            continue
+        content = item.get("content", "")
+        if isinstance(content, str):
+            parts.append(content)
+        elif isinstance(content, list):
+            parts.extend(
+                str(block.get("text") or "")
+                for block in content
+                if isinstance(block, dict) and block.get("text")
+            )
+    return "\n".join(parts)
+
+
 def _skill_description(body: str) -> str:
     """Extract the `description:` value from a SKILL.md frontmatter block."""
     in_fm = False
@@ -97,6 +154,46 @@ def _seed_skill_playbooks(memory_store, task_id: str, skill_sources: dict) -> No
         rel = f"tasks/{task_id}/memory/method-{name}.md"
         idx.append(f"- **{name}** — {_skill_description(body)}  (load: memory_get {rel})")
     memory_store.write_task_memory("\n".join(idx) + "\n")
+
+
+async def _stage_prep_bundle(
+    interface: Any,
+    *,
+    task_root: str,
+    os_type: str,
+    content: str,
+    artifacts: dict[str, str],
+) -> str | None:
+    """Place a validated prep report and its text artifacts for the writer."""
+    if not task_root or not content:
+        return None
+    separator = "\\" if os_type.lower() == "windows" else "/"
+    task_root = task_root.rstrip("/\\")
+    report_dir = task_root + separator + "task_prep"
+    report_path = report_dir + separator + "PREP_REPORT.md"
+    try:
+        created_dirs: set[str] = set()
+        for relative, artifact_content in sorted(artifacts.items()):
+            if report_dir not in created_dirs:
+                await interface.create_dir(report_dir)
+                created_dirs.add(report_dir)
+            portable_parts = _prep_artifact_parts(relative)
+            native_relative = separator.join(portable_parts)
+            artifact_path = report_dir + separator + native_relative
+            parent = artifact_path.rsplit(separator, 1)[0]
+            if parent not in created_dirs:
+                await interface.create_dir(parent)
+                created_dirs.add(parent)
+            await interface.write_text(
+                artifact_path, artifact_content, append=False
+            )
+        # The report is the bundle's entry point, so expose it only after every
+        # declared artifact has been staged successfully.
+        await interface.write_text(report_path, content, append=False)
+    except Exception as exc:  # noqa: BLE001 - optional research must not abort solve
+        logger.warning("could not stage task prep bundle at %s: %s", report_path, exc)
+        return None
+    return report_path
 
 
 class AleClawDeployer(BaseAgentDeployer):
@@ -166,6 +263,7 @@ class AleClawDeployer(BaseAgentDeployer):
         :meth:`parse_artifacts` to read later.
         """
         cfg: AleClawConfig = self.config  # type: ignore[assignment]
+        t0 = time.monotonic()
         # work_dir from BaseExecutor is a substrate-native str; local /
         # docker runtimes are host-visible so wrapping in Path is safe.
         work_dir = Path(self.executor.work_dir)
@@ -303,7 +401,30 @@ class AleClawDeployer(BaseAgentDeployer):
             context_window_tokens=context_window_tokens,
             computer_handler=computer_handler,
             mcp_runtime=mcp_runtime,
+            api_key=cfg.api_key,
+            api_base=cfg.api_base,
         )
+        # Prep receives the real read/exec/web tools even when the main-agent
+        # policy disables one of them. Its own session applies a narrower,
+        # explicit allowlist and never receives solver skills or delegation.
+        prep_tools = list(tools)
+        # Pre-submission verification: the writer may run the frozen suite
+        # against its own draft before DONE. The tool is registered now (the
+        # agent's tool schemas are fixed at construction) and the frozen suite
+        # is bound after the builder finishes; until then it reports
+        # unavailable. Listing "verify" in disabled_tools removes it like any
+        # other tool.
+        verify_tool: WriterVerifyTool | None = None
+        if cfg.verifier and cfg.verifier_writer_checks > 0:
+            verify_tool = WriterVerifyTool(
+                interface=session.interface,
+                os_type=sb.os,
+                task_root=cfg.task_specific_prep_task_root,
+                task_prompt=prompt,
+                max_calls=cfg.verifier_writer_checks,
+                work_dir=work_dir,
+            )
+            tools.append(verify_tool)
         if cfg.disabled_tools:
             from .harness.tools.tools import COMPUTER_TOOL_NAME, _is_computer_tool
             drop_computer = COMPUTER_TOOL_NAME in cfg.disabled_tools
@@ -318,6 +439,8 @@ class AleClawDeployer(BaseAgentDeployer):
                 and not (drop_computer and _is_computer_tool(t))
             ]
             logger.info("ale-claw: disabled_tools=%s", cfg.disabled_tools)
+            if verify_tool is not None and verify_tool not in tools:
+                verify_tool = None
         tool_summaries = get_tool_summaries(tools)
 
         # ---- 7. System prompt + AGENTS.md + TASK_MEMORY.md context ----
@@ -349,6 +472,8 @@ class AleClawDeployer(BaseAgentDeployer):
 
         agent = OpenClawComputerAgent(
             model=cfg.model,
+            api_key=cfg.api_key,
+            api_base=cfg.api_base,
             tools=tools,
             only_n_most_recent_images=3,
             trajectory_dir=trajectory_dir,
@@ -378,11 +503,6 @@ class AleClawDeployer(BaseAgentDeployer):
             replay_messages = limit_history_turns(replay_messages, cfg.max_history_turns)
             replay_messages = sanitize_history(replay_messages)
             replay_messages = convert_to_responses_api_items(replay_messages)
-        run_input = (
-            replay_messages + [{"role": "user", "content": prompt}]
-            if replay_messages else prompt
-        )
-
         # ---- 10. Drive loop ----
         # The episode wall budget is orchestration-owned: the executor wraps
         # launch() in asyncio.wait_for(timeout=timeout_s) (derived from the
@@ -395,10 +515,30 @@ class AleClawDeployer(BaseAgentDeployer):
             "input_tokens": 0, "output_tokens": 0,
             "total_tokens": 0, "response_cost": 0.0,
         }
-        t0 = time.monotonic()
         step = 0
         task_completed = False
         transcript_path = work_dir / "openclaw_sessions" / task_id / "transcript.jsonl"
+        verifier_build = VerifierBuildResult(status="disabled")
+        prep_result = TaskPrepResult(status="disabled")
+        verifier_rounds: list[dict[str, Any]] = []
+        verifier_stop_reason = "disabled"
+        verifier_model = cfg.verifier_model or cfg.model
+        verifier_registry = (
+            SubagentRegistry(
+                max_concurrent=1,
+                persist_path=session_mgr.task_dir / "verifier-runs.jsonl",
+            )
+            if cfg.verifier
+            else None
+        )
+        prep_registry = (
+            SubagentRegistry(
+                max_concurrent=1,
+                persist_path=session_mgr.task_dir / "task-prep-runs.jsonl",
+            )
+            if cfg.task_specific_prep
+            else None
+        )
 
         # Connect the MCP bridge(s) for the duration of the drive loop and tear
         # them down (terminating the node children) on any exit — success,
@@ -409,10 +549,216 @@ class AleClawDeployer(BaseAgentDeployer):
             if mcp_runtime is not None:
                 await mcp_stack.enter_async_context(mcp_runtime)
 
-            async def _drive() -> None:
-                nonlocal step, task_completed
-                async for result in agent.run(run_input):
+            async def _build_verifier_branch() -> VerifierBuildResult:
+                if not cfg.verifier:
+                    return VerifierBuildResult(status="disabled")
+                if not cfg.task_specific_prep_task_root:
+                    return VerifierBuildResult(
+                        status="error", error="public task root is unavailable"
+                    )
+                assert verifier_registry is not None
+                try:
+                    return await build_candidate_suite(
+                        interface=session.interface,
+                        os_type=sb.os,
+                        task_id=cfg.task_specific_prep_task_id or task_id,
+                        task_root=cfg.task_specific_prep_task_root,
+                        task_prompt=prompt,
+                        model=verifier_model,
+                        summary_model=summary_model,
+                        tools=prep_tools,
+                        registry=verifier_registry,
+                        parent_session_dir=session_mgr.task_dir,
+                        max_steps=cfg.verifier_max_steps,
+                        thinking_params=thinking_config.to_api_params(verifier_model),
+                        summary_runtime=resolved_summary_model,
+                        api_key=cfg.api_key,
+                        api_base=cfg.api_base,
+                    )
+                except Exception as exc:  # noqa: BLE001 - audit is best-effort
+                    logger.warning("verifier builder crashed; writer continues: %s", exc)
+                    return VerifierBuildResult(
+                        status="error", error=f"{type(exc).__name__}: {exc}"
+                    )
+
+            async def _build_prep_branch() -> TaskPrepResult:
+                if not cfg.task_specific_prep:
+                    return TaskPrepResult(status="disabled")
+                assert prep_registry is not None
+                try:
+                    prep_model = cfg.task_specific_prep_model or cfg.model
+                    return await run_task_specific_prep(
+                        interface=session.interface,
+                        os_type=sb.os,
+                        task_id=cfg.task_specific_prep_task_id or task_id,
+                        task_root=cfg.task_specific_prep_task_root,
+                        task_prompt=prompt,
+                        model=prep_model,
+                        summary_model=summary_model,
+                        tools=prep_tools,
+                        registry=prep_registry,
+                        parent_session_dir=session_mgr.task_dir,
+                        max_steps=cfg.task_specific_prep_max_steps,
+                        timeout_s=cfg.task_specific_prep_timeout_s,
+                        thinking_params=thinking_config.to_api_params(prep_model),
+                        summary_runtime=resolved_summary_model,
+                        api_key=cfg.api_key,
+                        api_base=cfg.api_base,
+                    )
+                except Exception as exc:  # noqa: BLE001 - enrichment is best-effort
+                    logger.warning("task-specific prep crashed; solver continues: %s", exc)
+                    return TaskPrepResult(
+                        status="failed", error=f"{type(exc).__name__}: {exc}"
+                    )
+
+            # The builders share only the original public task surface. Running
+            # them concurrently prevents either optional branch from becoming a
+            # semantic predecessor of the other; neither output is staged yet.
+            verifier_build, prep_result = await asyncio.gather(
+                _build_verifier_branch(), _build_prep_branch()
+            )
+
+            # Phase B runs now: prep has finished changing the sandbox, so the
+            # environment gates measure what the writer and executor will get,
+            # and the Auditor completes before any prep artifact is staged into
+            # the task root, so it cannot read prep's semantic output.
+            if cfg.verifier and verifier_build.candidate is not None:
+                assert verifier_registry is not None
+                try:
+                    verifier_build = await finalize_candidate_suite(
+                        interface=session.interface,
+                        task_root=cfg.task_specific_prep_task_root,
+                        task_prompt=prompt,
+                        candidate=verifier_build.candidate,
+                        model=verifier_model,
+                        summary_model=summary_model,
+                        tools=prep_tools,
+                        registry=verifier_registry,
+                        parent_session_dir=session_mgr.task_dir,
+                        max_steps=cfg.verifier_max_steps,
+                        usage=verifier_build.usage,
+                        thinking_params=thinking_config.to_api_params(verifier_model),
+                        summary_runtime=resolved_summary_model,
+                        api_key=cfg.api_key,
+                        api_base=cfg.api_base,
+                    )
+                except Exception as exc:  # noqa: BLE001 - writer continues
+                    logger.warning("verifier freeze crashed; writer continues: %s", exc)
+                    verifier_build = VerifierBuildResult(
+                        status="error", error=f"{type(exc).__name__}: {exc}"
+                    )
+
+            if verifier_build.suite is not None:
+                (work_dir / "verifier_suite.json").write_text(
+                    json.dumps(
+                        verifier_build.suite.manifest,
+                        indent=2,
+                        ensure_ascii=True,
+                    ) + "\n",
+                    encoding="utf-8",
+                )
+            if verify_tool is not None:
+                if verifier_build.suite is not None:
+                    verify_tool.bind_suite(verifier_build.suite)
+                else:
+                    verify_tool.mark_unavailable(
+                        verifier_build.error or verifier_build.status
+                    )
+
+            solver_prompt = prompt
+            if cfg.task_specific_prep:
+                (work_dir / "task_prep.md").write_text(
+                    prep_result.report or NO_PREP_SENTINEL,
+                    encoding="utf-8",
+                )
+                for relative, artifact_content in sorted(
+                    prep_result.artifacts.items()
+                ):
+                    artifact_log_path = (
+                        work_dir / "task_prep_bundle" /
+                        Path(*_prep_artifact_parts(relative))
+                    )
+                    artifact_log_path.parent.mkdir(parents=True, exist_ok=True)
+                    artifact_log_path.write_text(artifact_content, encoding="utf-8")
+                (work_dir / "task_prep_meta.json").write_text(
+                    json.dumps(
+                        prep_result.metadata(), indent=2, ensure_ascii=True
+                    ) + "\n",
+                    encoding="utf-8",
+                )
+                logger.info(
+                    "task-specific prep: status=%s env=%s contract=%d "
+                    "findings=%d report_chars=%d",
+                    prep_result.status,
+                    prep_result.environment_status,
+                    prep_result.contract_items,
+                    prep_result.finding_count,
+                    len(prep_result.report),
+                )
+                if prep_result.report:
+                    prep_report_path = await _stage_prep_bundle(
+                        session.interface,
+                        task_root=cfg.task_specific_prep_task_root,
+                        os_type=sb.os,
+                        content=prep_result.report,
+                        artifacts=prep_result.artifacts,
+                    )
+                    # The report is consumed as a file the writer opens, not as
+                    # inlined text: only the digest (runtime state, self-check
+                    # command, where the rest is) enters the first prompt.
+                    if prep_report_path is None and prep_result.self_check:
+                        prep_result.self_check = None
+                    digest = build_prep_digest(prep_result, prep_report_path)
+                    solver_prompt = (
+                        f"{prompt.rstrip()}\n\n"
+                        f"## Task-specific prior research\n{digest}"
+                    )
+
+            # Mechanical contract cross-check: two independent readings of the
+            # same public surface exist only in the prep+verifier arm; compare
+            # the files they cite and surface the difference to the writer.
+            if prep_result.contract and verifier_build.suite is not None:
+                try:
+                    crosscheck = crosscheck_contract(
+                        prep_result.contract, verifier_build.suite.manifest
+                    )
+                    (work_dir / "contract_crosscheck.json").write_text(
+                        json.dumps(crosscheck, indent=2, ensure_ascii=True) + "\n",
+                        encoding="utf-8",
+                    )
+                    note = render_crosscheck_note(crosscheck)
+                    if note:
+                        solver_prompt = f"{solver_prompt.rstrip()}\n\n{note}"
+                except Exception as exc:  # noqa: BLE001 - advisory, never blocks
+                    logger.warning("contract crosscheck failed: %s", exc)
+
+            if verify_tool is not None and verifier_build.suite is not None:
+                solver_prompt = (
+                    f"{solver_prompt.rstrip()}\n\n"
+                    "## Pre-submission verification\n"
+                    "A public verifier suite was frozen from the task materials "
+                    "before you started. You may run it against your current "
+                    f"`output/` up to {verify_tool.max_calls} times with the "
+                    "`verify` tool. Run it once `output/` holds a complete "
+                    "draft, and act on the report while you still have budget. "
+                    "Passing it covers only the publicly testable part of the "
+                    "task; it is not a completion signal."
+                )
+
+            run_input = (
+                replay_messages + [{"role": "user", "content": solver_prompt}]
+                if replay_messages else solver_prompt
+            )
+
+            async def _drive(input_messages: Any) -> tuple[bool, str]:
+                nonlocal step
+                completed = False
+                response_text: list[str] = []
+                async for result in agent.run(input_messages):
                     sys.stdout.flush()
+                    text = _assistant_text(result.get("output", []))
+                    if text:
+                        response_text.append(text)
                     step += 1
                     for k in total_usage:
                         total_usage[k] += result["usage"].get(k, 0)
@@ -426,9 +772,184 @@ class AleClawDeployer(BaseAgentDeployer):
                         break
                     if has_done_signal(result.get("output", [])):
                         logger.info("ale-claw: done signal at step %d", step)
-                        task_completed = True
+                        completed = True
                         break
-            await _drive()
+                return completed, "\n".join(response_text)
+
+            task_completed, main_writer_text = await _drive(run_input)
+
+            suite = verifier_build.suite
+            if cfg.verifier and suite is not None:
+                try:
+                    suite = await stage_test_suite(
+                        interface=session.interface,
+                        task_root=cfg.task_specific_prep_task_root,
+                        manifest=suite.manifest,
+                    )
+                    verifier_build.suite = suite
+                except Exception as exc:  # verifier errors never fail the writer
+                    logger.warning("could not stage frozen verifier suite: %s", exc)
+                    verifier_build.status = "error"
+                    verifier_build.error = f"{type(exc).__name__}: {exc}"
+                    verifier_build.suite = None
+                    suite = None
+            writer_disputes: set[str] = set()
+            if suite is not None and main_writer_text:
+                # A dispute raised against a pre-submission `verify` report uses
+                # the same protocol as the post-DONE review rounds, so honor it.
+                # Blanket pre-emptive disputing is a theoretical hole, but with
+                # zero observed disputes across every run so far, gating this
+                # channel would be complexity spent on an attack that has never
+                # happened; revisit only with a real abuse sample.
+                writer_disputes.update(parse_disputes(
+                    main_writer_text,
+                    {test["check"] for test in suite.manifest["tests"]},
+                ))
+            verifier_revisions = 0
+            if cfg.verifier and suite is not None:
+                assert verifier_registry is not None
+                verifier_stop_reason = "max_review_rounds"
+                last_source_sha: str | None = None
+                for iteration in range(cfg.verifier_max_review_rounds + 1):
+                    try:
+                        snapshot = await snapshot_output(
+                            interface=session.interface,
+                            task_root=cfg.task_specific_prep_task_root,
+                            os_type=sb.os,
+                            iteration=iteration,
+                        )
+                    except Exception as exc:  # verifier errors never fail the writer
+                        logger.warning("could not create verifier snapshot: %s", exc)
+                        snapshot = None
+                    else:
+                        # A review round only matters when the Writer actually
+                        # changed output; identical output means the Writer
+                        # reviewed and chose to keep it, so stop.
+                        if iteration > 0 and snapshot.source_sha256 == last_source_sha:
+                            verifier_stop_reason = "writer_no_change"
+                            break
+                        if iteration > 0:
+                            verifier_revisions += 1
+                        last_source_sha = snapshot.source_sha256
+                    if snapshot is None:
+                        result = VerificationResult(
+                            overall="error",
+                            suite_sha256=suite.sha256,
+                            snapshot_sha256="",
+                            error="could not snapshot writer output",
+                        )
+                    else:
+                        try:
+                            result = await execute_test_suite(
+                                interface=session.interface,
+                                task_root=cfg.task_specific_prep_task_root,
+                                task_prompt=prompt,
+                                suite=suite,
+                                snapshot=snapshot,
+                            )
+                        except Exception as exc:  # verifier errors never fail the writer
+                            logger.warning("could not run verifier suite: %s", exc)
+                            result = VerificationResult(
+                                overall="error",
+                                suite_sha256=suite.sha256,
+                                snapshot_sha256=snapshot.sha256,
+                                error=f"{type(exc).__name__}: {exc}",
+                            )
+                    record = result.metadata()
+                    record["iteration"] = iteration
+                    record["snapshot_path"] = snapshot.path if snapshot else None
+                    record["snapshot_file_count"] = snapshot.file_count if snapshot else 0
+                    record["snapshot_source_sha256"] = (
+                        snapshot.source_sha256 if snapshot else None
+                    )
+                    record["snapshot_manifest"] = (
+                        await snapshot_manifest(session.interface, snapshot)
+                        if snapshot else []
+                    )
+                    record["writer_disputes"] = sorted(writer_disputes)
+                    writer_report_path = await stage_verifier_report(
+                        session.interface,
+                        task_root=cfg.task_specific_prep_task_root,
+                        filename=f"round_{iteration}.json",
+                        report=record,
+                    )
+                    record["writer_report_path"] = writer_report_path
+                    verifier_rounds.append(record)
+                    (work_dir / f"verifier_round_{iteration}.json").write_text(
+                        json.dumps(record, indent=2, ensure_ascii=True) + "\n",
+                        encoding="utf-8",
+                    )
+
+                    # Re-invocation is driven by the presence of a safe, reproducible
+                    # observation to review (hard mismatch or advisory item), not by
+                    # blocking-fail alone. Execution errors and coverage gaps are
+                    # informational and never force a round.
+                    reviewable = result.hard_mismatches + result.review_items
+                    outstanding = [
+                        check for check in reviewable
+                        if check["check"] not in writer_disputes
+                    ]
+                    if not result.needs_review:
+                        verifier_stop_reason = result.overall
+                        break
+                    if not outstanding:
+                        verifier_stop_reason = "writer_disputed"
+                        break
+                    if iteration >= cfg.verifier_max_review_rounds:
+                        break
+
+                    feedback_prompt = build_feedback_prompt(
+                        result,
+                        report_path=writer_report_path,
+                    )
+                    repair_history = build_replay_messages(session_mgr.load_history())
+                    repair_history = sanitize_history(repair_history)
+                    repair_history = limit_history_turns(
+                        repair_history, cfg.max_history_turns
+                    )
+                    repair_history = sanitize_history(repair_history)
+                    repair_input = convert_to_responses_api_items(repair_history)
+                    repair_input.append({"role": "user", "content": feedback_prompt})
+                    repair_completed, writer_response = await _drive(repair_input)
+                    task_completed = repair_completed or task_completed
+                    if step >= max_steps:
+                        verifier_stop_reason = "writer_step_limit"
+                        break
+                    disputed = parse_disputes(
+                        writer_response,
+                        {check["check"] for check in reviewable},
+                    )
+                    writer_disputes.update(disputed)
+            elif cfg.verifier:
+                verifier_stop_reason = verifier_build.status
+
+            if cfg.verifier:
+                verifier_meta = {
+                    "protocol": VERIFIER_PROTOCOL_VERSION,
+                    "status": verifier_build.status,
+                    "agent_usage": asdict(verifier_build.usage),
+                    "builder_error": verifier_build.error,
+                    "lint_dropped": list(verifier_build.dropped),
+                    "rounds": len(verifier_rounds),
+                    "repairs": verifier_revisions,
+                    "writer_disputes": sorted(writer_disputes),
+                    "stop_reason": verifier_stop_reason,
+                    "writer_checks_max": (
+                        verify_tool.max_calls if verify_tool is not None else 0
+                    ),
+                    "writer_checks_used": (
+                        verify_tool.calls_used if verify_tool is not None else 0
+                    ),
+                    "writer_check_overalls": (
+                        [record.get("overall") for record in verify_tool.records]
+                        if verify_tool is not None else []
+                    ),
+                }
+                (work_dir / "verifier_meta.json").write_text(
+                    json.dumps(verifier_meta, indent=2, ensure_ascii=True) + "\n",
+                    encoding="utf-8",
+                )
+
         except Exception as exc:                             # noqa: BLE001
             logger.exception("ale-claw: agent.run threw")
             return AgentRunResult(
@@ -512,4 +1033,3 @@ class AleClawDeployer(BaseAgentDeployer):
             level=level, flush_level=flush, compaction_level=compact,
             vision_level=vision, gui_level=gui,
         )
-
