@@ -31,11 +31,22 @@ import presets as brc  # noqa: E402  (stdlib-only helper library; see presets.py
 # arm_id -> (with_skills, task_specific_prep, verifier)
 # Skills remain code-compatible but are intentionally absent from this experiment
 # after the v2 run showed no positive signal despite 26/26 successful loads.
+# arm_id -> (with_skills, task_specific_prep, verifier, prep_self_check,
+#            writer_self_review_hint)
+# The last two isolate what the 26-task rounds could not separate:
+#   prep_nosc          - prep with the self-check script withheld, to price the
+#                        one prep carrier that correlated with harm.
+#   self_review_hint   - no verifier, no tests, only the instruction to check
+#                        output against the stated contract before finishing;
+#                        prices how much of the verifier arm is the expectation
+#                        of being measured rather than the measurements.
 ARMS = {
-    "base":          (False, False, False),
-    "prep":          (False, True,  False),
-    "verifier":      (False, False, True),
-    "prep_verifier": (False, True,  True),
+    "base":             (False, False, False, True,  False),
+    "prep":             (False, True,  False, True,  False),
+    "verifier":         (False, False, True,  True,  False),
+    "prep_verifier":    (False, True,  True,  True,  False),
+    "prep_nosc":        (False, True,  False, False, False),
+    "self_review_hint": (False, False, False, True,  True),
 }
 
 DEFAULT_EXP_NAME = "verifier_compare"
@@ -137,7 +148,8 @@ def main() -> int:
         if arm not in ARMS:
             print(f"warn: unknown arm {arm!r} (skip); valid: {list(ARMS)}", file=sys.stderr)
             continue
-        with_skills, task_specific_prep, with_verifier = ARMS[arm]
+        (with_skills, task_specific_prep, with_verifier,
+         prep_self_check, self_review_hint) = ARMS[arm]
         aid = f"ale_claw_{arm}"
         y = brc.ale_claw_agent_yaml(
             skills,
@@ -152,6 +164,8 @@ def main() -> int:
                 verifier.get("max_review_rounds", verifier.get("max_repairs", 1))
             ),
             verifier_writer_checks=int(verifier.get("writer_checks", 2)),
+            prep_self_check=prep_self_check,
+            writer_self_review_hint=self_review_hint,
             model=model,
             max_turns=max_turns,
             thinking_level=thinking,

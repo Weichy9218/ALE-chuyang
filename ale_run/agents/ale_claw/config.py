@@ -112,6 +112,15 @@ class AleClawConfig:
     task_specific_prep_timeout_s: int = 1800
     """Wall-clock budget for one prep session. On timeout the writer continues."""
 
+    task_specific_prep_self_check: bool = True
+    """Deliver the prep self-check (script, report section, digest command).
+
+    ``False`` keeps prep itself identical - same prompt, same budget, the
+    script is still written and declared - but withholds the self-check and
+    its artifact from everything the writer sees. This is the A/B switch for
+    isolating the self-check channel's net effect from the rest of prep.
+    """
+
     task_specific_prep_task_id: str = ""
     """Lifecycle-populated task identity used for audited content-addressed caching."""
 
@@ -141,6 +150,15 @@ class AleClawConfig:
     tool that snapshots the current ``output/`` and runs the complete frozen
     suite before DONE, so measurements arrive while the Writer still has budget
     to act on them. 0 removes the tool and keeps the post-DONE-only behavior.
+    """
+
+    writer_self_review_hint: bool = False
+    """Append a short pre-submission self-review instruction to the writer prompt.
+
+    Control arm for pricing the verifier: no frozen tests and no tools, only
+    the instruction to recheck ``output/`` against the task's stated contract
+    before DONE. Run it with ``verifier=False`` to measure how much of the
+    verifier arm's effect the instruction alone reproduces.
     """
 
     # ---- substrate transport ----

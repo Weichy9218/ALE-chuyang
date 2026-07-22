@@ -105,11 +105,12 @@ class WriterVerifyTool(BaseTool):
             "Run the frozen public verifier suite against a read-only snapshot "
             "of your current output/. The tests were derived from the public "
             "task materials and frozen before you started; running them does "
-            "not change them. Returns hard mismatches (public hard "
-            "requirements you currently violate), advisory review items, "
-            "execution errors, and coverage gaps. Use it before you finish, "
-            "when output/ holds a complete draft - a limited number of runs "
-            "is available and an all-pass result only covers the publicly "
+            "not change them. Every result is an advisory measurement of your "
+            "draft against the task's stated contract - review items where "
+            "your draft differs from the builder's reading, execution errors, "
+            "and coverage gaps; nothing is a verdict. Use it before you "
+            "finish, when output/ holds a complete draft - a limited number "
+            "of runs is available and passing covers only the publicly "
             "testable part of the task."
         )
 

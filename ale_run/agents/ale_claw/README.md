@@ -86,11 +86,17 @@ The full config surface lives in `config.py`, but most users only need these:
 - `disabled_tools`: tools to hide from the model
 - `task_specific_prep`: run grounded pre-solve preparation (default `true`;
   experiment arms set it explicitly)
+- `task_specific_prep_self_check`: deliver the prep self-check to the writer
+  (default `true`; `false` is the A/B off arm - prep is unchanged, the
+  self-check and its script are withheld)
 - `verifier`: build and run an independent frozen public-test suite (default `false`)
 - `verifier_max_review_rounds`: maximum writer review rounds after the suite runs
   (default `1`); a round becomes a revision only when the writer changes output
 - `verifier_writer_checks`: pre-submission runs of the frozen suite the writer
   may trigger itself via the `verify` tool (default `2`; `0` disables the tool)
+- `writer_self_review_hint`: inject a tool-less "recheck output before DONE"
+  instruction (default `false`; control arm for pricing the verifier, run with
+  `verifier=False`)
 <!-- - `summary_model` / `auxiliary_model` / `gui_model`: helper models -->
 
 Minimal direct usage looks like this:

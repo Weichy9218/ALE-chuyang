@@ -3,7 +3,7 @@
 本文常驻保存这两个辅助 agent 的核心 insight，随证据更新改写，不做增量日志。版本演化在
 [EVOLUTION.md](EVOLUTION.md)，当期设计在 [PREP.md](PREP.md) 与 [VERIFIER.md](VERIFIER.md)，
 逐轮实验证据在 [results/](results/README.md)。当前协议：`task-prep-v21`、
-`public-verifier-v17`（本仓库）；pgl 正在运行的六题两臂实验用 v20/v16，两组读数不混。
+`public-verifier-v18`（本仓库）；pgl 已跑完的六题两臂实验用 v20/v16，两组读数不混。
 
 ## 总纲：转化链
 
@@ -64,9 +64,15 @@ web；输出按保真度排序是三种载体：
 拉取通道存在的理由就是转化链：同一份测量，DONE 前到达可以转化为修复，DONE 后到达只能
 转化为验尸。
 
-**权威设计**：测量、权威、复核三维分离。权威只决定一条差异算不算硬要求，不决定检查跑不跑
-——来源已定位、checker 可复现的检查一律运行，歧义与部分覆盖以 advisory 身份出现并附审计
-说明。quote 是事实、locator 只是坐标，坐标错误机械修正，不让格式问题冒充语义问题。
+**权威设计（v18 起为零权威）**：每条结果都是参考测量，`blocking` 冻结时恒为 false。
+硬权威被放弃的原因是成本收益：为了给 LLM 生成的测试发"你必须改"的资格，需要来源蕴含、
+checker 对齐、来源无冲突三项语义证明，为此设了 Auditor 和五项 gate，链条十步、每环都可能
+断，v16 六题实测 6/6 构建 error、12 测试只跑 2；而零权威的 self_check 被 writer 5/5 调用。
+删掉 Auditor 后链条剩六步，每步都有独立于权威的存在理由：builder 生成（独立阅读）、lint
+逐条（结构安全）、定位与修复（quote 是事实、locator 只是坐标，坐标错误机械修正）、fixture
+预检（坏 checker 高频误导 writer，与权威无关）、冻结 hash（测量真的发生过、没被改）、隔离
+执行（不污染产物）。checker 锚定契约名：题面点名的文件、字段、标识符逐字进检查，check id
+以契约义务命名，报告是契约覆盖图。
 
 **红线**：标准在 writer 开始前冻结，每次执行复验全部 hash；隔离执行（Landlock/seccomp、
 只读快照、双次运行）；报告测量不做诊断、不给 repair hint；writer 可用公开反证 dispute 任何
@@ -79,14 +85,14 @@ web；输出按保真度排序是三种载体：
   "两个 agent 重复读题"的成本变成"分歧即警告"的收益，且不授予任何一方新权限。
 
 但重复是真实的，不该粉饰：**self_check 和 `verify` 都是"writer 提交前对草稿跑的机械
-检查"**，都从公开题面派生。v21/v17 起分工按对象切开：
+检查"**，都从公开题面派生，v18 起也都是零权威。分工按对象和独立性切开：
 
 | | prep 的 self_check | verifier 的 `verify` |
 |---|---|---|
-| 对象 | 结构覆盖："缺不缺"——存在性、字段、拼写、行数、编码、跨文件一致 | 判定测量："对不对"——expected、重算、任务软件 |
-| 权威 | 无，writer 可无视 | 分级（hard / advisory），hard 要修或 dispute |
-| 成本 | 一次性生成，运行不限次、零 LLM | 构建要两个 agent，运行限次 |
-| 独立性 | 与 writer 同源，不要求独立 | 独立冻结、审计、hash 固定 |
+| 对象 | 结构覆盖："缺不缺"——存在性、字段、拼写、行数、编码、跨文件一致 | 契约测量：expected、重算、任务软件，锚定公开来源 |
+| 权威 | 无 | 无（v18 起；差异是参考，dispute 可静音） |
+| 成本 | 一次性生成，运行不限次、零 LLM | 构建一个 builder agent，运行限次 |
+| 独立性 | 与 writer 同源，不要求独立 | 独立生成、冻结、hash 固定、隔离执行 |
 
 self_check 不硬编码期望取值、不给对错结论；prep 提示 writer 自检（digest 点名命令）是
 这个设计的本意，它不僭越 verifier，因为它没有任何判定权。残余重复只剩"同一条结构义务
@@ -102,7 +108,7 @@ output 要满足什么"，注意力稀释和口径冲突都无法先验排除。
 ```text
                     ┌─ Prep ──────────────┐──> 沙箱状态 / 报告文件+digest / self_check ──> Writer ─┐
 公开题面+input+software┤                    │        （机械合同对账 ⇢ Writer）                      │ output/
-                    └─ Builder ─> 定位/修复 ┴─> 预检 ─> 审计 ─> frozen suite ──────────────────────┤
+                    └─ Builder ─> 定位/修复 ┴─> fixture 预检 ─> frozen suite（全 advisory）─────────┤
                        （与 prep 并发）    （prep 后、prep staging 前）│                           │
                                     （solve 中）Writer ───────────────┴─ verify ─> 快照+隔离执行 ─> 四类报告
                                     （DONE 后）快照 ─> 完整冻结包 ─> 复核/修复 ─> 重跑
@@ -121,10 +127,9 @@ Agora 的引文压缩和 BPMN 的 delete-to-pass 是同一件事：面对一条�
 丢文件（`output_shrank`、`output_drift_bytes`、`output_dropped_files`）。一个读数同时覆盖
 self_check、`verify` 和复核轮三个信号源，纯 harness 统计，不改任何权威。
 
-需要说清楚一处已经存在的保护，避免重复造：总判定 `_overall` 只聚合 blocking 检查，
-ambiguous / 蕴含不足 / 部分覆盖 / simulation 在冻结时 blocking 就是 false，它们的差异不会
-让 Overall 变红。所以风险不是"有个全绿聚合目标可刷"，而是**逐条 advisory 的注意力消耗和
-逐条 Goodhart**。这也是为什么对策是读数而不是新 gate。
+需要说清楚一处已经存在的保护，避免重复造：v18 起总判定 `overall` 只描述覆盖
+（measured / error / unverifiable），根本不存在 pass/fail 聚合，没有全绿目标可刷。风险
+只剩**逐条 advisory 的注意力消耗和逐条 Goodhart**。这也是为什么对策是读数而不是新 gate。
 
 ## 当前痛点（按优先级）
 
@@ -136,8 +141,8 @@ ambiguous / 蕴含不足 / 部分覆盖 / simulation 在冻结时 blocking 就�
    最大的未验证假设。
 2. **清单定向优化。** Agora 给了第一份实测证据；self_check 可能放大它。对策（最低义务措辞、
    边界声明）已落进代码文案，加上删减读数，效果未测。
-3. **约束力最强的信号，验证环节最弱。** verifier 的每个 checker 冻结前要过 fixture 预检
-   加 Auditor 审计；self_check 原本只有 prompt 里一句"在合成小样上测试"。现在补了最小
+3. **高频信号的验证仍然弱。** verifier 的每个 checker 冻结前要过 fixture 预检（正样过、
+   反样挂、双跑一致）；self_check 原本只有 prompt 里一句"在合成小样上测试"，现在补了最小
    预检：staging 后用空草稿跑一次，崩溃、超时、无输出就降级进 dropped 并保留文字清单。
    这只保证脚本不是坏的，不保证它判得对。
 4. **k=1 方差远大于效应。** 六题配对 sd 约 0.2，任何单轮分数都测不出 0.02 量级的效应。

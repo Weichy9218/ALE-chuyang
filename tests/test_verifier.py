@@ -13,7 +13,6 @@ from ale_run.agents.ale_claw.verifier import (
     AgentUsage,
     MAX_SOURCE_QUOTE_CHARS,
     VerificationResult,
-    build_audit_system_prompt,
     build_feedback_prompt,
     build_suite_system_prompt,
     build_test_suite,
@@ -108,20 +107,6 @@ def _candidate(script: str = CHECKER) -> dict:
     }
 
 
-def _audit(candidate: dict, status: str = "supported") -> dict[str, dict]:
-    return {
-        test["check"]: {
-            "check": test["check"],
-            "source_status": status,
-            "source_evidence": "the exact schema quote defines the final header",
-            "source_entails_expected": status == "supported",
-            "checker_matches_requirement": True,
-            "checker_evidence": "the checker parses the final CSV header and compares all names",
-        }
-        for test in candidate["tests"]
-    }
-
-
 def _preflight(candidate: dict, reproducible: bool = True) -> list[dict]:
     return [{
         "check": test["check"],
@@ -169,9 +154,9 @@ def _require_landlock() -> None:
         pytest.skip("the local kernel does not expose Landlock; pgl does")
 
 
-def _frozen(candidate: dict, task_root: Path, status: str = "supported") -> dict:
+def _frozen(candidate: dict, task_root: Path) -> dict:
     located = _locate(candidate, task_root)
-    return lint_frozen_suite(finalize_suite(located, _preflight(located), _audit(located, status)))
+    return lint_frozen_suite(finalize_suite(located, _preflight(located)))
 
 
 def test_candidate_schema_hashes_scripts_and_fixtures() -> None:
@@ -209,6 +194,26 @@ def test_lint_quarantines_bad_tests_and_keeps_good_ones() -> None:
         "schema.required_columns"
     ]
     assert any("schema.broken_twin" in reason for reason in candidate["dropped"])
+
+
+def test_missing_envelope_fields_are_defaulted_not_fatal() -> None:
+    """A packaging slip must not cost the writer the whole verify tool.
+
+    The v18 six-task run lost the SEC suite to a builder response whose top
+    level lacked these keys, while its tests were fine.
+    """
+    value = _candidate()
+    value.pop("reason")
+    value.pop("unverifiable")
+
+    candidate = lint_candidate_suite(value)
+
+    assert [test["check"] for test in candidate["tests"]] == [
+        "schema.required_columns"
+    ]
+    assert candidate["unverifiable"] == []
+    assert candidate["reason"]
+    assert any("missing reason" in note for note in candidate["dropped"])
 
 
 def test_suite_with_no_usable_item_still_fails() -> None:
@@ -267,11 +272,21 @@ def test_checker_result_preserves_structured_observation_and_evidence() -> None:
     assert result["evidence"] == ["submission.csv#header"]
 
 
-def test_confirmed_failure_takes_precedence_over_unrelated_checker_error() -> None:
+def test_overall_reports_coverage_never_a_verdict() -> None:
+    executed = {"execution": {"reproducible": True, "runs": [{}, {}]}}
     assert _overall([
-        {"requested_blocking": True, "blocking": True, "status": "fail"},
-        {"requested_blocking": True, "blocking": False, "status": "error"},
-    ]) == "fail"
+        {"requested_blocking": True, "blocking": False, "status": "fail", **executed},
+        {"requested_blocking": True, "blocking": False, "status": "error",
+         "execution": None},
+    ]) == "measured"
+    assert _overall([
+        {"requested_blocking": True, "blocking": False, "status": "error",
+         "execution": None},
+    ]) == "error"
+    assert _overall([
+        {"requested_blocking": False, "blocking": False, "status": "unverifiable",
+         "execution": None},
+    ]) == "unverifiable"
 
 
 def test_source_is_located_and_hashed_before_freeze(tmp_path: Path) -> None:
@@ -413,7 +428,7 @@ def test_task_prompt_citation_resolves_to_public_input_file(tmp_path: Path) -> N
     assert source["located"] is True
 
 
-def test_blocking_gate_requires_supported_source_and_checker() -> None:
+def test_zero_authority_never_grants_blocking() -> None:
     candidate = lint_candidate_suite(_candidate())
     for collection in (candidate["tests"], candidate["unverifiable"]):
         for item in collection:
@@ -424,16 +439,18 @@ def test_blocking_gate_requires_supported_source_and_checker() -> None:
                     "locate_evidence": "located",
                 })
 
-    supported = finalize_suite(candidate, _preflight(candidate), _audit(candidate))
-    ambiguous = finalize_suite(candidate, _preflight(candidate), _audit(candidate, "ambiguous"))
-    bad_checker = finalize_suite(candidate, _preflight(candidate, False), _audit(candidate))
+    frozen = lint_frozen_suite(finalize_suite(candidate, _preflight(candidate)))
 
-    assert lint_frozen_suite(supported)["tests"][0]["blocking"] is True
-    assert lint_frozen_suite(ambiguous)["tests"][0]["blocking"] is False
-    assert lint_frozen_suite(bad_checker)["tests"][0]["blocking"] is False
+    test = frozen["tests"][0]
+    # The builder asked for hard authority; the freeze records the request and
+    # refuses the grant: every check is advisory.
+    assert test["requested_blocking"] is True
+    assert test["blocking"] is False
+    assert test["validation"]["sources_located"] is True
+    assert test["validation"]["checker_reproducible"] is True
 
 
-def test_blocking_gate_requires_every_source_to_be_located() -> None:
+def test_freeze_records_unlocated_sources_and_flaky_checkers() -> None:
     candidate = lint_candidate_suite(_candidate())
     candidate["tests"][0]["sources"].extend([
         {
@@ -452,26 +469,14 @@ def test_blocking_gate_requires_every_source_to_be_located() -> None:
             "locate_evidence": "located",
         })
 
-    frozen = finalize_suite(candidate, _preflight(candidate), _audit(candidate))
+    unlocated = finalize_suite(candidate, _preflight(candidate))
+    flaky = finalize_suite(candidate, _preflight(candidate, False))
 
-    assert lint_frozen_suite(frozen)["tests"][0]["blocking"] is False
-
-
-def test_simulation_cannot_be_blocking() -> None:
-    candidate = lint_candidate_suite(_candidate())
-    candidate["tests"][0]["execution_mode"] = "simulation"
-    for collection in (candidate["tests"], candidate["unverifiable"]):
-        for item in collection:
-            for source in item["sources"]:
-                source.update({
-                    "sha256": "a" * 64,
-                    "located": True,
-                    "locate_evidence": "located",
-                })
-
-    frozen = finalize_suite(candidate, _preflight(candidate), _audit(candidate))
-
-    assert lint_frozen_suite(frozen)["tests"][0]["blocking"] is False
+    validation = lint_frozen_suite(unlocated)["tests"][0]["validation"]
+    assert validation["sources_located"] is False
+    assert lint_frozen_suite(flaky)["tests"][0]["validation"][
+        "checker_reproducible"
+    ] is False
 
 
 def test_fixture_preflight_and_full_suite_rerun(tmp_path: Path) -> None:
@@ -498,7 +503,7 @@ def test_fixture_preflight_and_full_suite_rerun(tmp_path: Path) -> None:
     assert preflight[0]["environment_healthy"] is True
     assert preflight[0]["checker_reproducible"] is True
 
-    manifest = lint_frozen_suite(finalize_suite(located, preflight, _audit(located)))
+    manifest = lint_frozen_suite(finalize_suite(located, preflight))
     suite = asyncio.run(stage_test_suite(
         interface=_ShellInterface(), task_root=str(tmp_path), manifest=manifest,
     ))
@@ -513,7 +518,7 @@ def test_fixture_preflight_and_full_suite_rerun(tmp_path: Path) -> None:
         suite=suite,
         snapshot=first_snapshot,
     ))
-    assert first.overall == "pass"
+    assert first.overall == "measured"
     assert [check["status"] for check in first.checks] == ["pass", "unverifiable"]
 
     (output / "submission.csv").write_text("id,score\n", encoding="utf-8")
@@ -527,8 +532,11 @@ def test_fixture_preflight_and_full_suite_rerun(tmp_path: Path) -> None:
         suite=suite,
         snapshot=second_snapshot,
     ))
-    assert second.overall == "fail"
-    assert second.failure_signature == ("schema.required_columns",)
+    assert second.overall == "measured"
+    assert [item["check"] for item in second.review_items] == [
+        "schema.required_columns"
+    ]
+    assert second.failure_signature == ()
     assert "analysis" not in second.checks[0]
     assert second.checks[0]["execution"]["reproducible"] is True
     assert len(second.checks[0]["execution"]["runs"]) == 2
@@ -538,14 +546,14 @@ def test_fixture_preflight_and_full_suite_rerun(tmp_path: Path) -> None:
         "uncovered": ["quality.future_accuracy"],
     }
 
-def test_ambiguous_source_check_runs_as_advisory(tmp_path: Path) -> None:
-    """An ambiguous-source check executes; its difference is advisory, not lost."""
+def test_observed_difference_surfaces_as_advisory_review_item(tmp_path: Path) -> None:
+    """A located check executes; its difference is advisory, never blocking."""
     _require_landlock()
     (tmp_path / "input").mkdir()
     output = tmp_path / "output"
     output.mkdir()
     (output / "submission.csv").write_text("id,score\n", encoding="utf-8")
-    manifest = _frozen(_candidate(), tmp_path, status="ambiguous")
+    manifest = _frozen(_candidate(), tmp_path)
     assert manifest["tests"][0]["blocking"] is False
     suite = asyncio.run(stage_test_suite(
         interface=_ShellInterface(), task_root=str(tmp_path), manifest=manifest,
@@ -570,20 +578,23 @@ def test_ambiguous_source_check_runs_as_advisory(tmp_path: Path) -> None:
         "schema.required_columns"
     ]
     assert result.needs_review is True
-    assert result.overall == "unverifiable"
+    assert result.hard_mismatches == []
+    assert result.overall == "measured"
 
     feedback = build_feedback_prompt(result, report_path="/task/verifier/round_0.json")
     assert "ADVISORY REVIEW ITEM" in feedback
-    assert "Source caveat" in feedback
+    assert "Authority: advisory" in feedback
 
 
-def test_contradicted_source_check_stays_unrun(tmp_path: Path) -> None:
-    _require_landlock()
+def test_unlocated_source_check_stays_unrun(tmp_path: Path) -> None:
     (tmp_path / "input").mkdir()
     output = tmp_path / "output"
     output.mkdir()
     (output / "submission.csv").write_text("id,score\n", encoding="utf-8")
-    manifest = _frozen(_candidate(), tmp_path, status="contradicted")
+    value = _candidate()
+    value["tests"][0]["sources"][0]["quote"] = "this text is nowhere in the prompt"
+    manifest = _frozen(value, tmp_path)
+    assert manifest["tests"][0]["validation"]["sources_located"] is False
     suite = asyncio.run(stage_test_suite(
         interface=_ShellInterface(), task_root=str(tmp_path), manifest=manifest,
     ))
@@ -766,8 +777,8 @@ def _advisory_check(**overrides):
         "expected": "no duplicate producers",
         "execution_mode": "public_recompute",
         "execution_reason": "the diagram is public",
-        "validation": {"checker_matches_requirement": False,
-                       "checker_evidence": "covers only a subset of the rule"},
+        "validation": {"sources_located": True, "checker_reproducible": True,
+                       "environment_healthy": True},
         "requested_blocking": True,
         "blocking": False,
         "status": "fail",
@@ -794,35 +805,25 @@ def test_advisory_observation_reaches_writer_and_drives_review() -> None:
     feedback = build_feedback_prompt(result, report_path="/task/verifier/round_0.json")
     assert "ADVISORY REVIEW ITEM" in feedback
     assert "Authority: advisory" in feedback
-    assert "covers only a subset of the rule" in feedback
     assert parse_disputes(
         "VERIFIER_DISPUTE topology.producers: partial checker",
         {"topology.producers"},
     ) == {"topology.producers"}
 
 
-def test_advisory_feedback_carries_source_audit_caveats() -> None:
-    ambiguous = _advisory_check(validation={
-        "source_status": "ambiguous",
-        "source_evidence": "two adjacent rules give different orders",
-        "checker_matches_requirement": True,
-    })
-    entails_gap = _advisory_check(check="topology.consumers", validation={
-        "source_status": "supported",
-        "source_entails_expected": False,
-        "checker_matches_requirement": True,
-    })
+def test_advisory_feedback_flags_simulation_evidence() -> None:
+    simulated = _advisory_check(execution_mode="simulation")
     result = VerificationResult(
-        overall="unverifiable",
+        overall="measured",
         suite_sha256="a" * 64,
         snapshot_sha256="b" * 64,
-        checks=[ambiguous, entails_gap],
+        checks=[simulated],
     )
 
     feedback = build_feedback_prompt(result, report_path="/r.json")
 
-    assert "two adjacent rules give different orders" in feedback
-    assert "do not fully entail the expected" in feedback
+    assert "comes from a simulation" in feedback
+    assert "the verifier holds no authority over your output" in feedback
 
 
 def test_execution_errors_and_coverage_gaps_do_not_force_review() -> None:
@@ -848,27 +849,27 @@ def test_execution_errors_and_coverage_gaps_do_not_force_review() -> None:
     assert result.metadata()["needs_review"] is False
 
 
-def test_builder_and_auditor_require_public_enum_label_mapping() -> None:
+def test_builder_prompt_anchors_checks_in_the_contract() -> None:
     builder = build_suite_system_prompt("/task", "seed")
-    auditor = build_audit_system_prompt("/task", "/suite")
 
-    for prompt in (builder, auditor):
-        assert "Yes, No, Unknown" in prompt
-        assert "maps to that label" in prompt
-        assert "missing facts" in prompt.lower()
+    assert "Yes, No, Unknown" in builder
+    assert "maps to that label" in builder
+    assert "missing facts" in builder.lower()
     assert "exactly pass, fail, or unverifiable" in builder
+    # Contract-first: exact stated names, checks named after obligations,
+    # breadth of contract coverage over depth on one item.
+    assert "deliverable contract" in builder
+    assert "letter-for-letter" in builder
+    assert "contract.submission_csv.required_columns" in builder
+    assert "advisory measurement" in builder
 
 
-def test_builder_and_auditor_produce_one_frozen_suite(tmp_path: Path, monkeypatch) -> None:
+def test_builder_alone_produces_one_frozen_suite(tmp_path: Path, monkeypatch) -> None:
     calls: list[str] = []
 
     async def fresh(**kwargs):
         calls.append(kwargs["label"])
-        if kwargs["label"] == "verifier-builder":
-            return json.dumps(_candidate()), AgentUsage(llm_turns=1)
-        candidate = lint_candidate_suite(_candidate())
-        audit = {"tests": list(_audit(candidate).values())}
-        return json.dumps(audit), AgentUsage(llm_turns=1)
+        return json.dumps(_candidate()), AgentUsage(llm_turns=1)
 
     (tmp_path / "input").mkdir()
     monkeypatch.setattr("ale_run.agents.ale_claw.verifier._run_fresh_agent", fresh)
@@ -891,7 +892,8 @@ def test_builder_and_auditor_produce_one_frozen_suite(tmp_path: Path, monkeypatc
     assert result.status == "ready"
     assert result.suite.sha256 == result.suite.manifest["suite_sha256"]
     assert result.suite.path == ""
-    assert calls == ["verifier-builder", "verifier-auditor"]
+    # No auditor session: the freeze is mechanical under zero authority.
+    assert calls == ["verifier-builder"]
 
 
 def test_unlocatable_source_gets_one_mechanical_repair_round(
@@ -905,13 +907,10 @@ def test_unlocatable_source_gets_one_mechanical_repair_round(
             broken = _candidate()
             broken["tests"][0]["sources"][0]["quote"] = "Columns: id, score, WRONG"
             return json.dumps(broken), AgentUsage(llm_turns=1)
-        if kwargs["label"] == "verifier-builder-locate-repair":
-            assert "LOCATE FAILURES" in kwargs["task"]
-            assert "Columns: id, score, WRONG" in kwargs["task"]
-            return json.dumps(_candidate()), AgentUsage(llm_turns=1)
-        candidate = lint_candidate_suite(_candidate())
-        audit = {"tests": list(_audit(candidate).values())}
-        return json.dumps(audit), AgentUsage(llm_turns=1)
+        assert kwargs["label"] == "verifier-builder-locate-repair"
+        assert "LOCATE FAILURES" in kwargs["task"]
+        assert "Columns: id, score, WRONG" in kwargs["task"]
+        return json.dumps(_candidate()), AgentUsage(llm_turns=1)
 
     (tmp_path / "input").mkdir()
     monkeypatch.setattr("ale_run.agents.ale_claw.verifier._run_fresh_agent", fresh)
@@ -931,9 +930,8 @@ def test_unlocatable_source_gets_one_mechanical_repair_round(
     ))
 
     assert result.status == "ready"
-    assert calls == [
-        "verifier-builder", "verifier-builder-locate-repair", "verifier-auditor",
-    ]
+    assert calls == ["verifier-builder", "verifier-builder-locate-repair"]
     source = result.suite.manifest["tests"][0]["sources"][0]
     assert source["located"] is True
-    assert result.suite.manifest["tests"][0]["blocking"] is True
+    assert result.suite.manifest["tests"][0]["requested_blocking"] is True
+    assert result.suite.manifest["tests"][0]["blocking"] is False

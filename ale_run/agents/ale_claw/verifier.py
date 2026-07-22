@@ -14,7 +14,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-VERIFIER_PROTOCOL_VERSION = "public-verifier-v18"
+VERIFIER_PROTOCOL_VERSION = "public-verifier-v19"
 MAX_TESTS = 6
 MAX_UNVERIFIABLE_REQUIREMENTS = 8
 MAX_SCRIPT_BYTES = 50_000
@@ -92,8 +92,9 @@ class VerificationResult:
     def hard_mismatches(self) -> list[dict[str, Any]]:
         """Blocking assertions whose frozen check ran and observed a difference.
 
-        These carry hard authority: the public source entails the expected result,
-        so the Writer must either reconcile the output or dispute the test.
+        Structurally retained, but the zero-authority protocol freezes every
+        check with ``blocking=False``, so this category is empty in production;
+        every observed difference surfaces as an advisory review item instead.
         """
         return [
             check for check in self.checks
@@ -327,22 +328,33 @@ def _fixture_files(
 
 
 def lint_candidate_suite(value: dict[str, Any]) -> dict[str, Any]:
-    """Validate the Builder's untrusted candidate suite."""
+    """Validate the Builder's untrusted candidate suite.
+
+    Top-level tolerance matches the per-item discipline below: a missing
+    envelope field is defaulted and recorded, never fatal. The v18 six-task
+    run lost an entire suite to a builder response whose top level lacked
+    these keys, which is a packaging slip, not evidence the tests are bad.
+    Only a response with no usable test or requirement at all raises.
+    """
     if not isinstance(value, dict):
         raise ValueError("candidate suite must be an object")
-    _check_keys(
-        value,
-        required={"reason", "tests", "unverifiable"},
-        optional=set(),
-        label="candidate suite",
-    )
-    reason = str(value["reason"] or "").strip()
-    raw_tests = value["tests"]
-    raw_unverifiable = value["unverifiable"]
+    envelope_notes: list[str] = []
+    for key in sorted(value.keys() - {"reason", "tests", "unverifiable"}):
+        envelope_notes.append(f"suite: ignored unknown field {key}")
+    reason = str(value.get("reason") or "").strip()
     if not reason:
-        raise ValueError("candidate suite reason cannot be empty")
-    if not isinstance(raw_tests, list) or not isinstance(raw_unverifiable, list):
-        raise ValueError("candidate suite tests and unverifiable must be arrays")
+        reason = "(builder supplied no suite reason)"
+        envelope_notes.append("suite: missing reason")
+    raw_tests = value.get("tests")
+    if not isinstance(raw_tests, list):
+        if raw_tests is not None:
+            envelope_notes.append("suite: tests was not an array")
+        raw_tests = []
+    raw_unverifiable = value.get("unverifiable")
+    if not isinstance(raw_unverifiable, list):
+        if raw_unverifiable is not None:
+            envelope_notes.append("suite: unverifiable was not an array")
+        raw_unverifiable = []
     if not raw_tests and not raw_unverifiable:
         raise ValueError("candidate suite must contain a test or unverifiable requirement")
     # Over-length lists are truncated rather than rejected: the excess items are
@@ -356,7 +368,7 @@ def lint_candidate_suite(value: dict[str, Any]) -> dict[str, Any]:
     script_bytes = 0
     fixture_bytes = 0
     tests: list[dict[str, Any]] = []
-    dropped: list[str] = []
+    dropped: list[str] = list(envelope_notes)
     if overflow_tests:
         dropped.append(f"tests: {len(overflow_tests)} beyond the {MAX_TESTS} cap")
     if overflow_unverifiable:
@@ -1026,8 +1038,17 @@ async def build_candidate_suite(
         )
     except Exception as exc:
         logger.warning("verifier candidate build failed: %s", exc)
+        # Keep a bounded excerpt of what the builder actually returned. A build
+        # that dies in parsing or lint is otherwise undiagnosable after the
+        # run: the message alone cannot distinguish a genuinely broken builder
+        # response from an extractor that picked the wrong object.
+        excerpt = ""
+        try:
+            excerpt = f" | builder response head: {raw[:400]!r}"
+        except (NameError, TypeError):
+            pass
         return VerifierBuildResult(
-            status="error", usage=usage, error=f"{type(exc).__name__}: {exc}"
+            status="error", usage=usage, error=f"{type(exc).__name__}: {exc}{excerpt}"
         )
 
 

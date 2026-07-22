@@ -21,6 +21,9 @@
 | 2026-07-21 | prep v18 六题配对 | 六题两臂 | 生成率 6/6 但配对 `-0.0562`；交付 artifact 零调用；Agora 清单定向优化 `-0.34`；SEC `+0.26` 与 prep 无关。消费问题成为主矛盾。见 [results/prep_v18_six](results/prep_v18_six/) |
 | 2026-07-21 | v15/v19 与 v16/v20 | 代码改写（未跑配对） | 预提交 `verify` 工具；删 `output/` 字符串边界；quote 重定位与机械修复轮；ambiguous 以 advisory 运行；self_check 一等字段；机械合同对账。见 FABLE.md |
 | 2026-07-21 | v21/v17 | 代码改写（v20/v16 六题同日在 pgl 启动，两组不混） | prep 报告改文件式消费 + digest；self_check 限定结构覆盖；verifier lint 逐条隔离；预检/审计移到 prep 之后（仅合并臂）；批量定位与分块 staging；dispute 门控评审后否决 |
+| 2026-07-21 | v18 | 代码改写（v20/v16 六题读数已回：prep 正、verifier 6/6 构建 error） | verifier 零权威：删 Auditor、blocking 恒 false、builder 契约名聚焦、overall 改覆盖描述；六题 smoke 待跑 |
+| 2026-07-21 夜 | v21/v18 与 v22/v19 | 26 题两臂 ×2，串行 | 机制全部达标（冻结 26/26 与 25/26，`verify` 全调用）；verifier `+0.0209`（t 2.57）在第二轮变成 `+0.0005`（t 0.05），未复现；prep `-0.0070` 与 `+0.0163`，方向翻转。见 [results/full26_two_rounds](results/full26_two_rounds/) |
+| 2026-07-22 | v23 | 代码改写（未进实验） | prep 修三处交付故障链；加 self_check 交付开关与无测试对照臂开关；verifier 冻结在 v19 不动 |
 
 机器结果和历史均分见 [results/run_summary.csv](results/run_summary.csv)。原分析和 run 表位于 [archive](archive/README.md)。
 
@@ -298,16 +301,89 @@ ambiguous 145 条）。task-prep-v20 把合同自检升为一等输出字段 `se
 （builder 回复带前导散文不再整包失败）；agent loop 的工具分派移出事件循环线程（`verify`
 一次最坏几十分钟，此前会冻结增量日志拉取和 MCP 心跳）。
 
+## 2026-07-21：v18 —— 零权威 verifier
+
+v20/v16 六题读数当日回来：prep 臂 6/6 报告、self_check 调用 5/5、配对为正；verifier 臂
+6/6 构建 error，4/6 因单个 locator 格式错误整包 lint 失败，12 个冻结测试只执行 2 个，
+dispute / repair / 复核轮全部为 0。诊断是结构性的：硬权威要求来源蕴含、checker 对齐、
+来源无冲突三项语义证明，为此设 Auditor 和五项 gate，链条十步、每环都在断；而零权威的
+prep self_check 被 writer 5/5 调用。结论是放弃硬权威这个目标本身。
+
+v18 的变化：删除 Auditor（三项判定只为硬权威发许可，零权威无许可可发，构建省一个 LLM
+agent）；`blocking` 冻结时恒为 false，builder 主张留档为 `requested_blocking`；
+`overall` 从 pass/fail 聚合改为覆盖描述（measured / error / unverifiable），不留全绿
+目标；反馈与 `verify` 工具描述全部改为参考测量措辞；builder prompt 增加契约锚定——题面
+点名的文件、字段、标识符逐字进 checker，check id 以契约义务命名
+（`contract.<file>.<obligation>`），宁可广覆盖不深钻单条。保留的每一环都有独立于权威的
+理由：lint 逐条（结构安全）、定位与修复轮（引用真实性）、fixture 预检（坏 checker 高频
+误导 writer）、冻结 hash（测量可信）、隔离双跑（不污染产物、结果确定）。
+
+六题 smoke 的读数：冻结成功率（对照 v16 的 0/6）、每题实际执行检查数（对照 12/2）、
+`verify` 调用率与调用后 output 变化、review_items 采纳率、删减读数（零权威是否仍诱发
+delete-to-pass）。
+
+## 2026-07-21 夜：两轮 26 题 —— verifier 的单轮显著结果没有复现
+
+两组实验串行跑完，都是同样 26 题、同样两个 treatment 臂、同一套历史 base，完整数据在
+[results/full26_two_rounds](results/full26_two_rounds/)。
+
+| 臂 | 实验1（v21/v18） | 实验2（v22/v19） |
+|---|---|---|
+| prep | `-0.0070`（t `-0.77`，n 24） | `+0.0163`（t `+1.26`，n 23） |
+| verifier | `+0.0209`（t `+2.57`，n 26） | `+0.0005`（t `+0.05`，n 25） |
+
+机制读数全部达标，而且是历史最好：冻结成功率 26/26 与 25/26（对照 v16 六题的 0/6），
+所有冻结成功的题都调用了 `verify`，零权威没有诱发 delete-to-pass。
+
+分数上，实验1 的 verifier `+0.0209`、t `+2.57` 没有在实验2 复现。v18 到 v19 只加了信封
+字段兜底和构建失败时的响应记录，两处都是 fail-open 方向，解释不了 `+0.0209` 到 `+0.0005`
+的落差，所以更合理的解释是运行方差而不是协议变化。单题层面同样不稳：digital_audience 在
+verifier 臂从 `+0.0925` 翻到 `-0.1247`，Variant 在 prep 臂从 `-0.1374` 翻到 `+0.0686`，
+跨轮方差比配对均差大一个量级。
+
+功效不足的直接原因是零效应题占了一半：两轮都算分的题里，delta 在两轮都恰好为 0 的
+verifier 有 14/25、prep 有 11/21。这些题要么两轮满分（没有改进空间），要么两轮零分
+（失败原因在 prep 和 verifier 的作用范围之外）。继续在全 26 题上重复，每轮买到的信息很少。
+下一轮改用预先剔除零效应题的子集，剔除清单在看结果之前定好。
+
+跨两轮稳定的单题效应只有两个：agora 在 verifier 臂 `+0.1597` 和 `+0.1550`，Variant 三次
+出现同一个 0.9304 到 0.9990 的跳变。
+
+## 2026-07-22：v23 —— prep 交付故障链，协议其余部分冻结
+
+26 题的 `dropped` 字段暴露三条独立的 prep 交付故障，都不在产出设计里，而在最后一步：
+
+- **artifact 收集把"文件不存在"记成"读不出来"。** `wc -c` 的 stdout 解析放在返回码检查
+  之前，文件不存在时 stdout 为空，`int("")` 先抛异常，于是所有缺失都归进 `unreadable`，
+  `artifact:missing` 分支实际是死码。审计记录因此指向了错误方向。v23 先看返回码再解析，
+  并在出现任一种失败时把 scratch 里实际存在的文件列进 `dropped`。
+- **scratch 初始化超时吃掉整个 prep 机会。** 它在 LLM 会话开始前跑，撞上 60 s 上限就是
+  `llm_turns=0` 的失败。v23 给它单独的 180 s 并重试一次，命令是幂等的 `rm -rf && mkdir`。
+- **self-check 脚本在空草稿上静默退出。** 预检要求脚本打印点什么，而脚本作者不知道有这道
+  门。v23 在提示词里写明空草稿和缺文件时也必须向 stdout 报告，缺文件是要打印的发现。
+  没有改成两段式预检：那需要新增 schema 字段声明合成小样的位置，而根因是契约没说清楚。
+
+同时加两个实验开关，都不改默认行为。`task_specific_prep_self_check` 关掉时 prep 的提示词、
+预算和产出都不变，只撤下 self_check 节、digest 命令和脚本 artifact，用来单独测 self_check
+通道的净效应。`writer_self_review_hint` 是 verifier 的无测试对照臂：只给一句提交前对照
+题面契约自查 output 的提示，用来区分"测量内容有价值"和"知道会被测量"。
+
+verifier 冻结在 v19 不动。曾经改过三处又撤回：builder token 与冻结测试数的比值告警、
+`ready_but_unexecutable` 状态、meta 里的 `frozen_tests` / `executable_checks` 字段，
+理由是原始量已经落盘，这些读数属于分析脚本，不该固化进 agent 代码；`unverifiable` 上限
+从 8 收到 3 方向正确但会改 builder 行为，与同轮的 self_check A/B 撞在一起会引入第二个
+归因变量。归因实验出结果之前，协议不再加变量。
+
 ## 当前状态
 
-- Prep 当前为 v21，默认开启。v18 六题配对已跑：生成率修复但净配对为负、artifact 零调用、
-  清单定向优化实证（[results/prep_v18_six](results/prep_v18_six/)）；v20 六题复测正在 pgl
-  运行（读数见 PREP.md）；v21 的文件式消费与 self_check 分工在 v20 读数回来后另测。
-- Verifier 当前为 v17，默认关闭；启用时 writer 有预提交 `verify` 工具（默认 2 次），DONE 后
-  至少一轮复核。v14 起历轮改动（反馈通道、时机、信号率、时序与 lint 隔离）的得分收益都
-  未测量。v16 六题正在 pgl 运行。
+- Prep 当前为 v23，默认开启。两轮 26 题实测见上；v23 的三处修复未进实验。
+- Verifier 当前为 v19（零权威），默认关闭；启用时 writer 有预提交 `verify` 工具（默认
+  2 次），DONE 后至少一轮 advisory 复核。机制达标，分数收益未证明。
+- 实验臂：`harness/run/launch.py` 的 `ARMS` 有 base、prep、verifier、prep_verifier 四个
+  常规臂，加 prep_nosc（prep 但撤下 self_check）和 self_review_hint（无测试的自查提示）
+  两个备用臂。备用臂只在显式指定时才跑，默认不进实验。
 - `deliverable-contract` 不进入默认 skill 集；prep 的 self_check 机制已经覆盖其目标场景。
 - `evidence-audit` 默认隐藏，只在多源 verdict matrix 任务复验条件效应。
 - 当前 v10 结果冻结在 [results/latest](results/latest/)，旧实验不再散列于 harness 顶层。
-- 本仓库（batchcom ALE-chuyang）是 v21/v17 的唯一权威副本；pgl 主仓库在 v20/v16 并正在
-  跑六题两臂实验，实验结束前不向 pgl 同步 v21/v17。
+- 本仓库（batchcom ALE-chuyang）是 v23/v19 的唯一权威副本。pgl 上另有他人的实验在跑，
+  同步到 pgl 主仓库前先确认没有正在运行的 run。

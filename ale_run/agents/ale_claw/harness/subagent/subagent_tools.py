@@ -17,12 +17,14 @@ Reference:
   ``openclaw/src/agents/tools/subagents-tool.ts`` (list/kill actions).
 
 Design notes:
-  * ``BaseTool.call()`` is synchronous. ``DelegateGeneralTool`` runs inside an
-    active asyncio event loop (the CUA agent awaits tool calls), so it
-    schedules a task with ``asyncio.get_running_loop().create_task`` and
-    returns immediately. ``DelegateGUITool`` needs to block until the relay
-    loop finishes, so it adopts the ``ThreadPoolExecutor + asyncio.run``
-    pattern from ``AnalyzeImageTool.call`` (``analyze_image.py:144-168``).
+  * ``BaseTool.call()`` is synchronous and is dispatched on a worker thread
+    (the agent loop uses ``asyncio.to_thread``), so there is normally no
+    running loop in the calling thread. Spawn-style tools capture the harness
+    loop at construction (``_capture_host_loop``) and schedule their subagent
+    coroutine onto it with ``_schedule_subagent`` - the registry, inbox, and
+    session objects live on that loop. ``DelegateGUITool`` needs to block
+    until the relay loop finishes, so it adopts the ``ThreadPoolExecutor +
+    asyncio.run`` pattern from ``AnalyzeImageTool.call``.
   * All three tools degrade gracefully: ``DelegateGeneralTool`` returns a
     ``rejected`` payload when the registry refuses a spawn (concurrency cap);
     ``DelegateGUITool`` returns ``{"status": "error", ...}`` when the relay
@@ -55,6 +57,58 @@ from .subagent_registry import (
 from .subagent_session import _encode_image_url_from_path
 
 DELEGATE_GENERAL_DEFAULT_MAX_STEPS = GENERAL_DEFAULT_MAX_STEPS
+
+
+def _capture_host_loop() -> "asyncio.AbstractEventLoop | None":
+    """Remember the harness event loop at tool-construction time.
+
+    ``BaseTool.call`` executes on a worker thread (the agent loop dispatches
+    tools via ``asyncio.to_thread``), where ``asyncio.get_running_loop``
+    raises. The subagent coroutine must still run on the harness loop - the
+    registry, inbox, and session objects live there - so the loop is captured
+    here, while ``build_tools`` runs inside it.
+    """
+    try:
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        return None
+
+
+SCHEDULE_TIMEOUT_S = 300
+"""How long to wait for the harness loop to accept the subagent task.
+
+Creating a task is instant work, but the loop only reaches it between other
+callbacks, and under a busy run (many units, heavy VM RPC) that wait was
+observed to exceed a 30s bound. A schedule timeout is not a solver error, so
+it must never be the reason an episode ends - the callers turn any failure
+here into a rejected tool result.
+"""
+
+
+def _schedule_subagent(
+    coro: Any, host_loop: "asyncio.AbstractEventLoop | None"
+) -> asyncio.Task:
+    """Create the subagent task on the harness loop from any thread."""
+    try:
+        running = asyncio.get_running_loop()
+    except RuntimeError:
+        running = None
+    if running is not None:
+        return running.create_task(coro)
+    if host_loop is None or host_loop.is_closed():
+        coro.close()
+        raise RuntimeError("no event loop is available to run the subagent")
+
+    async def _create() -> asyncio.Task:
+        return asyncio.get_running_loop().create_task(coro)
+
+    future = asyncio.run_coroutine_threadsafe(_create(), host_loop)
+    try:
+        return future.result(timeout=SCHEDULE_TIMEOUT_S)
+    except Exception:
+        future.cancel()
+        coro.close()
+        raise
 
 _POST_DELEGATION_TEXT = "[VM state after GUI delegation]"
 _logger = logging.getLogger(__name__)
@@ -172,6 +226,7 @@ class DelegateGeneralTool(BaseTool):
         self._auxiliary_model = auxiliary_model
         self._api_key = api_key
         self._api_base = api_base
+        self._host_loop = _capture_host_loop()
         super().__init__(cfg)
 
     @property
@@ -280,8 +335,15 @@ class DelegateGeneralTool(BaseTool):
             api_base=self._api_base,
         )
 
-        loop = asyncio.get_running_loop()
-        task_handle = loop.create_task(coro)
+        try:
+            task_handle = _schedule_subagent(coro, self._host_loop)
+        except Exception as exc:  # noqa: BLE001 - report, never end the episode
+            _logger.warning("could not schedule subagent %s: %s", run.run_id, exc)
+            self._registry.fail(run.run_id, f"scheduling failed: {exc}")
+            return {
+                "status": "rejected",
+                "reason": f"the harness could not start a subagent: {exc}",
+            }
         self._registry.attach_task(run.run_id, task_handle)
 
         response = {
@@ -321,6 +383,7 @@ class DelegateGUITool(BaseTool):
         self._thinking_params = thinking_params
         self._memory_store = memory_store
         self._auxiliary_model = auxiliary_model
+        self._host_loop = _capture_host_loop()
         super().__init__(cfg)
 
     @property
@@ -422,8 +485,15 @@ class DelegateGUITool(BaseTool):
             if isinstance(post_shot, (bytes, bytearray)) and post_shot:
                 self._enqueue_post_delegation(run.run_id, bytes(post_shot))
 
-        loop = asyncio.get_running_loop()
-        task_handle = loop.create_task(_drive())
+        try:
+            task_handle = _schedule_subagent(_drive(), self._host_loop)
+        except Exception as exc:  # noqa: BLE001 - report, never end the episode
+            _logger.warning("could not schedule GUI subagent %s: %s", run.run_id, exc)
+            self._registry.fail(run.run_id, f"scheduling failed: {exc}")
+            return {
+                "status": "error",
+                "reason": f"the harness could not start a GUI subagent: {exc}",
+            }
         self._registry.attach_task(run.run_id, task_handle)
 
         response = {

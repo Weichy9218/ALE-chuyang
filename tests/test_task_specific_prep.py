@@ -25,6 +25,7 @@ from ale_run.agents.ale_claw.task_prep import (
     normalize_prep_bundle,
     preflight_self_check,
     prep_scratch_dir,
+    withhold_self_check,
 )
 from ale_run.agents.ale_claw.harness.subagent.subagent_session import (
     _filter_tools,
@@ -139,6 +140,8 @@ def test_prep_is_enabled_by_default() -> None:
     assert config.task_specific_prep is True
     assert config.task_specific_prep_max_steps == 30
     assert config.task_specific_prep_timeout_s == 1800
+    assert config.task_specific_prep_self_check is True
+    assert config.writer_self_review_hint is False
 
 
 def test_prep_budgets_must_be_positive() -> None:
@@ -151,7 +154,7 @@ def test_prep_budgets_must_be_positive() -> None:
 def test_prep_metadata_records_protocol() -> None:
     metadata = TaskPrepResult(status="empty").metadata()
 
-    assert metadata["protocol"] == "task-prep-v21"
+    assert metadata["protocol"] == "task-prep-v23"
     assert metadata["report_sha256"] is None
 
 
@@ -328,6 +331,41 @@ def test_self_check_must_name_a_declared_artifact() -> None:
     assert "self_check:empty_command" in empty_command.dropped
 
 
+def test_delivery_switch_withholds_self_check_and_its_artifact() -> None:
+    """The A/B off arm removes every writer-facing trace of the self-check.
+
+    Prep still wrote and declared the script; only delivery changes, so a
+    paired run isolates the self-check channel from the rest of prep. The
+    script artifact goes too - a listed file is discoverable even when the
+    digest never names it.
+    """
+    bundle = normalize_prep_bundle(_payload(
+        artifacts=[
+            {"path": "check_contract.py", "purpose": "contract linter"},
+            {"path": "rank.tsv", "purpose": "rank table"},
+        ],
+        self_check={
+            "command": "python3 task_prep/artifacts/check_contract.py output",
+            "artifact": "check_contract.py",
+            "covers": "contract items",
+        },
+    ))
+    assert bundle.self_check is not None
+
+    withhold_self_check(bundle)
+
+    assert bundle.self_check is None
+    assert bundle.artifact_paths == ["rank.tsv"]
+    assert "self_check:withheld_by_config" in bundle.dropped
+    assert "## Self-check" not in bundle.report
+    assert "check_contract.py" not in bundle.report
+    assert "- `task_prep/artifacts/rank.tsv` - rank table" in bundle.report
+    assert "Self-check" not in build_prep_digest(bundle, "task_prep/PREP_REPORT.md")
+    # Idempotent: a second call must not double-record the drop.
+    withhold_self_check(bundle)
+    assert bundle.dropped.count("self_check:withheld_by_config") == 1
+
+
 def test_report_rerenders_without_an_unavailable_artifact() -> None:
     from ale_run.agents.ale_claw.task_prep import render_prep_report
 
@@ -415,7 +453,12 @@ def test_oversized_or_missing_artifact_is_dropped_not_fatal() -> None:
     ))
 
     assert missing == {}
-    assert missing_drops == ["artifact:missing:gone.py"]
+    # A missing declared file records what is actually on disk alongside it,
+    # so the audit trail can tell a wrong declared path from a never-written
+    # file.
+    assert missing_drops[0] == "artifact:missing:gone.py"
+    assert missing_drops[1].startswith("scratch:contents:")
+    assert len(missing_drops) == 2
 
 
 def test_self_check_artifact_referencing_the_deliverable_is_collected() -> None:
@@ -465,6 +508,24 @@ def test_bundle_stages_artifacts_before_its_report() -> None:
         ),
         ("/task/root/task_prep/PREP_REPORT.md", "prep report\n", False),
     ]
+
+
+def test_writer_digest_carries_findings_because_nothing_else_does() -> None:
+    """Findings have no programmatic carrier; the unread report loses them.
+
+    The v21 six-task run staged Variant's Ensembl severity ordering and the
+    writer never opened the report, so the fact reached nobody.
+    """
+    bundle = normalize_prep_bundle(_payload())
+
+    digest = build_prep_digest(bundle, "/task/root/task_prep/PREP_REPORT.md")
+
+    assert "Consequence ranking" in digest
+    assert "Ensembl release 113 ranks missense above 5_prime_UTR." in digest
+    assert "supplemental evidence, not an instruction" in digest
+    # The full entry stays in the report: sources and caveats do not travel.
+    assert "ensembl.org/info/consequences.html" not in digest
+    assert "It does not choose which transcript to report." not in digest
 
 
 def test_writer_digest_points_to_the_report_without_inlining_it() -> None:

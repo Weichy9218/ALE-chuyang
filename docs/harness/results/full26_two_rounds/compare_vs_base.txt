@@ -1,0 +1,132 @@
+
+================================================================================================
+.logs/ale/prep_v21_verifier_v18_full26
+================================================================================================
+
+--- ale_claw_prep  (26 units, 24 scored) ---
+task                                                          base     run   delta  notes
+business_finance/american_option_pricing_ls                 1.0000 - -  failed prep=completed self_check=True contract=21 findings=5
+business_finance/bpmn_category_governance_restructuring_l3  0.0000  0.0000 +0.0000  prep=completed self_check=True contract=24 findings=5
+business_finance/bpmn_supply_disruption_l3                  0.8485  0.8295 -0.0190  prep=completed self_check=False contract=24 findings=6
+business_finance/digital_marketing_ab_test_analysis_1       1.0000  1.0000 +0.0000  prep=completed self_check=True contract=20 findings=6
+business_finance/digital_marketing_audience_segmentation_1  0.8117  0.8667 +0.0550  prep=completed self_check=True contract=18 findings=6
+business_finance/financial_stmt_reconstruction_aapl_fy2024  1.0000  1.0000 +0.0000  prep=completed self_check=False contract=23 findings=4
+business_finance/internal_employee_agent_instance_1         1.0000  1.0000 +0.0000  prep=completed self_check=False contract=18 findings=4
+business_finance/legal_ma_consistency_audit_01              0.0000  0.0000 +0.0000  prep=completed self_check=True contract=10 findings=5
+business_finance/llm_ecosystem_privacy_audit_realdata_1     0.5000  0.5000 +0.0000  prep=failed self_check=False contract=0 findings=0
+business_finance/pe_screening_memo_1                        0.9587  0.9563 -0.0024  prep=completed self_check=True contract=15 findings=4
+business_finance/sec_10k_financial_parsing                  0.6859  0.7103 +0.0244  prep=completed self_check=False contract=19 findings=5
+business_finance/sse_northbound_programmatic_trading_01     0.6667  0.6667 -0.0000  prep=completed self_check=True contract=10 findings=4
+education_info/homework_grading_numerical_pdes_instance_02  0.6403  0.5973 -0.0430  prep=completed self_check=True contract=15 findings=4
+education_info/marc_remediation_folio_overlay               0.2000  0.2000 +0.0000  prep=completed self_check=True contract=20 findings=6
+education_info/moodle_gradebook_closeout_reconciliation     0.9337  0.8850 -0.0487  prep=completed self_check=True contract=21 findings=6
+health_medicine/crf_sdtm_mapping_1                          0.0000  0.0000 +0.0000  prep=completed self_check=True contract=14 findings=5
+health_medicine/crf_sdtm_mapping_4                          0.6210  0.6220 +0.0010  prep=completed self_check=False contract=14 findings=5
+health_medicine/ct_geometry_calibration_catphan             0.0000  0.0000 +0.0000  prep=completed self_check=False contract=8 findings=5
+health_medicine/epidemiology_forecast                       1.0000 - -  failed prep=completed self_check=True contract=19 findings=6
+health_medicine/flusight_offline_hosp_forecast_2024_12_14   0.7127  0.7475 +0.0348  prep=completed self_check=False contract=11 findings=4
+health_medicine/healthcare_bias_audit_27a_public_replicati  0.0000  0.0000 +0.0000  prep=completed self_check=True contract=24 findings=5
+health_medicine/healthcare_sap_group_sequential_nsclc       0.2725  0.3500 +0.0775  prep=failed self_check=False contract=0 findings=0
+health_medicine/healthcare_tcga_luad_survival_kras          0.8400  0.8400 +0.0000  prep=failed self_check=False contract=0 findings=0
+health_medicine/healthcare_variant_annotation_pipeline      0.9304  0.7930 -0.1374  prep=completed self_check=True contract=19 findings=6
+legal/agora_governance_classify_instance_1                  0.5250  0.4141 -0.1109  prep=completed self_check=True contract=22 findings=5
+legal/legal_dr_fees_01                                      1.0000  1.0000 +0.0000  prep=completed self_check=True contract=11 findings=5
+
+  paired mean -0.0070  sd 0.0444  t -0.77  n 24  (+5 / =13 / -6)
+
+--- ale_claw_verifier  (26 units, 26 scored) ---
+task                                                          base     run   delta  notes
+business_finance/american_option_pricing_ls                 1.0000  1.0000 +0.0000  build=ready verify_used=2 lint_dropped=0
+business_finance/bpmn_category_governance_restructuring_l3  0.0000  0.0000 +0.0000  build=ready verify_used=2 lint_dropped=0
+business_finance/bpmn_supply_disruption_l3                  0.8485  0.8152 -0.0333  build=ready verify_used=2 lint_dropped=1
+business_finance/digital_marketing_ab_test_analysis_1       1.0000  1.0000 +0.0000  build=ready verify_used=1 lint_dropped=1
+business_finance/digital_marketing_audience_segmentation_1  0.8117  0.9042 +0.0925  build=ready verify_used=2 lint_dropped=0
+business_finance/financial_stmt_reconstruction_aapl_fy2024  1.0000  1.0000 +0.0000  build=ready verify_used=1 lint_dropped=0
+business_finance/internal_employee_agent_instance_1         1.0000  1.0000 +0.0000  build=ready verify_used=1 lint_dropped=2
+business_finance/legal_ma_consistency_audit_01              0.0000  0.0000 +0.0000  build=ready verify_used=1 lint_dropped=0
+business_finance/llm_ecosystem_privacy_audit_realdata_1     0.5000  0.5000 +0.0000  build=ready verify_used=1 lint_dropped=0
+business_finance/pe_screening_memo_1                        0.9587  1.0000 +0.0413  build=ready verify_used=1 lint_dropped=0
+business_finance/sec_10k_financial_parsing                  0.6859  0.6880 +0.0021  build=ready verify_used=1 lint_dropped=3
+business_finance/sse_northbound_programmatic_trading_01     0.6667  0.6667 -0.0000  build=ready verify_used=1 lint_dropped=1
+education_info/homework_grading_numerical_pdes_instance_02  0.6403  0.7132 +0.0729  build=ready verify_used=1 lint_dropped=0
+education_info/marc_remediation_folio_overlay               0.2000  0.2000 +0.0000  build=ready verify_used=1 lint_dropped=0
+education_info/moodle_gradebook_closeout_reconciliation     0.9337  0.9500 +0.0163  build=ready verify_used=1 lint_dropped=0
+health_medicine/crf_sdtm_mapping_1                          0.0000  0.0000 +0.0000  build=ready verify_used=1 lint_dropped=0
+health_medicine/crf_sdtm_mapping_4                          0.6210  0.6579 +0.0369  build=ready verify_used=1 lint_dropped=0
+health_medicine/ct_geometry_calibration_catphan             0.0000  0.0000 +0.0000  build=ready verify_used=1 lint_dropped=0
+health_medicine/epidemiology_forecast                       1.0000  1.0000 +0.0000  build=ready verify_used=1 lint_dropped=1
+health_medicine/flusight_offline_hosp_forecast_2024_12_14   0.7127  0.7226 +0.0099  build=ready verify_used=1 lint_dropped=0
+health_medicine/healthcare_bias_audit_27a_public_replicati  0.0000  0.0000 +0.0000  build=ready verify_used=1 lint_dropped=3
+health_medicine/healthcare_sap_group_sequential_nsclc       0.2725  0.3500 +0.0775  build=ready verify_used=2 lint_dropped=2
+health_medicine/healthcare_tcga_luad_survival_kras          0.8400  0.8400 +0.0000  build=ready verify_used=1 lint_dropped=3
+health_medicine/healthcare_variant_annotation_pipeline      0.9304  0.9990 +0.0686  build=ready verify_used=2 lint_dropped=0
+legal/agora_governance_classify_instance_1                  0.5250  0.6847 +0.1597  build=ready verify_used=2 lint_dropped=0
+legal/legal_dr_fees_01                                      1.0000  1.0000 +0.0000  build=ready verify_used=1 lint_dropped=0
+
+  paired mean +0.0209  sd 0.0416  t +2.57  n 26  (+10 / =15 / -1)
+
+================================================================================================
+.logs/ale/prep_v22_verifier_v19_full26
+================================================================================================
+
+--- ale_claw_prep  (26 units, 23 scored) ---
+task                                                          base     run   delta  notes
+business_finance/american_option_pricing_ls                 1.0000  1.0000 +0.0000  prep=completed self_check=True contract=21 findings=5
+business_finance/bpmn_category_governance_restructuring_l3  0.0000 - -  failed prep=completed self_check=True contract=24 findings=5
+business_finance/bpmn_supply_disruption_l3                  0.8485  0.8638 +0.0153  prep=completed self_check=False contract=24 findings=5
+business_finance/digital_marketing_ab_test_analysis_1       1.0000  1.0000 +0.0000  prep=completed self_check=True contract=18 findings=5
+business_finance/digital_marketing_audience_segmentation_1  0.8117  0.9042 +0.0925  prep=completed self_check=True contract=20 findings=6
+business_finance/financial_stmt_reconstruction_aapl_fy2024  1.0000  1.0000 +0.0000  prep=completed self_check=True contract=19 findings=5
+business_finance/internal_employee_agent_instance_1         1.0000  1.0000 +0.0000  prep=completed self_check=True contract=13 findings=5
+business_finance/legal_ma_consistency_audit_01              0.0000  0.0000 +0.0000  prep=completed self_check=True contract=10 findings=3
+business_finance/llm_ecosystem_privacy_audit_realdata_1     0.5000  0.5000 +0.0000  prep=completed self_check=True contract=20 findings=5
+business_finance/pe_screening_memo_1                        0.9587  0.9563 -0.0024  prep=completed self_check=True contract=18 findings=4
+business_finance/sec_10k_financial_parsing                  0.6859  0.9497 +0.2638  prep=completed self_check=True contract=18 findings=5
+business_finance/sse_northbound_programmatic_trading_01     0.6667  0.6667 -0.0000  prep=completed self_check=True contract=10 findings=4
+education_info/homework_grading_numerical_pdes_instance_02  0.6403  0.5927 -0.0476  prep=completed self_check=True contract=13 findings=5
+education_info/marc_remediation_folio_overlay               0.2000 - -  failed prep=completed self_check=False contract=23 findings=6
+education_info/moodle_gradebook_closeout_reconciliation     0.9337  0.8850 -0.0487  prep=completed self_check=True contract=17 findings=5
+health_medicine/crf_sdtm_mapping_1                          0.0000  0.0000 +0.0000  prep=completed self_check=True contract=19 findings=5
+health_medicine/crf_sdtm_mapping_4                          0.6210  0.6627 +0.0417  prep=completed self_check=False contract=15 findings=5
+health_medicine/ct_geometry_calibration_catphan             0.0000  0.0000 +0.0000  prep=completed self_check=False contract=10 findings=5
+health_medicine/epidemiology_forecast                       1.0000  1.0000 +0.0000  prep=completed self_check=False contract=19 findings=5
+health_medicine/flusight_offline_hosp_forecast_2024_12_14   0.7127  0.7259 +0.0132  prep=completed self_check=True contract=11 findings=4
+health_medicine/healthcare_bias_audit_27a_public_replicati  0.0000  0.0000 +0.0000  prep=completed self_check=True contract=23 findings=6
+health_medicine/healthcare_sap_group_sequential_nsclc       0.2725  0.2500 -0.0225  prep=completed self_check=True contract=18 findings=5
+health_medicine/healthcare_tcga_luad_survival_kras          0.8400  0.8400 +0.0000  prep=failed self_check=False contract=0 findings=0
+health_medicine/healthcare_variant_annotation_pipeline      0.9304  0.9990 +0.0686  prep=completed self_check=False contract=16 findings=4
+legal/agora_governance_classify_instance_1                  0.5250 - -  failed prep=completed self_check=True contract=19 findings=5
+legal/legal_dr_fees_01                                      1.0000  1.0000 +0.0000  prep=completed self_check=True contract=12 findings=6
+
+  paired mean +0.0163  sd 0.0618  t +1.26  n 23  (+6 / =13 / -4)
+
+--- ale_claw_verifier  (26 units, 25 scored) ---
+task                                                          base     run   delta  notes
+business_finance/american_option_pricing_ls                 1.0000  1.0000 +0.0000  build=ready verify_used=1 lint_dropped=0
+business_finance/bpmn_category_governance_restructuring_l3  0.0000 - -  failed
+business_finance/bpmn_supply_disruption_l3                  0.8485  0.8095 -0.0390  build=ready verify_used=1 lint_dropped=2
+business_finance/digital_marketing_ab_test_analysis_1       1.0000  1.0000 +0.0000  build=ready verify_used=2 lint_dropped=1
+business_finance/digital_marketing_audience_segmentation_1  0.8117  0.6870 -0.1247  build=ready verify_used=2 lint_dropped=0
+business_finance/financial_stmt_reconstruction_aapl_fy2024  1.0000  1.0000 +0.0000  build=ready verify_used=1 lint_dropped=1
+business_finance/internal_employee_agent_instance_1         1.0000  1.0000 +0.0000  build=ready verify_used=2 lint_dropped=2
+business_finance/legal_ma_consistency_audit_01              0.0000  0.0000 +0.0000  build=ready verify_used=1 lint_dropped=0
+business_finance/llm_ecosystem_privacy_audit_realdata_1     0.5000  0.5000 +0.0000  build=ready verify_used=1 lint_dropped=2
+business_finance/pe_screening_memo_1                        0.9587  0.9062 -0.0524  build=ready verify_used=2 lint_dropped=0
+business_finance/sec_10k_financial_parsing                  0.6859  0.6386 -0.0473  build=ready verify_used=2 lint_dropped=0
+business_finance/sse_northbound_programmatic_trading_01     0.6667  0.6667 -0.0000  build=ready verify_used=1 lint_dropped=1
+education_info/homework_grading_numerical_pdes_instance_02  0.6403  0.6650 +0.0247  build=ready verify_used=1 lint_dropped=0
+education_info/marc_remediation_folio_overlay               0.2000  0.2000 +0.0000  build=ready verify_used=2 lint_dropped=0
+education_info/moodle_gradebook_closeout_reconciliation     0.9337  0.8850 -0.0487  build=ready verify_used=1 lint_dropped=1
+health_medicine/crf_sdtm_mapping_1                          0.0000  0.0000 +0.0000  build=ready verify_used=1 lint_dropped=0
+health_medicine/crf_sdtm_mapping_4                          0.6210  0.6172 -0.0038  build=ready verify_used=1 lint_dropped=1
+health_medicine/ct_geometry_calibration_catphan             0.0000  0.0000 +0.0000  build=ready verify_used=1 lint_dropped=2
+health_medicine/epidemiology_forecast                       1.0000  1.0000 +0.0000  build=ready verify_used=1 lint_dropped=1
+health_medicine/flusight_offline_hosp_forecast_2024_12_14   0.7127  0.7160 +0.0033  build=ready verify_used=1 lint_dropped=0
+health_medicine/healthcare_bias_audit_27a_public_replicati  0.0000  0.0000 +0.0000  build=ready verify_used=1 lint_dropped=2
+health_medicine/healthcare_sap_group_sequential_nsclc       0.2725  0.3500 +0.0775  build=ready verify_used=2 lint_dropped=2
+health_medicine/healthcare_tcga_luad_survival_kras          0.8400  0.8400 +0.0000  build=error verify_used=0 lint_dropped=0
+health_medicine/healthcare_variant_annotation_pipeline      0.9304  0.9990 +0.0686  build=ready verify_used=2 lint_dropped=0
+legal/agora_governance_classify_instance_1                  0.5250  0.6800 +0.1550  build=ready verify_used=1 lint_dropped=2
+legal/legal_dr_fees_01                                      1.0000  1.0000 +0.0000  build=ready verify_used=1 lint_dropped=0
+
+  paired mean +0.0005  sd 0.0499  t +0.05  n 25  (+5 / =14 / -6)

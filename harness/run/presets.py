@@ -48,6 +48,8 @@ def ale_claw_agent_yaml(
     verifier_max_steps: int = 30,
     verifier_max_review_rounds: int = 1,
     verifier_writer_checks: int = 2,
+    prep_self_check: bool = True,
+    writer_self_review_hint: bool = False,
     model: str = "openai/gpt-5.6-sol",
     max_turns: int = 100000,
     thinking_level: str = "medium",
@@ -75,6 +77,8 @@ def ale_claw_agent_yaml(
         f"  verifier_max_steps: {verifier_max_steps}\n"
         f"  verifier_max_review_rounds: {verifier_max_review_rounds}\n"
         f"  verifier_writer_checks: {verifier_writer_checks}\n"
+        f"  task_specific_prep_self_check: {'true' if prep_self_check else 'false'}\n"
+        f"  writer_self_review_hint: {'true' if writer_self_review_hint else 'false'}\n"
     )
     if with_skills:
         head += "  skill_sources:\n"

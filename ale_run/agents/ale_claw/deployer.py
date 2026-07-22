@@ -604,6 +604,7 @@ class AleClawDeployer(BaseAgentDeployer):
                         summary_runtime=resolved_summary_model,
                         api_key=cfg.api_key,
                         api_base=cfg.api_base,
+                        deliver_self_check=cfg.task_specific_prep_self_check,
                     )
                 except Exception as exc:  # noqa: BLE001 - enrichment is best-effort
                     logger.warning("task-specific prep crashed; solver continues: %s", exc)
@@ -619,28 +620,15 @@ class AleClawDeployer(BaseAgentDeployer):
             )
 
             # Phase B runs now: prep has finished changing the sandbox, so the
-            # environment gates measure what the writer and executor will get,
-            # and the Auditor completes before any prep artifact is staged into
-            # the task root, so it cannot read prep's semantic output.
+            # fixture preflight measures the environment the writer and
+            # executor will actually get. Purely mechanical - no LLM agent.
             if cfg.verifier and verifier_build.candidate is not None:
-                assert verifier_registry is not None
                 try:
                     verifier_build = await finalize_candidate_suite(
                         interface=session.interface,
                         task_root=cfg.task_specific_prep_task_root,
-                        task_prompt=prompt,
                         candidate=verifier_build.candidate,
-                        model=verifier_model,
-                        summary_model=summary_model,
-                        tools=prep_tools,
-                        registry=verifier_registry,
-                        parent_session_dir=session_mgr.task_dir,
-                        max_steps=cfg.verifier_max_steps,
                         usage=verifier_build.usage,
-                        thinking_params=thinking_config.to_api_params(verifier_model),
-                        summary_runtime=resolved_summary_model,
-                        api_key=cfg.api_key,
-                        api_base=cfg.api_base,
                     )
                 except Exception as exc:  # noqa: BLE001 - writer continues
                     logger.warning("verifier freeze crashed; writer continues: %s", exc)
@@ -739,10 +727,26 @@ class AleClawDeployer(BaseAgentDeployer):
                     "A public verifier suite was frozen from the task materials "
                     "before you started. You may run it against your current "
                     f"`output/` up to {verify_tool.max_calls} times with the "
-                    "`verify` tool. Run it once `output/` holds a complete "
-                    "draft, and act on the report while you still have budget. "
-                    "Passing it covers only the publicly testable part of the "
-                    "task; it is not a completion signal."
+                    "`verify` tool. Its results are advisory measurements "
+                    "against the task's stated contract, never verdicts. Run "
+                    "it once `output/` holds a complete draft, and weigh the "
+                    "report while you still have budget. Passing it covers "
+                    "only the publicly testable part of the task; it is not a "
+                    "completion signal."
+                )
+
+            # Control arm for pricing the verifier: the same "recheck before
+            # DONE" impulse with no frozen tests behind it.
+            if cfg.writer_self_review_hint:
+                solver_prompt = (
+                    f"{solver_prompt.rstrip()}\n\n"
+                    "## Pre-submission self-review\n"
+                    "Before you declare DONE, reread the task prompt and "
+                    "`/input`, and check `output/` against every obligation "
+                    "they state - required files at their stated paths, field "
+                    "names as spelled, identifiers preserved, counts, "
+                    "ordering, encoding, and cross-file consistency. Nothing "
+                    "is measured for you; this review is yours."
                 )
 
             run_input = (

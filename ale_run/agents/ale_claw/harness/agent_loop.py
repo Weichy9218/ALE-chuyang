@@ -31,6 +31,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
+import logging
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
 from agent.agent import ComputerAgent, assert_callable_with, get_json, get_output_call_ids
@@ -42,6 +43,8 @@ from agent.tools.base import BaseTool
 from agent.types import ToolError
 from core.telemetry import is_telemetry_enabled, record_event
 from litellm.responses.utils import Usage
+
+_tool_logger = logging.getLogger(__name__)
 
 
 # Map of computer-action name → the param keys the action accepts.
@@ -658,6 +661,24 @@ class OpenClawComputerAgent(ComputerAgent):
                 f"Please retry the call with complete arguments."
             )
             return [make_tool_error_item(error_message, call_id)]
+        except Exception as e:  # noqa: BLE001 - one bad call must not end the run
+            # A tool that raises instead of returning an error dict used to
+            # kill the whole episode: the exception unwound through run() into
+            # the deployer, the unit was marked failed, and an hour of solving
+            # was scored as null. Tools are expected to return errors, but the
+            # loop cannot assume every one of them does - especially for
+            # timeouts raised by the harness's own plumbing. Hand it back as a
+            # tool_error so the agent can adapt on the next turn.
+            tool_name = item.get("name", "<unknown>")
+            _tool_logger.warning(
+                "tool %s raised %s; returning tool_error instead of ending the run",
+                tool_name, repr(e),
+            )
+            return [make_tool_error_item(
+                f"Tool {tool_name!r} failed: {e!r}. The call did not complete; "
+                "retry it, adjust the arguments, or take another route.",
+                call_id,
+            )]
 
     async def _dispatch_function_call(
         self,

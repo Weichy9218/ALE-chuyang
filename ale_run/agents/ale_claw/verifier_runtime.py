@@ -842,10 +842,27 @@ async def execute_test_suite(
     """Run every eligible frozen test twice against one immutable snapshot."""
     started = time.monotonic()
     manifest = suite.manifest
+    # Coverage describes what the frozen suite can measure at all: a check is
+    # covered when it will actually execute against the snapshot, uncovered
+    # when its sources failed to locate, its checker failed preflight, or the
+    # requirement has no public solve-time oracle.
+    def _executable(test: dict[str, Any]) -> bool:
+        validation = test["validation"]
+        return bool(
+            validation["sources_located"]
+            and validation["checker_reproducible"]
+            and validation["environment_healthy"]
+        )
+
     coverage = {
-        "covered": [test["check"] for test in manifest["tests"] if test["blocking"]],
+        "covered": [
+            test["check"] for test in manifest["tests"] if _executable(test)
+        ],
         "uncovered": [
-            *[test["check"] for test in manifest["tests"] if not test["blocking"]],
+            *[
+                test["check"] for test in manifest["tests"]
+                if not _executable(test)
+            ],
             *[item["check"] for item in manifest["unverifiable"]],
         ],
     }
@@ -887,11 +904,10 @@ async def execute_test_suite(
                 raise RuntimeError("staged verifier sandbox changed after staging")
         for test in manifest["tests"]:
             validation = test["validation"]
-            if validation["source_status"] in ("missing", "contradicted"):
-                # No usable public anchor: a source failed to locate, or the
-                # public materials contradict the interpretation. Running would
-                # measure against an expected with no standing, so this stays a
-                # coverage gap.
+            if not validation["sources_located"]:
+                # No usable public anchor: a cited source failed to locate.
+                # Running would measure against an expected with no standing,
+                # so this stays a coverage gap.
                 check = _unverifiable_source_check(test)
             elif not (
                 validation["checker_reproducible"]
@@ -902,16 +918,12 @@ async def execute_test_suite(
                 check = _error_check(
                     test,
                     "checker did not pass its pre-freeze gate",
-                    f"checker audit: {validation['checker_evidence']}; "
                     f"fixture preflight: {validation['fixture_evidence']}",
                 )
             else:
-                # Located and reproducible. Runs even when the Auditor judged
-                # the source ambiguous, the entailment incomplete, or the
-                # checker a partial or proxy metric: `blocking` is already
-                # false for all of those, so a difference surfaces as an
-                # advisory review item (with the audit caveat attached)
-                # instead of being discarded unrun.
+                # Located and reproducible: run it. Every difference surfaces
+                # as an advisory review item - nothing is blocking under the
+                # zero-authority protocol.
                 script = f"{suite.path}/{test['script_path']}"
                 receipt = await interface.run_command(
                     f"sha256sum {shlex.quote(script)} | awk '{{print $1}}'"

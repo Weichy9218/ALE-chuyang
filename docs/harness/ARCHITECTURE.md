@@ -12,9 +12,9 @@ harness/run/settings*.yaml
   -> AleClawDeployer.launch()
        -> optional verifier candidate build (builder + relocation + one mechanical
           locate-repair round) and task-specific prep independently in parallel
-       -> after prep: optional verifier fixture preflight, source/checker audit and
-          suite freeze (environment gates measured in the post-prep sandbox,
-          before any prep artifact is staged)
+       -> after prep: optional verifier fixture preflight and suite freeze
+          (mechanical, no LLM; environment gates measured in the post-prep
+          sandbox, before any prep artifact is staged; all checks advisory)
        -> atomically stage supplemental task_prep/PREP_REPORT.md + optional artifacts/
        -> inject a prep digest (runtime state, self-check command, item counts,
           read-the-report instruction) into the initial writer prompt
@@ -41,7 +41,7 @@ harness/run/settings*.yaml
 | Skills | writer memory 中的可选方法文本或能力 | writer 自行调用的方法 | 独立验证、隐藏评分 |
 | Task-Specific Prep | 公开题面、`input/`、`software/`、runtime、web 来源 | 可用的运行时状态、合同清单、可复查的事实与工具 | 生成最终答案、检查候选 output |
 | Verifier builder | 公开题面和公开文件 | 候选脚本、source set、执行方式和 fixtures | 查看 writer 产物或本轮 Prep 后增加检查 |
-| Verifier auditor | 候选测试、公开材料、fixture 预检 | source entailment、冲突和 Checker 对齐证据 | 查看 Writer output、增加题目条件 |
+| Verifier auditor（v18 已删除） | — | —（三项语义判定只为硬权威服务，零权威下无许可可发） | — |
 | Verifier executor | frozen suite、公开文件、artifact snapshot | 完整执行记录、verdict、可选分析和 coverage | 临时决定检查方法、修改产物、替代原 evaluator |
 | Task evaluator | writer output、solve 后 staging 的 reference | `[0,1]` score 和分项 | 向 writer 提供 solve 时反馈 |
 | Analyzer | 多个 run artifact | 配对分数、成本、adoption 和 verifier audit | 修复运行结果 |
@@ -144,7 +144,7 @@ Prep 状态为 `completed`、`empty` 或 `failed`。后两种都 fail-open，wri
 
 ## Independent Verifier
 
-Verifier 源码为 [`verifier.py`](../../ale_run/agents/ale_claw/verifier.py)，详细说明见 [VERIFIER.md](VERIFIER.md)。构建分两阶段。阶段 A 与 Prep 并发、互不读取输出：Builder 生成测试脚本、结构化 source set 和合法/错误 fixtures；lint 逐条隔离，单条 schema 违规丢该条记 `dropped`，只有顶层结构损坏才整包失败；Harness 机械定位每个 source 并保存 hash（quote 在文件中唯一时，错误的行号坐标被机械修正而不判死），仍定位失败的 source 触发一轮机械修复（新 builder 会话只收到"quote 未找到"类证据，修复产物重新 lint 和定位，定位失败数严格减少且 lint 丢弃不增加才采用）。阶段 B 在 Prep 完成后、Prep 产物 staging 之前执行：Executor 在隔离环境预检 fixtures（环境判定因此发生在 writer 将要接手的同一沙箱里），独立 Auditor 再审查完整来源集的题意蕴含、公开冲突和 Checker 对齐。五项 blocking gate 全部通过后才冻结最终测试包；来源歧义或蕴含不足的测试不获硬权限，但照常以 advisory 身份运行。
+Verifier 源码为 [`verifier.py`](../../ale_run/agents/ale_claw/verifier.py)，详细说明见 [VERIFIER.md](VERIFIER.md)。构建分两阶段。阶段 A 与 Prep 并发、互不读取输出：Builder 生成测试脚本、结构化 source set 和合法/错误 fixtures；lint 逐条隔离，单条 schema 违规丢该条记 `dropped`，只有顶层结构损坏才整包失败；Harness 机械定位每个 source 并保存 hash（quote 在文件中唯一时，错误的行号坐标被机械修正而不判死），仍定位失败的 source 触发一轮机械修复（新 builder 会话只收到"quote 未找到"类证据，修复产物重新 lint 和定位，定位失败数严格减少且 lint 丢弃不增加才采用）。阶段 B 在 Prep 完成后、Prep 产物 staging 之前执行，纯机械零 LLM：Executor 在隔离环境预检 fixtures（环境判定因此发生在 writer 将要接手的同一沙箱里），随后直接冻结。v18 为零权威协议：`blocking` 冻结时恒为 false（builder 的主张留档为 `requested_blocking`），每条结果都是 advisory 测量；Auditor 与硬权限 gate 一并删除。builder 生成检查时锚定任务契约——题面点名的文件、字段、标识符逐字进 checker，check id 以契约义务命名。
 
 Writer 完成后，代码复制只读 artifact snapshot。Executor 不使用 LLM 临时设计检查，只在 Landlock/seccomp 隔离进程中运行冻结命令。每项测试连续运行两次；两次规范化结果不同则返回 `error`。Landlock 只允许读取系统 runtime、公开 input/software、snapshot 和 checks，只允许写独立 scratch；seccomp 禁止网络 syscall。Fixtures、Writer 原 output、Prep、hidden reference 和官方 evaluator 不可访问。
 
@@ -153,18 +153,16 @@ Verifier 的状态流为：
 ```text
 disabled
   or builder error
-  or frozen suite
+  or frozen suite (all advisory)
        (during solve: writer may run it on its own draft via `verify`,
         default 2 runs, same isolation, standard unchanged)
-       -> pass
-       -> unverifiable
-       -> error
-       -> fail -> writer reviews evidence and repairs
+       -> measured / error / unverifiable   (coverage description, no verdict)
+       -> review items -> writer reviews evidence, decides, may repair
                -> new snapshot
                -> rerun the complete frozen suite
 ```
 
-`max_repairs` 默认为 1，允许范围为 1 至 3。hard mismatch 与 advisory review item 会反馈给 Writer。反馈先给 source locator、原文、hash 和解释，再给命令、observed、expected、evidence 和第一处分歧假设，不包含 `repair_hint`。Writer 先复核 source 并复现测试，再自行修改或用公开反证提出 dispute；每轮都重跑完整冻结测试包。主运行文本与复核轮的 dispute 同协议解析（dispute 门控方案因实测零 dispute 被否决，见 VERIFIER.md）。
+`max_repairs` 默认为 1，允许范围为 1 至 3。advisory review item 会反馈给 Writer。反馈先给 source locator、原文、hash 和解释，再给命令、observed、expected、evidence，不包含 `repair_hint`。Writer 先复核 source 并复现测试，再自行决定改不改；用公开反证 `VERIFIER_DISPUTE` 可静音单条；每轮都重跑完整冻结测试包。主运行文本与复核轮的 dispute 同协议解析（dispute 门控方案因实测零 dispute 被否决，见 VERIFIER.md）。
 
 writer 预提交自检：`verifier_writer_checks`（默认 2，0 关闭）为 Writer 提供 `verify`
 工具，对当前 `output/` 快照运行同一冻结测试包并返回同一份四类报告，措辞为 pre-submission。
@@ -197,8 +195,8 @@ ALE-Claw 的 origin log 还包括：
 | Hidden reference | solve 和 verifier 完成后才 staging | 依赖 lifecycle 顺序，需持续回归测试 |
 | Prep context | fresh session、无 skills、无 writer history；报告不在 input/ | 与 writer 共享 VM，prompt 只读要求没有独立挂载 |
 | Verifier builder | solve 前生成脚本、结构化 source 和 fixtures | 候选质量依赖模型，不能直接获得 blocking 权限 |
-| Verifier source gate | quote 机械定位、source hash、独立 entailment/conflict audit | 语义蕴含仍包含模型判断，需要用 false-blocking 样本持续测量 |
-| Verifier checker gate | 合法/错误 fixture、双次运行、静态 Checker audit | 自动 fixtures 不能穷举 Checker 控制流 |
+| Verifier source gate | quote 机械定位、source hash（零权威后无语义审查） | 定位失败的检查沉默为 coverage gap，覆盖率依赖 builder 质量 |
+| Verifier checker gate | 合法/错误 fixture、双次运行 | 自动 fixtures 不能穷举 Checker 控制流；无审计后 checker-要求错位只能靠 writer 复核 |
 | Verifier executor | Landlock 文件 allowlist、seccomp 无网络、独立 scratch、双次确定性运行 | 依赖 Linux Landlock ABI 和 libseccomp |
 | Verifier snapshot | symlink 拒绝、去写权限、tree hash | 快照复制和 mount 启动失败时只能返回 error |
 | Writer 预提交自检 | 同一冻结包，suite/script/source hash 每次运行复验，快照只读，次数上限 | 冻结测试内容在提交前对 writer 可见（有意变化），需监控对未覆盖要求的挤出效应 |
@@ -230,7 +228,7 @@ Builder 的 fresh context 和并发顺序防止读取 Writer 历史或本轮 Pre
 | ALE-Claw writer | on | 基线系统 |
 | writer skills | off | skills v2 相对 base `-0.0161` |
 | task-specific Prep v21 | on | v20 把 self-check 升为一等字段；v21 改文件式消费 + digest 交接、self-check 限定结构覆盖；v20 六题配对正在 pgl 运行 |
-| public Verifier v17 | off | v15 加预提交自检、v16 修信号率；v17 lint 逐条隔离（v16 六题 4/6 整包 lint 失败的直接修复）、预检后移到 prep 之后（仅合并臂）；v16 六题正在 pgl 运行；得分收益均未测量 |
+| public Verifier v18 | off | v16 六题 6/6 构建 error（4/6 单 locator 整包 lint 死）；v17 lint 逐条隔离、预检后移；v18 零权威——删 Auditor、blocking 恒 false、契约名聚焦、overall 改覆盖描述；六题 smoke 待跑 |
 | contract cross-check | prep_verifier 臂自动 | 纯机械文件覆盖对账，零 LLM 成本；分歧率待六题 canary 读数 |
 | writer repair | Verifier 开启时 1 轮 | Writer 先判断反馈；预提交自检不消耗复核轮数；仍需复验收益和误修率 |
 

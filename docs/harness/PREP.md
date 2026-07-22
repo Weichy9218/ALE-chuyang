@@ -1,11 +1,13 @@
 # Task-Specific Prep
 
-协议 `task-prep-v21`，默认开启。实现在
+协议 `task-prep-v23`，默认开启。实现在
 [`task_prep.py`](../../ale_run/agents/ale_claw/task_prep.py)，交接在
 [`deployer.py`](../../ale_run/agents/ale_claw/deployer.py)。本文只描述当前设计；版本演化在
-[EVOLUTION.md](EVOLUTION.md)，跨版本 insight 在 [FABLE.md](FABLE.md)，最近一轮实测证据在
-[results/prep_v18_six](results/prep_v18_six/)。pgl 上正在运行的六题两臂实验用的是上一版
-`task-prep-v20`；v21 未进实验。
+[EVOLUTION.md](EVOLUTION.md)，跨版本 insight 在 [FABLE.md](FABLE.md)。
+
+最近实测是 2026-07-21 夜的两轮 26 题实验（[results/full26_two_rounds](results/full26_two_rounds/)）：
+v21 配对均差 `-0.0070`（t `-0.77`，n 24），v22 `+0.0163`（t `+1.26`，n 23）。方向在两轮之间
+翻转，两轮都不显著。v23 未进实验。
 
 ## 任务需求分析
 
@@ -82,23 +84,34 @@ Prep 返回一个 JSON 对象，每个部分都可以为空：
 
 机械校验：类型、长度、条数、artifact 路径安全性与后缀、大小、`self_check.artifact` 必须在
 已声明 artifacts 中、artifact 内容拒收 NUL。上限：清单 24 条、findings 6 条、artifact 4 个
-各 64 KB。报告只作为文件交付，上限 48,000 字符是防爆炸的安全上限而非注意力预算；超限时
+各 64 KB。声明的 artifact 读不到时，先看命令返回码再解析字节数，两种失败分别记
+`artifact:missing` 和 `artifact:unreadable`；出现任一种就把 scratch 目录里实际存在的文件
+列进 `dropped`，用来区分"prep 写错了路径"和"prep 根本没写"。报告只作为文件交付，上限 48,000 字符是防爆炸的安全上限而非注意力预算；超限时
 截断发生在文件尾部，且文件头部写明"本报告被截断、清单不完整"，读者不会把残缺清单当完整
 清单。`environment.status`、清单条数、结构化 contract、self_check 和 dropped 全部进入
 `task_prep_meta.json` 供审计。
 
 预算与工具：30 LLM step、1800 s、每轮 tool result 60 KB；工具为 `read`、`exec`、
 `web_search`（Exa 主、Firecrawl 备）、`web_fetch`，不受 writer 臂 `disabled_tools` 影响。
+scratch 目录初始化单独给 180 s 并重试一次：它在 LLM 会话开始之前跑，失败会让整个 prep
+机会作废（观察到的失败形态是 `llm_turns=0` 的 TimeoutError），而命令是幂等的
+`rm -rf && mkdir`，重试没有副作用。
 
 交接与消费，按保真度排序：
 
 1. **沙箱状态**：直接生效，零损耗。
 2. **self_check**：writer 拉取式消费，随时可跑、不限次数、零权威。机械条目多的清单必须
    实现成脚本并注册到 `self_check`；脚本只查结构覆盖（见实现原则），不硬编码期望取值；
-   在 scratch 的合成小样上测试，打印通过/失败/不可判定三类。两道机械关卡：artifact staging 失败时整节撤下（报告重新渲染），不宣传打不开
-   的文件；staging 后 harness 用空草稿跑一次预检，崩溃、超时或无输出就降级进 `dropped`
-   并保留文字清单（空草稿下报告"缺文件"是正确行为，算通过）。这只保证脚本不是坏的，不
-   保证它判得对。
+   在 scratch 的合成小样上测试，打印通过/失败/不可判定三类。提示词写明脚本在空草稿或
+   缺文件时也必须向 stdout 报告，缺文件是要打印的发现，不是静默退出的理由。两道机械
+   关卡：artifact staging 失败时整节撤下（报告重新渲染），不宣传打不开的文件；staging 后
+   harness 用空草稿跑一次预检，崩溃、超时或无输出就降级进 `dropped` 并保留文字清单
+   （空草稿下报告"缺文件"是正确行为，算通过）。这只保证脚本不是坏的，不保证它判得对。
+
+   交付本身受 `task_specific_prep_self_check` 控制，默认开。关掉时 prep 的提示词、预算和
+   产出都不变，脚本照写照声明，只是 self_check 节、digest 里的命令和脚本 artifact 一起
+   撤下（报告列出的文件仍可被 writer 发现，所以 artifact 必须一并撤）。这个开关的用途是
+   把 self_check 通道的净效应从 prep 的整体效应里分离出来，配对跑一轮就能定论。
 3. **报告文件 + digest 交接**：staging 完成后完整报告只存在于 `task_prep/PREP_REPORT.md`，
    不再内联 writer 首轮 prompt。首轮 prompt 注入一段 digest：运行时状态与已验证命令
    （这部分是真实状态的描述，必须 t=0 到达）、self_check 的**确切命令**（staged 却没被
@@ -129,31 +142,31 @@ writer 不回写采纳状态；采用链事后从 transcript 判断。
   -> writer：状态直接用；读报告文件；self_check 随时跑；依赖哪条清单就复查哪条
 ```
 
-## 下一步待验证
+## 实测结果与下一步
 
-v20 六题配对（清单同 [results/prep_v18_six/tasks.txt](results/prep_v18_six/tasks.txt)）正在
-pgl 运行，只跑 prep 臂，base 用 2026-07-21 同轮历史值。三个读数：
+两轮 26 题实测（[results/full26_two_rounds](results/full26_two_rounds/)）：v21 配对均差
+`-0.0070`（t `-0.77`，n 24），v22 `+0.0163`（t `+1.26`，n 23）。方向在两轮之间翻转，
+幅度都在噪声内。同一道题跨轮的 delta 可以差 0.2（Variant 从 `-0.1374` 到 `+0.0686`，
+SEC 从 `+0.0244` 到 `+0.2638`），而配对均差只有 ±0.02，26 题测这个量级的效应功效不足。
 
-1. **self_check 调用率**（核心假设）：v18 六题的零调用有两个根因——Variant/BPMN/Digital
-   的 artifact 引用被 12,000 字符截断从尾部切掉（报告都顶到 ~11,900 字符），SEC 的引用
-   活着但交接语没点名。v20 分别用"Self-check 节前置"和"handoff 点名命令"各治一半，所以
-   要看：报告里 self_check 节是否活过截断、writer 是否运行、运行后 output 是否变化。
-2. **定向优化是否复现**：Agora 分项维度对比（引文长度、关键词、pass_rate），加上机械的
-   `output_shrank` / `output_dropped_files` 读数，检验"最低义务"措辞是否抑制了删减到通过。
-3. **配对分数与成本**：相对 base 的配对差不低于噪声下界；prep input token 和 wall time
-   （v18 区间 35k-359k，成本方差本身是问题）。
+机制侧的读数是正面的：报告生成率、self_check 交付率、findings 到达率在 v22 都比 v21 高，
+v22 把 findings 放进 digest 之后，只存在于报告文件里的 findings 不再零到达。交付率不是
+目标，交付之后是否转化为分数才是，这一点两轮都没有正面证据。
 
-v21（本仓库，未进实验）在 v20 之上改三处：报告改为纯文件消费加 digest 交接（截断类失败
-整体消失，代价是引入"writer 不读文件"这一新失败面，读数是 transcript 里对
-`task_prep/PREP_REPORT.md` 的 read 调用率）；self_check 限定结构覆盖（见实现原则，为合并
-臂消除与 `verify` 的功能重复）；报告上限从注意力预算改为安全上限。三处都要在 v20 读数
-回来后另跑六题验证，不与 v20 的结论混读。
+v23 修三处机制故障，不改产出设计：artifact 收集先看返回码再解析（此前文件不存在会被
+误记成 `unreadable`，`artifact:missing` 分支实为死码），失败时列出 scratch 实际内容；
+scratch 初始化 180 s 加一次重试；提示词写明 self-check 脚本在空草稿下必须打印。同时加
+`task_specific_prep_self_check` 交付开关，用来单独测 self_check 通道。
 
-已知风险（不阻塞实验，按危害排序）：清单/脚本编码的是部分阅读，writer 会照着优化，脚本比
-文字约束力更强、可能放大该效应；文件式交接后 writer 可能不读报告（v8 证据是点名后 1-4 步
-内会读，但那是内联时代的旁证）；清单 24 条上限在 v18 有四题打满，未调整；prep 无法知道
+下一轮的两个读数：`task_specific_prep_self_check=False` 与开启臂的配对差，以及 v23 的三处
+修复是否把交付失败清零。实验设计上先剔除多轮 delta 恒为 0 的题（26 题里约一半），剔除
+清单在看结果之前定好。
+
+已知风险（按危害排序）：清单和脚本编码的是对题面的部分阅读，writer 会照着优化，脚本比
+文字约束力更强、可能放大该效应；文件式交接后 writer 可能不读报告（v22 的实测是确实不读，
+所以 findings 才要进 digest）；清单 24 条上限在 v18 有四题打满，未调整；prep 无法知道
 writer 本来是否会自己发现同一事实，边际价值只能配对估计；沙箱修改无回滚。
 
-验证状态：2026-07-21 在 pgl 测试副本（`~/ale/v21-test`，独立目录，主仓库与实验不受影响）
-三套件 69 passed 1 skipped，六个改动文件 ruff clean，harness 侧回归与主仓库基线一致
-（同一组既有 WIP 失败，零新增）。
+验证状态：2026-07-22 在 pgl 测试副本（`~/ale/v21-test`，独立目录，主仓库与远端实验不受
+影响）三套件 71 passed 1 skipped，改动文件 ruff clean，相邻套件的失败与主仓库基线是同一组
+既有 WIP 失败，零新增。

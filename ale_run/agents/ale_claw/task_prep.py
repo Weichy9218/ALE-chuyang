@@ -32,7 +32,7 @@ from .harness.subagent.subagent_session import GeneralSubagentSession
 
 logger = logging.getLogger(__name__)
 
-PREP_PROTOCOL_VERSION = "task-prep-v21"
+PREP_PROTOCOL_VERSION = "task-prep-v23"
 NO_PREP_SENTINEL = "NO_TASK_SPECIFIC_PREP"
 
 MAX_PREP_CONTRACT_ITEMS = 24
@@ -48,8 +48,24 @@ longer competes with the writer's first-turn context. This bound only stops a
 runaway response from filling the sandbox; a truncated report announces itself
 in its own header so a partial checklist is never read as a complete one.
 """
+DIGEST_FINDING_CHARS = 600
+"""Per-finding budget in the first-turn digest.
+
+Six findings at this size is a few thousand characters - the cost of the one
+prep output class that has no programmatic carrier. The full entry, with its
+sources and caveats, stays in the report file.
+"""
 MAX_PREP_TOOL_RESULT_CHARS_PER_TURN = 60_000
 PREP_IO_TIMEOUT_S = 60
+PREP_SETUP_TIMEOUT_S = 180
+"""Scratch initialization gets more room than ordinary artifact I/O.
+
+It is one idempotent ``rm -rf && mkdir``, but it runs before the LLM session
+starts, so losing it forfeits the entire prep opportunity - the observed
+failure shape is a run with zero LLM turns. Under parallel episodes sharing
+one disk, 60 s proved too tight; the command is also retried once because a
+retry has no side effects.
+"""
 PREP_AGENT_TIMEOUT_S = 1_800
 PREP_SELF_CHECK_TIMEOUT_S = 120
 
@@ -76,6 +92,7 @@ class TaskPrepResult:
     contract: list[dict[str, str]] = field(default_factory=list)
     self_check: dict[str, str] | None = None
     environment: dict[str, Any] = field(default_factory=dict)
+    findings: list[dict[str, Any]] = field(default_factory=list)
     dropped: list[str] = field(default_factory=list)
     input_tokens: int = 0
     output_tokens: int = 0
@@ -169,9 +186,12 @@ fields, cross-file consistency rules, exhaustive ID preservation - do not leave
 the checklist manual: implement it as one runnable self-check script, attach it
 as an artifact, and register it in the `self_check` output field so the writer
 gets a single exact command. The script takes the draft directory as an
-argument and prints what passed, what failed, and what it cannot check. Test it
-on a tiny synthetic draft you create under the scratch directory, never on the
-real task root.
+argument and prints what passed, what failed, and what it cannot check. It must
+report to stdout even when the draft directory is empty or files are missing -
+a missing file is a finding to print, not a reason to exit silently. The
+harness probes the script once on an empty draft and withholds it if it
+crashes or prints nothing. Test it on a tiny synthetic draft you create under
+the scratch directory, never on the real task root.
 
 The self-check reports structural coverage, never correctness. It may check
 that a file exists, that a field is present and spelled as the task spells it,
@@ -445,7 +465,10 @@ def normalize_prep_bundle(text: str) -> PrepBundle:
         candidate_check = {
             "command": _text(raw_self_check.get("command"), limit=300),
             "artifact": _text(raw_self_check.get("artifact"), limit=200),
-            "covers": _text(raw_self_check.get("covers"), limit=400),
+            # The coverage statement is the self-check's boundary declaration -
+            # what it does not check. Truncating it mid-sentence (observed on
+            # SEC at 300 chars) removes exactly the caveat it exists to make.
+            "covers": _text(raw_self_check.get("covers"), limit=900),
         }
         declared = {item["path"] for item in artifacts}
         if not candidate_check["command"]:
@@ -576,22 +599,58 @@ def render_prep_report(bundle: PrepBundle, *, unavailable: frozenset[str]) -> st
     return report
 
 
+def withhold_self_check(bundle: PrepBundle) -> None:
+    """Remove the self-check and its artifact from everything the writer sees.
+
+    Delivery switch for the self-check A/B (``task_specific_prep_self_check``):
+    the prep agent behaves identically - same prompt, same budget, the script
+    is still written and declared - and only the delivery differs, so a paired
+    run isolates the net effect of the self-check channel from the rest of
+    prep. The artifact is withheld too: a staged script the report lists is
+    still discoverable, and the off arm must not deliver it through a side
+    door.
+    """
+    if bundle.self_check is None:
+        return
+    withheld = bundle.self_check["artifact"]
+    bundle.self_check = None
+    bundle.artifact_paths = [
+        path for path in bundle.artifact_paths if path != withheld
+    ]
+    bundle.artifact_entries = [
+        entry for entry in bundle.artifact_entries if entry["path"] != withheld
+    ]
+    bundle.dropped.append("self_check:withheld_by_config")
+    if bundle.report:
+        bundle.report = render_prep_report(bundle, unavailable=frozenset())
+
+
 def build_prep_digest(
     bundle_or_result: Any, report_path: str | None
 ) -> str:
     """The only prep content injected into the writer's first prompt.
 
-    Everything else lives in the report file. Three things must arrive at t=0
+    Everything else lives in the report file. Four things must arrive at t=0
     because they change what the writer does before it reads anything: the
     runtime state (a real fact about the sandbox), the exact self-check command
-    (a staged file nobody names is a file nobody runs), and where the rest is.
-    Item counts are included so the writer can tell an empty report from a
-    substantial one without opening it.
+    (a staged file nobody names is a file nobody runs), the findings, and where
+    the rest is.
+
+    Findings are here because they are the one class of prep output with no
+    other carrier. Runtime state sinks into commands and the self-check sinks
+    into a script, but an exact external fact the task omits - an official
+    ordering, a versioned rule - can only travel as prose. The v21 six-task run
+    showed the writer never opens the report file (it has the commands and the
+    script it needs), so a finding left only in that file reaches nobody:
+    Variant's Ensembl severity ordering was delivered, staged, and never seen.
+    Only the title and the observation travel; sources, writer_action, and the
+    do-not-infer caveat stay in the report for the writer that follows up.
     """
     env = getattr(bundle_or_result, "environment", None) or {}
     self_check = getattr(bundle_or_result, "self_check", None)
     contract_items = getattr(bundle_or_result, "contract_items", 0)
     finding_count = getattr(bundle_or_result, "finding_count", 0)
+    findings = getattr(bundle_or_result, "findings", None) or []
 
     lines = [
         "A prep agent worked in this sandbox before you started: it set up the "
@@ -617,6 +676,18 @@ def build_prep_digest(
             f"({self_check['covers'] or 'see the report'}); it has no "
             "authority and passing it is not evidence the task is complete.",
         ])
+    if findings:
+        lines.extend([
+            "",
+            "**Findings** — exact facts the task materials do not supply. "
+            "Each is supplemental evidence, not an instruction; the task "
+            "prompt and `/input` still decide. Full sources, the suggested "
+            "use, and what each does not authorize are in the report.",
+        ])
+        for item in findings:
+            title = item.get("title") or "finding"
+            observation = _text(item.get("observation"), limit=DIGEST_FINDING_CHARS)
+            lines.append(f"- {title}: {observation}")
     if report_path:
         counts = (
             f"{contract_items} contract item(s) and {finding_count} finding(s)"
@@ -664,12 +735,20 @@ async def collect_prep_artifacts(
                 ),
                 timeout=PREP_IO_TIMEOUT_S,
             )
-            byte_count = int(str(getattr(result, "stdout", "") or "").strip())
-        except (TimeoutError, ValueError):
+        except TimeoutError:
             dropped.append(f"artifact:unreadable:{relative}")
             continue
+        # A failed probe means the declared file is not there: empty stdout
+        # must not be parsed first, or every missing file is misfiled as
+        # unreadable and the audit trail points away from the actual cause
+        # (usually prep writing the file somewhere other than it declared).
         if getattr(result, "returncode", 1) != 0:
             dropped.append(f"artifact:missing:{relative}")
+            continue
+        try:
+            byte_count = int(str(getattr(result, "stdout", "") or "").strip())
+        except ValueError:
+            dropped.append(f"artifact:unreadable:{relative}")
             continue
         if byte_count > MAX_PREP_ARTIFACT_BYTES:
             dropped.append(f"artifact:too_large:{relative}")
@@ -685,6 +764,25 @@ async def collect_prep_artifacts(
             dropped.append(f"artifact:rejected_content:{relative}")
             continue
         artifacts[f"artifacts/{relative}"] = content
+    if any(
+        entry.startswith(("artifact:missing:", "artifact:unreadable:"))
+        for entry in dropped
+    ):
+        # Diagnostic, not recovery: record what is actually on disk so the
+        # audit trail can tell a wrongly declared path from a file that was
+        # never written.
+        try:
+            listing = await asyncio.wait_for(
+                interface.run_command(
+                    f"find {shlex.quote(scratch_dir.rstrip('/'))} "
+                    "-maxdepth 4 -type f 2>/dev/null | head -c 1500"
+                ),
+                timeout=PREP_IO_TIMEOUT_S,
+            )
+            found = " ".join(str(getattr(listing, "stdout", "") or "").split())
+            dropped.append(f"scratch:contents:{found[:600] or '(no files)'}")
+        except Exception:  # noqa: BLE001 - a diagnostic must not add a failure
+            pass
     return artifacts, dropped
 
 
@@ -751,21 +849,35 @@ async def run_task_specific_prep(
     summary_runtime: Any | None = None,
     api_key: str | None = None,
     api_base: str | None = None,
+    deliver_self_check: bool = True,
 ) -> TaskPrepResult:
     """Run prep in the writer's sandbox and return its report and artifacts.
 
     Prep leaves real runtime state behind, so its result is never cached.
     """
     scratch_dir = prep_scratch_dir(task_root or task_id)
-    setup = await asyncio.wait_for(
-        interface.run_command(
-            f"rm -rf -- {shlex.quote(scratch_dir)} && "
-            f"mkdir -p -- {shlex.quote(scratch_dir)}"
-        ),
-        timeout=PREP_IO_TIMEOUT_S,
+    setup_command = (
+        f"rm -rf -- {shlex.quote(scratch_dir)} && "
+        f"mkdir -p -- {shlex.quote(scratch_dir)}"
     )
-    if getattr(setup, "returncode", 1) != 0:
-        raise RuntimeError("could not initialize task prep scratch directory")
+    setup_failure = ""
+    for _attempt in range(2):
+        try:
+            setup = await asyncio.wait_for(
+                interface.run_command(setup_command),
+                timeout=PREP_SETUP_TIMEOUT_S,
+            )
+        except TimeoutError:
+            setup_failure = f"timed out after {PREP_SETUP_TIMEOUT_S}s"
+            continue
+        if getattr(setup, "returncode", 1) == 0:
+            break
+        setup_failure = f"exit code {getattr(setup, 'returncode', 1)}"
+    else:
+        raise RuntimeError(
+            "could not initialize task prep scratch directory "
+            f"({setup_failure})"
+        )
 
     request = build_task_prep_request(task_prompt)
     run = registry.register(
@@ -802,6 +914,8 @@ async def run_task_specific_prep(
         if raw.startswith("(subagent reached max steps"):
             raise RuntimeError("task prep reached max steps without a final report")
         bundle = normalize_prep_bundle(raw)
+        if not deliver_self_check:
+            withhold_self_check(bundle)
         report = bundle.report
         artifacts: dict[str, str] = {}
         unavailable: frozenset[str] = frozenset()
@@ -844,6 +958,7 @@ async def run_task_specific_prep(
             contract=bundle.contract,
             self_check=bundle.self_check,
             environment=bundle.environment,
+            findings=bundle.findings,
             dropped=bundle.dropped,
             input_tokens=session.usage.input_tokens,
             output_tokens=session.usage.output_tokens,
