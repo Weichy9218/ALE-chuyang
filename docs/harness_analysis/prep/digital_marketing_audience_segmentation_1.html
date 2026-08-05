@@ -1,0 +1,132 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>受众分层：prep 修好一个错误又制造一个｜ALE</title><style>
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}
+.wrap{max-width:980px;margin:0 auto;padding:32px 22px 90px}
+h1{font-size:25px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:34px 0 10px}
+h3{font-size:15px;margin:18px 0 6px}
+.sub{color:var(--muted);font-size:14.5px;margin:0 0 4px}
+.tid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted)}
+p{margin:10px 0}
+a{color:var(--accent)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--codebg);padding:1px 5px;border-radius:4px;word-break:break-word}
+pre{background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+pre code{background:none;padding:0}
+section{border-top:1px solid var(--line);padding-top:8px;margin-top:26px}
+.spec{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:2px 18px;margin:16px 0;display:grid;grid-template-columns:auto 1fr;gap:0 18px}
+.spec dt{font-weight:600;font-size:12.5px;padding:8px 0;color:var(--muted);border-top:1px solid var(--line)}
+.spec dd{margin:0;font-size:13.5px;padding:8px 0;border-top:1px solid var(--line)}
+.spec dt:first-of-type,.spec dd:first-of-type{border-top:none}
+.tblwrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--card);font-weight:600;white-space:nowrap}
+.badge{display:inline-block;font-weight:700;font-size:12px;padding:1px 8px;border-radius:5px}
+.b-good{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+.b-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+.b-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.callout{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 16px;margin:14px 0;background:var(--card);font-size:14px}
+.callout.warn{border-left-color:var(--warn)}
+.callout.bad{border-left-color:var(--bad)}
+ul,ol{margin:10px 0;padding-left:22px}li{margin:5px 0}
+.back{font-size:13px;margin-bottom:10px;display:inline-block}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+/* 流程图组件：纵向步骤流，纯 CSS，无外部依赖 */
+.flow{margin:16px 0}
+.fstep{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px 14px;position:relative}
+.fstep+.fstep{margin-top:26px}
+.fstep+.fstep::before{content:"↓";position:absolute;top:-23px;left:22px;color:var(--muted);font-size:15px}
+.fstep .ft{font-weight:600;font-size:14px;margin:0 0 4px}
+.fstep .fb{font-size:13.5px;color:var(--fg);margin:0}
+.fstep .fn{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);margin-right:8px}
+.fstep.ok{border-left:3px solid var(--good)}
+.fstep.miss{border-left:3px solid var(--bad)}
+.fstep.risk{border-left:3px solid var(--warn)}
+/* 图：题目自带素材、agent 产出图、自画的对照图，一律 data URI 内嵌 */
+.fig{margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px}
+.fig img{width:100%;height:auto;display:block;border-radius:6px;background:#fff}
+.fig figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.figrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0}
+.figrow .fig{margin:0}
+.scorebar{display:flex;align-items:center;gap:10px;margin:10px 0}
+.scorebar .bar{flex:1;height:10px;background:var(--codebg);border-radius:6px;overflow:hidden}
+.scorebar .fill{height:100%;background:var(--accent)}
+.scorebar .num{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:nowrap}
+/* 对比专用：三臂并列 */
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:16px 0}
+.cmpcol{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:12px 14px}
+.cmpcol h4{margin:0 0 8px;font-size:13.5px;display:flex;align-items:baseline;gap:8px}
+.cmpcol h4 .sc{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;font-weight:700}
+.cmpcol.base{border-left:3px solid var(--muted)}
+.cmpcol.up{border-left:3px solid var(--good)}
+.cmpcol.down{border-left:3px solid var(--bad)}
+.cmpcol p{margin:6px 0;font-size:13px}
+.cmpcol ul{margin:6px 0;padding-left:18px;font-size:13px}
+.q{border-left:2px solid var(--line);padding:2px 0 2px 12px;margin:8px 0;color:var(--muted);font-size:13px}
+.delta{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+.up-t{color:var(--good)}.down-t{color:var(--bad)}.flat-t{color:var(--muted)}
+.kv{font-size:13px;margin:4px 0}.kv b{font-weight:600}
+.lead{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;background:var(--card);padding:12px 16px;margin:16px 0}
+.lead p{margin:8px 0;font-size:14.5px}
+.lead b{font-weight:600}
+.lead .k{display:inline-block;min-width:3.4em;color:var(--muted);font-size:12.5px;font-weight:600;margin-right:6px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+td.num,th.num{text-align:right;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:nowrap}
+</style></head><body><div class="wrap">
+<a class="back" href="index.html">← 返回 Prep 对比列表</a>
+<h1>数字营销受众分层</h1>
+<div class="tid">taskId：business_finance/digital_marketing_audience_segmentation_1 ｜ 同期 base 0.9042 ｜ 历史 base 均值 0.8117 ｜ prep 三轮 0.8667 / 0.9042 / 0.8667</div>
+<p class="sub">prep 读出了简报里一个条件句的两种读法，消除了 base 七次里四次出现的错误；同时让 writer 把假设写进了一个被逐项比对的字段，扣掉 0.0375。</p>
+<dl class="spec">
+  <dt>交付物</dt><dd>分层定义 JSON、受众名单 CSV、重叠报告 TSV</dd>
+  <dt>评分方式</dt><dd>六个维度加权，名单占 35%</dd>
+  <dt>同期 base</dt><dd>0.9042（七次 base 双峰：三次 0.9042 档，四次 0.7245 档）</dd>
+  <dt>prep 三轮</dt><dd>0.8667／0.9042／0.8667</dd>
+  <dt>净效应</dt><dd>相对单次 base 为负 0.0375，相对历史均值为正 0.055</dd>
+  <dt>轨迹路径</dt><dd><code>v23_v20_attribution/…/business_finance__digital_marketing_audience_segmentation_1/</code></dd>
+</dl>
+<div class="callout"><b>prep 消除了 base 的一个真实失败模式，同时又制造了一个小的新失分，净效应为正。</b>这是唯一一道 prep 的收益能追到具体领域判断的题。</div>
+<section><h2>一、base 的失败模式</h2>
+<p>按简报圈定受众，交三个文件。评分权重最大的是名单本身（35%）和资格标记（20%）。</p>
+<p>简报说，跨渠道推广要排除 <code>email_opt_out = 1</code> 的客户，<b>前提是推广内容涉及邮件</b>；而治理配置说这些客户不进邮件渠道，短信和推送各有自己的开关。推广创意的具体内容题目没给。</p>
+<p>这个条件句有两种读法。base 七次运行里有四次读成了无条件排除，名单从 449 人变成 427 人，代码注释里写得很清楚：</p>
+<div class="q"># …cross-channel campaign, so honor the<br># brief's exclusion of email opt-outs from messaging referencing email.<br>&amp; profiles["email_opt_out"].eq(0)<br><span class="mono">— base 臂某次运行的第 16 步</span></div>
+<p>这四次的分数是 0.7245：受众统计整项判零，名单准确率掉到 0.951，重叠计数掉到 0.5。</p>
+</section>
+<section><h2>二、prep 说了什么</h2>
+<div class="q">Observation：The brief excludes email_opt_out = 1 from cross-channel messaging <b>only when that messaging references email content</b>. The YAML independently says such customers are excluded from email channels, while SMS and push exclusions are based on their own opt-in fields.<br>Do not infer：Email opt-out alone is not stated as an unconditional SMS or push opt-out.<br><span class="mono">— task_prep_meta.json，第三轮 findings 第 4 条</span></div>
+<p>清单第 6 条同样点名了这件事，并写明「不要把它悄悄重新解释成无条件的短信与推送排除」。</p>
+<p>writer 读了报告（第 1 步就读），第 7 步一次执行就把两个数都算了出来：符合条件的 449 人、扣掉 email_opt_out 后的 427 人，然后选了 449。prep 臂七次运行里有六次拿到受众统计满分和名单满分，base 七次里只有三次。</p>
+</section>
+<section><h2>三、prep 同时制造的新失分</h2>
+<p>writer 把这个条件性假设写进了 <code>segment_definition.json</code> 的 <code>suppression_rules</code> 字段：</p>
+<div class="q">{"field": "email_opt_out", "operator": "=", "value": 1,<br> "reason": "Conditional: suppress from cross-channel messaging only when creative references email content; this SMS/push roster assumes the creative does not reference email."}<br><span class="mono">— prep 第三轮的 output/segment_definition.json</span></div>
+<p>问题在于评分器对这个字段做的是<b>集合相等</b>比较，参考答案里只有一条抑制规则。多写一条就不相等，这一维从 3/4 掉到 2/4，扣 0.0375。名单本身没受影响，仍然是正确的 449 人，所以这纯粹是元数据与产物不一致。</p>
+<div class="callout">prep 让 writer 把「我做了一个假设」显式写下来，这在工程上是好习惯，在这个评分器面前是失分项。清单没有说明哪些字段会被逐项比对。</div>
+</section>
+<section><h2>四、分数落在哪</h2>
+<div class="tblwrap"><table>
+<tr><th>分项</th><th>权重</th><th class="num">base 好的那次</th><th class="num">base 坏的那次</th><th class="num">prep 第三轮</th></tr>
+<tr><td>名单准确率</td><td>0.35</td><td class="num">1.0</td><td class="num">0.951</td><td class="num">1.0</td></tr>
+<tr><td>受众统计</td><td>0.10</td><td class="num">1.0</td><td class="num"><b>0.0</b></td><td class="num">1.0</td></tr>
+<tr><td>重叠计数</td><td>0.15</td><td class="num">0.667</td><td class="num">0.5</td><td class="num">0.667</td></tr>
+<tr><td>分层定义</td><td>0.15</td><td class="num"><b>0.75</b></td><td class="num">0.5</td><td class="num"><b>0.5</b></td></tr>
+<tr><td>其余两项</td><td>0.25</td><td class="num">相同</td><td class="num">相同</td><td class="num">相同</td></tr>
+<tr><td><b>总分</b></td><td></td><td class="num"><b>0.9042</b></td><td class="num"><b>0.7245</b></td><td class="num"><b>0.8667</b></td></tr>
+</table></div>
+<p>相对同期 base 的那一次（0.9042，恰好是 base 做对的那次）prep 是 −0.0375；相对 base 七次的历史均值 0.8117，prep 是 +0.055。两个方向都对，取决于拿哪个 base 比。这道题的 base 是双峰的，用单次运行做对照会得出相反的结论。</p>
+<p>还有一处所有臂都失分：<code>filter_predicates</code> 的运算符，参考答案写 <span class='mono'>==</span>，所有 agent 都写 <span class='mono'>=</span>。prep 的清单第 3 条把这个条件复述成 <span class='mono'>email_opens_30d = 0</span>，等于把错误写法固化了下来。</p>
+</section>
+<section><h2>五、这道题说明什么</h2>
+<p><b>prep 在这里做了它设计上该做的事。</b>它读出了简报里的条件句，指出了两种读法的分歧，给了理由，并声明了边界。这消除了 base 一半运行里出现的真实错误。</p>
+<p><b>但它同时把 writer 推向了一个评分器不喜欢的表达方式。</b>把假设写进产物元数据是合理的工程习惯，而评分器做的是集合相等比较。清单能点名「要写什么」，点不出「哪些字段多写会扣分」。</p>
+<p><b>base 双峰意味着单次对照不可靠。</b>这道题拿哪一次 base 做基准，结论就是相反的。用多次运行的均值才能看出 prep 是把成功率从 3/7 提到 6/7。</p>
+</section><footer>数据来源：pgl 机器 <code>~/ale/agents-last-exam/.logs/ale/</code> 下的运行记录，路径见第一节表格。题目定义、打分脚本与隐藏参考在 batchcom 机器 <code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/</code>。本页的分数取自各次运行的 <code>eval_result.json</code>；题面背景与 base 失分的完整复盘见 <a href="../../task_analysis/digital_marketing_audience_segmentation_1.html">题目逐题分析</a>。</footer>
+</div></body></html>

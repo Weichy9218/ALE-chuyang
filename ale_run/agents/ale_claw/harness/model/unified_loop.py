@@ -17,6 +17,7 @@ home. Registered via the side-effect import at the bottom of
 
 import base64
 import json
+import os
 from io import BytesIO
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -523,6 +524,140 @@ def _convert_response_to_output(response: Any) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Responses-API transport (opt-in via ALE_MODEL_TRANSPORT=responses)
+#
+# gpt-5.6-sol rejects function tools + reasoning_effort on /v1/chat/completions
+# ("Please use /v1/responses instead") on the boyue gateway. This transport
+# sends the same request over litellm.aresponses so tools and a reasoning
+# effort coexist. Reasoning is requested by effort only: no summary is asked
+# for and none is replayed, so it works even when the gateway returns no
+# reasoning_content. Off by default — the chat path above is unchanged.
+# ---------------------------------------------------------------------------
+
+# A unit makes tens of requests; if any single one exhausts its retries the
+# whole unit dies. Long units therefore fail preferentially, which censors
+# exactly the discriminating tasks. Keep per-request survival high.
+_RESPONSES_MIN_RETRIES = 24
+
+
+def _use_responses_transport() -> bool:
+    return os.getenv("ALE_MODEL_TRANSPORT", "").strip().lower() == "responses"
+
+
+def _to_responses_tools(chat_tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Chat-completions function tools -> flat Responses-API function tools."""
+    out: List[Dict[str, Any]] = []
+    for t in chat_tools or []:
+        if t.get("type") == "function" and isinstance(t.get("function"), dict):
+            fn = t["function"]
+            out.append({
+                "type": "function",
+                "name": fn["name"],
+                "description": fn.get("description", ""),
+                "parameters": fn.get("parameters", {}),
+            })
+        else:
+            out.append(t)
+    return out
+
+
+def _normalize_message_item(item: Dict[str, Any]) -> Dict[str, Any]:
+    """Coerce a message item's content blocks to Responses-API content types.
+
+    The canonical store uses ``{"type": "text"}`` blocks; the Responses API
+    input schema requires ``input_text`` for user/system/developer roles and
+    ``output_text`` for assistant. Image/refusal/other blocks pass through;
+    reasoning ``summary_text`` blocks are dropped (no summary replay).
+    """
+    role = item.get("role")
+    want = "output_text" if role == "assistant" else "input_text"
+    content = item.get("content")
+    if isinstance(content, str):
+        new_content: Any = [{"type": want, "text": content}]
+    elif isinstance(content, list):
+        new_content = []
+        for c in content:
+            if not isinstance(c, dict):
+                new_content.append(c)
+                continue
+            ctype = c.get("type")
+            if ctype in ("text", "input_text", "output_text"):
+                new_content.append({"type": want, "text": c.get("text", "")})
+            elif ctype == "image_url":
+                # Chat shape {"image_url": {"url": ...}} -> Responses input_image,
+                # whose image_url is a bare string.
+                url = c.get("image_url")
+                if isinstance(url, dict):
+                    url = url.get("url")
+                if url:
+                    new_content.append({"type": "input_image", "image_url": url})
+            elif ctype in ("input_image", "input_file", "refusal",
+                           "computer_screenshot"):
+                new_content.append(c)
+            else:
+                # thinking / summary_text / anything else is not representable as
+                # Responses input content. Dropping beats passing it through: an
+                # unknown block type is a hard 400 that kills the whole unit.
+                continue
+    else:
+        return {**item, "type": "message"}
+    return {**item, "type": "message", "content": new_content}
+
+
+def _responses_input(messages: Messages) -> List[Dict[str, Any]]:
+    """Adapt canonical items to aresponses ``input``.
+
+    Reasoning items are DROPPED, not resent. Under ``store=False`` (required by
+    the load-balanced boyue gateway — see ``_predict_step_responses``) a prior
+    turn's ``rs_`` reasoning item is only a dangling id reference: the gateway
+    did not persist it, and boyue returns no reasoning summary / encrypted_content
+    to make it self-contained, so resending it 400s ("Item with id 'rs_...' not
+    found. Items are not persisted when store=false ... remove this item from your
+    input."). boyue does not enforce the OpenAI "function_call needs a paired
+    reasoning item" rule, so dropping is safe — verified by a live probe
+    (store=false + drop-reasoning: 3/3 multi-turn tool use). Nothing replayable is
+    lost (the shell carries no content); the reasoning is still captured verbatim
+    in the session-event transcript. Message items have their content blocks
+    coerced to Responses-API content types.
+    """
+    items: List[Dict[str, Any]] = []
+    for it in (messages or []):
+        if not isinstance(it, dict):
+            items.append(it)
+            continue
+        itype = it.get("type")
+        if itype == "reasoning":
+            continue  # un-replayable rs_ shell under store=false — drop it
+        if itype == "message" or ("role" in it and "content" in it and itype is None):
+            items.append(_normalize_message_item(it))
+        else:
+            items.append(it)
+    return items
+
+
+def _convert_responses_output(response: Any) -> Dict[str, Any]:
+    """Normalize an aresponses result to the {"output", "usage"} contract.
+
+    The Responses API already returns items in Responses shape, so ``output``
+    passes through; only usage naming and cost are normalized.
+    """
+    if response is None:
+        return {"output": [], "usage": {}}
+    payload = response.model_dump() if hasattr(response, "model_dump") else dict(response)
+    output_items = payload.get("output") or []
+    usage = payload.get("usage") or {}
+    if isinstance(usage, dict):
+        if "prompt_tokens" in usage and "input_tokens" not in usage:
+            usage["input_tokens"] = usage["prompt_tokens"]
+        if "completion_tokens" in usage and "output_tokens" not in usage:
+            usage["output_tokens"] = usage["completion_tokens"]
+    hidden = getattr(response, "_hidden_params", None)
+    if isinstance(hidden, dict):
+        usage["response_cost"] = hidden.get("response_cost", 0.0)
+    return {"output": output_items, "usage": usage}
+
+
+# ---------------------------------------------------------------------------
 # Unified agent loop
 # ---------------------------------------------------------------------------
 
@@ -551,6 +686,12 @@ class UnifiedAgentConfig(AsyncAgentConfig):
         **kwargs,
     ) -> Dict[str, Any]:
         """Predict the next step using litellm.acompletion() via OpenRouter."""
+        if _use_responses_transport():
+            return await self._predict_step_responses(
+                messages, model, tools=tools, max_retries=max_retries,
+                _on_api_start=_on_api_start, _on_api_end=_on_api_end,
+                _on_usage=_on_usage, **kwargs,
+            )
         tools = tools or []
 
         # Build Chat Completions tools
@@ -597,6 +738,88 @@ class UnifiedAgentConfig(AsyncAgentConfig):
 
         # Convert response to Responses API output format
         result = _convert_response_to_output(response)
+
+        if _on_usage:
+            await _on_usage(result["usage"])
+
+        return result
+
+    async def _predict_step_responses(
+        self,
+        messages: Messages,
+        model: str,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        max_retries: Optional[int] = None,
+        _on_api_start=None,
+        _on_api_end=None,
+        _on_usage=None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Predict the next step over litellm.aresponses (Responses API).
+
+        The only route on which gpt-5.6-sol accepts function tools together
+        with a reasoning effort. The chat-style ``reasoning_effort`` kwarg is
+        translated into the Responses ``reasoning`` object. Runs with
+        ``store=False`` so each request is self-contained on the load-balanced
+        boyue gateway (see the ``store`` note below).
+        """
+        tools = tools or []
+        responses_tools = _to_responses_tools(await _prepare_tools(tools))
+
+        # A transient 429 must not kill a unit that has already spent dozens of
+        # steps: the gateway quota is shared, so ride bursts out with backoff
+        # rather than surfacing the error after litellm's 3 default tries.
+        api_kwargs: Dict[str, Any] = {
+            "model": model,
+            "input": _responses_input(messages),
+            "tools": responses_tools or None,
+            "num_retries": max(int(max_retries or 0), _RESPONSES_MIN_RETRIES),
+            "retry_strategy": "exponential_backoff_retry",
+            # store=False is REQUIRED on the boyue gateway. boyue fronts Azure
+            # OpenAI with several resources behind a load balancer; with the API
+            # default store=True the server persists each turn's reasoning item
+            # (rs_...) on whichever resource served it, then the NEXT turn round-
+            # robins to a different resource which rejects the foreign item with
+            # "created under a different Azure OpenAI resource" -> surfaced to the
+            # harness as "Item with id 'rs_...' not found" (400, after 24 retries)
+            # and every multi-turn unit dies. store=False makes each request self-
+            # contained: input reasoning items are treated as literal context, so
+            # no cross-resource stored-item lookup happens. Verified stateless-safe
+            # by a 6-variant x 3-repeat live probe against boyue (store=True: cross-
+            # resource 400s; store=False: 3/3 clean on every resend policy).
+            "store": False,
+        }
+
+        # chat-style reasoning_effort -> Responses reasoning object. summary="auto"
+        # asks the gateway to return a readable reasoning summary to persist in the
+        # session events; boyue currently strips it (probe: 0 summary chars, no
+        # encrypted_content), so this is a no-op today but future-proofs the trace
+        # if boyue starts exposing it or we move to an endpoint that does.
+        effort = kwargs.pop("reasoning_effort", None)
+        caller_reasoning = kwargs.pop("reasoning", None)
+        if not effort and isinstance(caller_reasoning, dict):
+            effort = caller_reasoning.get("effort")
+        if effort:
+            api_kwargs["reasoning"] = {"effort": effort, "summary": "auto"}
+
+        # Merge remaining generation kwargs (api_key, api_base, temperature, ...);
+        # drop the chat-only ``stream`` flag and internal callbacks.
+        for k, v in kwargs.items():
+            if k.startswith("_") or k == "stream" or v is None:
+                continue
+            api_kwargs[k] = v
+
+        if _on_api_start:
+            await _on_api_start(api_kwargs)
+
+        response = await litellm.aresponses(
+            **{k: v for k, v in api_kwargs.items() if v is not None}
+        )
+
+        if _on_api_end:
+            await _on_api_end(api_kwargs, response)
+
+        result = _convert_responses_output(response)
 
         if _on_usage:
             await _on_usage(result["usage"])

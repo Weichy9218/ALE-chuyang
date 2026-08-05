@@ -1,0 +1,68 @@
+{
+  "ok": true,
+  "summary": {
+    "missions_started": 2,
+    "missions_run": 2,
+    "planning_cycles": 2,
+    "results": [
+      {
+        "item_id": "334351459d8a",
+        "title": "ALE task",
+        "tags": [
+          "ale",
+          "ale_last_exam"
+        ],
+        "execution_workdir": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__health_medicine__wsi_tumor_localization_1__v0__20260725_131003/project",
+        "success": true,
+        "status": "done",
+        "review_status": "done",
+        "stop_reason": "Independent audit passed every observable hard gate. The exact required output directory contains only the non-empty regular file prediction.json; it parses to exactly {\"x\": 72800.0, \"y\": 125500.0} with finite float values and no extra keys. Native OpenSlide reports level-0 dimensions 97792×221184, so the coordinate is in bounds, and fresh level-3 through level-0 region reads reopened successfully. Visual inspection confirms the point lies centrally within cohesive atypical epithelial tumor in desmoplastic stroma, not normal lymphoid tissue or a tumor boundary. Input modification timestamps predate execution, and CHECKPOINT.md now records the independently verified evidence.",
+        "rounds": 1,
+        "cost_usd": 4.233452,
+        "known_cost_usd": 4.233452,
+        "pricing_status": "unpriced",
+        "iteration": null,
+        "auth_failure": false,
+        "review_reason": "",
+        "expected_plan_id": "",
+        "expected_plan_version": 0,
+        "context_packet": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__health_medicine__wsi_tumor_localization_1__v0__20260725_131003/argus_home/projects/ale/handoffs/334351459d8a/latest.json"
+      },
+      {
+        "item_id": "9ec6a5ba290e",
+        "title": "Complete and certify the current Goal Gate",
+        "tags": [
+          "planner",
+          "scope:bounded",
+          "bounded_dag_node",
+          "stage_closing",
+          "review:required"
+        ],
+        "execution_workdir": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__health_medicine__wsi_tumor_localization_1__v0__20260725_131003/project",
+        "success": true,
+        "status": "done",
+        "review_status": "done",
+        "stop_reason": "Independent final audit passes every observable Goal Gate. The exact output directory contains only the regular 30-byte `prediction.json`, parsing exactly to finite floats `{\"x\": 72000.0, \"y\": 125000.0}` with no extra keys. Native OpenSlide confirms the level-0 dimensions are 97792×221184, so the coordinate is in bounds; fresh native reads at levels 3, 2, and 0 exactly match the submitted evidence images, and visual inspection places the centered marker within cohesive atypical epithelial tumor in desmoplastic stroma. The supplied slide, helper, and manifest retain their verified sizes, May 14, 2026 mtimes, and SHA-256 hashes; the input tree has no bytecode or extra entries. Cross-artifact consistency and the final hard-gate audit pass, and CHECKPOINT.md now records the independently verified state.",
+        "rounds": 2,
+        "cost_usd": 7.0166640000000005,
+        "known_cost_usd": 7.0166640000000005,
+        "pricing_status": "unpriced",
+        "iteration": null,
+        "auth_failure": false,
+        "review_reason": "",
+        "expected_plan_id": "plan-68b2da93748b",
+        "expected_plan_version": 1,
+        "context_packet": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__health_medicine__wsi_tumor_localization_1__v0__20260725_131003/argus_home/projects/ale/handoffs/9ec6a5ba290e/latest.json"
+      }
+    ],
+    "total_cost_usd": 18.855997000000002,
+    "known_cost_usd": 18.855997000000002,
+    "pricing_status": "partial",
+    "stopped_by": "planner_error",
+    "suggested_sleep": 15.0
+  },
+  "thread_id": null,
+  "project_root": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__health_medicine__wsi_tumor_localization_1__v0__20260725_131003/argus_home/projects/ale",
+  "events_path": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__health_medicine__wsi_tumor_localization_1__v0__20260725_131003/argus_home/projects/ale/events.jsonl",
+  "work_dir": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__health_medicine__wsi_tumor_localization_1__v0__20260725_131003"
+}

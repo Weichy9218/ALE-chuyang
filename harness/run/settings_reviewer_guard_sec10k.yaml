@@ -1,0 +1,40 @@
+# ============================================================================
+# Repair-regression GUARD validation — reviewer arm, sec_10k only, k=3.
+#
+# Purpose: confirm the guard added to the reviewer loop (verifier_runtime.py
+# snapshot_regressed/restore_snapshot + deployer.py rollback) catches the
+# sec_10k failure mode. In the no-guard A/B, 1 of 3 reviewer passes collapsed
+# raw_extractions from ~76 MB verbatim 10-K text to a 156 KB paraphrase during
+# an in-place repair round, dropping the score 0.685 -> 0.163 while the audit's
+# 5 counters stayed clean. With the guard, such a round must roll back to the
+# pre-repair snapshot (stop_reason "repair_regressed") and score ~0.65+.
+#
+# reviewer arm ONLY (base baseline already measured: 0.647/0.696/0.613).
+#
+# DRY-RUN FIRST (no API cost, no Docker), from the stack dir:
+#   .venv/bin/python harness/run/launch.py --stack . \
+#       --settings harness/run/settings_reviewer_guard_sec10k.yaml --per-arm
+# Then k=3 via: nohup bash harness/run/run_reviewer_guard_sec10k.sh > k3_guard_driver.log 2>&1 &
+# Read back: python3 harness/run/summarize.py .logs/ale/reviewer_guard --baseline ale_claw_reviewer
+# ============================================================================
+
+arms: [reviewer]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000
+  thinking_level: medium
+
+reviewer:
+  max_steps: 40
+  max_rounds: 2
+
+run:
+  name: reviewer_guard_sec10k
+  tasks: docs/harness/sec10k_only.txt
+  concurrency: 1            # single task; keep boyue load minimal.
+  cleanup_mode: delete
+  secret_file: secret/.env.boyue
+  api_endpoints: []
+  output_root: .logs/ale/reviewer_guard
+  wall_time_s: 86400

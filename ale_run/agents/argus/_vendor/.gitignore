@@ -1,0 +1,4 @@
+# The argus-skill wheel is built from source (the package is not on PyPI) and
+# dropped here so it ships into the sandbox with the ale_run tree. Binary
+# artifact: keep it out of git, build it per run box.
+*.whl

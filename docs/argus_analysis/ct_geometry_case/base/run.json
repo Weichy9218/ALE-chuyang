@@ -1,0 +1,67 @@
+{
+  "schema_version": 2,
+  "run_id": "ale_claw_base__openai-gpt-5-6-sol__health_medicine__ct_geometry_calibration_catphan__v0__20260723_061058",
+  "timestamp_utc": "2026-07-23T07:40:39Z",
+  "agent": {
+    "id": "ale_claw_base",
+    "class": "ale_claw",
+    "name": "ale-claw",
+    "version": null,
+    "model": "openai/gpt-5.6-sol",
+    "executor": "local",
+    "config_repr": {
+      "max_turns": 100000,
+      "thinking_level": "medium",
+      "flush_thinking_level": "off",
+      "compaction_thinking_level": "off",
+      "vision_thinking_level": "off",
+      "gui_thinking_level": "off",
+      "substrate_transport": "mcp",
+      "gui_transport": null,
+      "disable_delegate_gui": true,
+      "disabled_tools": [
+        "web_search",
+        "computer",
+        "analyze_image"
+      ],
+      "task_specific_prep": false,
+      "task_specific_prep_max_steps": 50,
+      "task_specific_prep_timeout_s": 1800,
+      "verifier": false,
+      "verifier_max_steps": 30,
+      "verifier_max_review_rounds": 1,
+      "verifier_writer_checks": 8,
+      "verifier_llm_layer": false,
+      "writer_self_review_hint": false,
+      "model": "openai/gpt-5.6-sol"
+    }
+  },
+  "task": {
+    "slug": "health_medicine__ct_geometry_calibration_catphan",
+    "path": "tasks/health_medicine/ct_geometry_calibration_catphan",
+    "variant_index": 0
+  },
+  "status": "completed",
+  "score": 0.0,
+  "score_valid": true,
+  "termination": {
+    "reason": "completed",
+    "phase": null,
+    "category": null,
+    "error": null
+  },
+  "timings": {
+    "duration_s": 3743.11
+  },
+  "usage": {
+    "total_steps": 86,
+    "total_input_tokens": 645182,
+    "total_output_tokens": 9203,
+    "total_cache_read_tokens": 577024,
+    "total_cache_creation_tokens": 0,
+    "total_cost_usd": 0.891784,
+    "total_duration_ms": 3728451,
+    "reward": 0.0,
+    "status": "completed"
+  }
+}

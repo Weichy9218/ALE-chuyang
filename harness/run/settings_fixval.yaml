@@ -1,0 +1,30 @@
+# Fix-validation run: does fable5's prep + verifier fix remove the regressions?
+# ONLY the code changed vs the 2026-07-22 pre-fix consumption run; every budget,
+# model, endpoint, and arm switch below is identical to that run. Base is NOT
+# rerun (compare against historical base + the pre-fix consumption prep/verifier).
+
+arms: [prep, verifier]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000
+  thinking_level: medium
+
+prep:
+  max_steps: 50
+  timeout_s: 1800
+
+verifier:
+  max_steps: 30
+  max_review_rounds: 1
+  writer_checks: 8
+
+run:
+  name: fixval13
+  tasks: docs/harness/results/fixval13/tasks.txt
+  concurrency: 6              # --per-arm -> 6 x 2 arms = 12 concurrent (boyue ceiling ~20)
+  cleanup_mode: delete
+  secret_file: secret/.env.haoxiang   # boyue gateway 503 (no gpt-5.6-sol distributor); haoxiang serves same model
+  api_endpoints: []          # one shared endpoint; no per-arm rotation confound
+  output_root: .logs/ale/fixval13
+  wall_time_s: 86400

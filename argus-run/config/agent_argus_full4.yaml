@@ -1,0 +1,51 @@
+# Argus 4-role harness (Manager / Planner / Engineer / Reviewer) on Boyue.
+#
+# executor MUST be sandbox: argus drives the codex CLI, whose shell and file
+# tools act on the machine codex runs on. In-VM is what makes the task's exact
+# output paths real paths and keeps the harness host out of reach.
+#
+# Model routing: the gateway wants the bare id `gpt-5.6-sol`; the `openai/`
+# prefix ale_claw uses is a litellm provider prefix and 503s here
+# ("分组 auto 下模型 openai/gpt-5.6-sol 无可用渠道").
+harness: argus
+id: argus_full4
+executor: sandbox
+model: gpt-5.6-sol
+
+config:
+  provider: openrouter          # == "custom OpenAI-compatible Responses gateway"
+  base_url: ${env:OPENAI_BASE_URL}
+  api_key: ${env:OPENAI_API_KEY}
+
+  # Optional (codex runs this model fine without it), but it declares the
+  # window and the effort list explicitly. Verified to load and complete a turn.
+  model_catalog_path: /home/ubuntu/argus/config/model_catalog_boyue.json
+  # Same budget ale_claw runs with (secret/.env.boyue: CONTEXT_WINDOW_OVERRIDE).
+  model_context_window: 128000
+  model_auto_compact_token_limit: 100000
+
+  # All four roles on one endpoint. The endpoint itself reports xhigh as
+  # supported ('none', 'minimal', 'low', 'medium', 'high', 'xhigh').
+  manager_reasoning_effort: xhigh
+  planner_reasoning_effort: xhigh
+  engineer_reasoning_effort: xhigh
+  engineer_initial_reasoning_effort: high
+  reviewer_reasoning_effort: high
+
+  # Pin the vertical rather than paying a Manager classification call that can
+  # land the episode in the paper pipeline. Set true only to measure routing.
+  manager_division: false
+  vertical: ale_last_exam
+
+  max_missions: 1
+  max_rounds: 500
+  iterate: false
+  require_post_task_learning: false
+
+  # Gateway models are unpriced and argus's default unpriced policy is "block",
+  # which would refuse every call.
+  cost_control: false
+
+  # Empty -> the wheel vendored at ale_run/agents/argus/_vendor/ (argus-skill
+  # is not on PyPI, and the sandbox cannot read the harness host).
+  argus_package: ""

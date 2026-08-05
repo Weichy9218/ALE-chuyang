@@ -1,0 +1,45 @@
+# Argus 4-role harness on Boyue. Hand-written (launch.py only generates
+# ale_claw presets). Pair it with an experiment yaml that also lists an
+# ale_claw arm if you want a same-task comparison.
+#
+# executor MUST be sandbox: argus drives the codex CLI, whose shell and file
+# tools act on the machine codex runs on. In-VM is what makes the task's exact
+# output paths real paths and keeps the harness host out of reach.
+harness: argus
+id: argus_full4
+executor: sandbox
+model: openai/gpt-5.6-sol
+
+config:
+  provider: openrouter
+  base_url: ${env:ALE_API_BASE}
+  api_key: ${env:ALE_API_KEY}
+  # gpt-5.6-sol is not in codex's bundled catalog. Without this every role
+  # fails at model resolution. Path is resolved host-side, content ships in.
+  model_catalog_path: harness/run/model_catalog_boyue.json
+
+  # All four roles on the same endpoint; Boyue's gpt-5.6-sol accepts xhigh.
+  manager_reasoning_effort: xhigh
+  planner_reasoning_effort: xhigh
+  engineer_reasoning_effort: xhigh
+  engineer_initial_reasoning_effort: high
+  reviewer_reasoning_effort: high
+
+  # Pin the vertical instead of paying a Manager classification call that can
+  # land the episode in the paper pipeline. Set true only when measuring
+  # Manager's routing itself.
+  manager_division: false
+  vertical: ale_last_exam
+
+  max_missions: 1
+  max_rounds: 500
+  iterate: false
+  require_post_task_learning: false
+
+  # Gateway models are unpriced; argus's default unpriced policy is "block",
+  # which would refuse every call.
+  cost_control: false
+
+  # Point at a build that carries the ale_last_exam vertical. install() fails
+  # loudly if the installed wheel does not.
+  argus_package: argus-skill

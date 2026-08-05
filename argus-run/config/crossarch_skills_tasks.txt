@@ -1,0 +1,11 @@
+# WS2 crossarch-skills A/B task scope — the 6 task_classes the authored skills
+# target. 5 are argus-target failures (argus 0 <- claude-code solved); 1
+# (ct_geometry_calibration_catphan) is the ale-claw-base failure. All 6 skills
+# are seeded into the +skills arm; load-on-demand keeps only the matching one
+# in play per task.
+life_sciences/tms_marrow_cell_type_annotation_instance_1
+health_medicine/ct_geometry_calibration_catphan
+life_sciences/yeast_colony_detection
+computing_math/ranking_node_feature_parity_recovery_instance_1
+life_sciences/hg002_chr22_germline_variant_pipeline
+physical_sciences/hst_acs_wfc_visit_reduction

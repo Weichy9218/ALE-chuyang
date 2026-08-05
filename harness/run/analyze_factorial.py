@@ -41,12 +41,6 @@ DESIGNS = {
 }
 ARMS = DESIGNS["skills"]
 SHORT_ARM = {arm: arm.removeprefix("ale_claw_") for arm in set().union(*DESIGNS.values())}
-_LEGACY_PREP_PRESCRIPTIVE = re.compile(
-    r"\b(must|should|use|choose|select|prefer|treat|interpret|map|translate|"
-    r"override|reinterpret|adopt)\b",
-    re.IGNORECASE,
-)
-
 
 def _factorial_axes() -> tuple[str, str, str] | None:
     """Return (first factor, second factor, combined arm) for a 2x2 design."""
@@ -153,11 +147,6 @@ def _retained_prep_claims(report: str) -> set[str]:
     return set(legacy + current + deliverables)
 
 
-def _prep_protocol_version(run: Run) -> int | None:
-    meta = _read_json(run.run_dir / "origin_log" / "ale-claw" / "task_prep_meta.json")
-    match = re.fullmatch(r"task-prep-v(\d+)", str((meta or {}).get("protocol") or ""))
-    return int(match.group(1)) if match else None
-
 
 def _main_transcript_calls(run: Run) -> list[tuple[str, str]]:
     transcripts = list(
@@ -197,6 +186,14 @@ def _nested_strings(value: Any) -> Iterator[str]:
 
 
 def _prep_report_inlined(run: Run, report: str) -> bool:
+    """Whether prep content reached the writer's first prompt (the digest).
+
+    Measured on the raw turn-0 API request, never on transcript.jsonl: the
+    transcript can lose the initial prompt to compaction, and a grep there
+    produced three false "prep never arrived" units in the 2026-07-22 run.
+    The current protocol injects a digest under this heading and delivers the
+    full report as a file, so the report text itself is not expected inline.
+    """
     report = report.strip()
     if not report or report == "NO_TASK_SPECIFIC_PREP":
         return False
@@ -206,7 +203,7 @@ def _prep_report_inlined(run: Run, report: str) -> bool:
     for path in request_paths:
         value = _read_json(path)
         if value is not None and any(
-            "--- BEGIN TASK PREP ---" in text and report in text
+            "## Task-specific prior research" in text
             for text in _nested_strings(value)
         ):
             return True
@@ -293,10 +290,10 @@ def _prep_metrics(run: Run) -> dict[str, Any]:
     except OSError:
         report = b""
     return {
-        "prep_protocol": meta.get("protocol"),
+        "prep_protocol_digest": meta.get("protocol_digest"),
         "prep_status": meta.get("status"),
         "prep_environment_status": meta.get("environment_status"),
-        "prep_contract_items": meta.get("contract_items"),
+        "prep_attempt_outcome": (meta.get("attempt") or {}).get("outcome"),
         "prep_finding_count": meta.get("finding_count"),
         "prep_dropped": ";".join(meta.get("dropped") or []) or None,
         "prep_report_chars": meta.get("report_chars"),
@@ -308,24 +305,10 @@ def _prep_metrics(run: Run) -> dict[str, Any]:
         "prep_report_bytes": len(report) if report else None,
         "prep_report_sha256": hashlib.sha256(report).hexdigest() if report else None,
         "prep_final_report_chars": meta.get("final_report_chars"),
-        "prep_final_report_sha256": meta.get("final_report_sha256"),
-        "prep_report_modified": meta.get("report_modified"),
         "prep_report_capture_error": meta.get("report_capture_error"),
-        "prep_self_check": bool(meta.get("self_check")) or None,
-        "crosscheck_shared_paths": _crosscheck_count(run, "shared_paths"),
-        "crosscheck_prep_only_paths": _crosscheck_count(run, "prep_only_paths"),
-        "crosscheck_verifier_only_paths": _crosscheck_count(run, "verifier_only_paths"),
     }
 
 
-def _crosscheck_count(run: Run, key: str) -> int | None:
-    crosscheck = _read_json(
-        run.run_dir / "origin_log" / "ale-claw" / "contract_crosscheck.json"
-    )
-    if not crosscheck:
-        return None
-    value = crosscheck.get(key)
-    return len(value) if isinstance(value, list) else None
 
 
 def _verifier_metrics(run: Run) -> dict[str, Any]:
@@ -385,8 +368,8 @@ def _verifier_metrics(run: Run) -> dict[str, Any]:
         "verifier_writer_check_overalls": json.dumps(
             [record.get("overall") for record in writer_checks]
         ) if writer_checks else None,
-        "verifier_writer_check_hard_mismatches": sum(
-            len((record.get("categories") or {}).get("hard_mismatches") or [])
+        "verifier_writer_check_review_items": sum(
+            len((record.get("categories") or {}).get("review_items") or [])
             for record in writer_checks
         ) if writer_checks else None,
         **_output_drift(writer_checks + rounds),
@@ -554,7 +537,14 @@ def prep_audit_rows(runs: dict[tuple[str, str], Run]) -> list[dict[str, Any]]:
 
 
 def prep_finding_rows(runs: dict[tuple[str, str], Run]) -> list[dict[str, Any]]:
-    """Show each raw prep entry/finding and why the protocol kept or dropped it."""
+    """Show each raw prep finding and why the protocol kept or dropped it.
+
+    One shape only. The version-gated branches this replaced silently stopped
+    working when protocol version numbers were dropped: every gate evaluated
+    false, so current findings were parsed by a pre-v11 branch and came out
+    empty. An analyzer that fails this way reports "the component produced
+    nothing" instead of "the analyzer is out of date".
+    """
     rows: list[dict[str, Any]] = []
     for run in sorted(runs.values(), key=lambda item: item.task):
         if run.arm != "ale_claw_prep":
@@ -566,193 +556,47 @@ def prep_finding_rows(runs: dict[tuple[str, str], Run]) -> list[dict[str, Any]]:
         except OSError:
             report = ""
         retained = _retained_prep_claims(report)
-        protocol_version = _prep_protocol_version(run)
-        is_v11 = protocol_version is not None and protocol_version >= 11
-        is_v13 = protocol_version is not None and protocol_version >= 13
-        # v18 dropped the single-deliverable envelope: findings are plain
-        # entries with string sources, alongside environment and contract.
-        is_v18 = protocol_version is not None and protocol_version >= 18
-        raw_items = (response or {}).get(
-            "findings" if is_v18 or not is_v11
-            else "deliverables" if is_v13 else "entries"
-        ) or []
+        raw_items = (response or {}).get("findings") or []
         if not isinstance(raw_items, list):
             raw_items = []
-            error = error or "prep entries/findings is not an array"
+            error = error or "prep findings is not an array"
         for index, raw_item in enumerate(raw_items, 1):
             if not isinstance(raw_item, dict):
                 continue
-            if is_v18:
-                raw_sources = raw_item.get("sources")
-                item = {
-                    "title": str(raw_item.get("title") or "").strip(),
-                    "claim": str(raw_item.get("observation") or "").strip(),
-                    "writer_action": str(
-                        raw_item.get("writer_action") or ""
-                    ).strip(),
-                    "local_source": ";".join(
-                        str(source).strip() for source in raw_sources
-                    ) if isinstance(raw_sources, list) else "",
-                    "do_not_infer": str(
-                        raw_item.get("do_not_infer") or ""
-                    ).strip(),
-                }
-                item["solver_impact"] = item["writer_action"]
-                retained_key = item["title"]
-            elif is_v11:
-                raw_sources = raw_item.get("sources") or []
-                sources = [
-                    str(source.get("source") or "").strip()
-                    for source in raw_sources
-                    if isinstance(source, dict)
-                ] if isinstance(raw_sources, list) else []
-                evidence = [
-                    str(source.get("evidence") or "").strip()
-                    for source in raw_sources
-                    if isinstance(source, dict)
-                ] if isinstance(raw_sources, list) else []
-                focus = (response or {}).get("focus") or {}
-                if not isinstance(focus, dict):
-                    focus = {}
-                item = {
-                    "title": str(raw_item.get("title") or "").strip(),
-                    "kind": str(raw_item.get("kind") or "").strip(),
-                    "input_gap": str(
-                        (
-                            focus.get("increment") if is_v13
-                            else raw_item.get("input_gap")
-                        ) or ""
-                    ).strip(),
-                    "claim": str(
-                        (
-                            raw_item.get("observation") if is_v13
-                            else raw_item.get("claim")
-                        ) or ""
-                    ).strip(),
-                    "local_source": ";".join(sources),
-                    "evidence": " | ".join(evidence),
-                    "solver_impact": str(
-                        (
-                            focus.get("decision_impact") if is_v13
-                            else raw_item.get("solver_use")
-                        ) or ""
-                    ).strip(),
-                    "risk_if_ignored": str(
-                        raw_item.get(
-                            "do_not_infer" if is_v13 else "risk_if_ignored"
-                        ) or ""
-                    ).strip(),
-                    "verification": str(
-                        raw_item.get("recheck" if is_v13 else "verification") or ""
-                    ).strip(),
-                    "confidence": str(raw_item.get("confidence") or "").strip(),
-                }
-                if is_v13:
-                    item.update({
-                        "focus_kind": str(focus.get("kind") or "").strip(),
-                        "task_relation": str(
-                            focus.get("task_relation") or ""
-                        ).strip(),
-                        "applies_if": str(
-                            raw_item.get("applies_if") or ""
-                        ).strip(),
-                        "do_not_infer": str(
-                            raw_item.get("do_not_infer") or ""
-                        ).strip(),
-                        "artifact_path": str(
-                            raw_item.get("artifact_path") or ""
-                        ).strip(),
-                        "writer_action": str(
-                            raw_item.get("writer_action") or ""
-                        ).strip(),
-                        "validation_command": str(
-                            raw_item.get("validation_command") or ""
-                        ).strip(),
-                        "validation_signal": str(
-                            raw_item.get("validation_signal") or ""
-                        ).strip(),
-                    })
-                retained_key = item["title"]
-            else:
-                item = {
-                    key: str(raw_item.get(key) or "").strip()
-                    for key in (
-                        "claim",
-                        "local_source",
-                        "evidence",
-                        "solver_impact",
-                        "confidence",
-                    )
-                }
-                retained_key = item["claim"]
-            claim_words = sorted({
-                match.group(0).lower()
-                for match in _LEGACY_PREP_PRESCRIPTIVE.finditer(item["claim"])
-            })
-            impact_words = sorted({
-                match.group(0).lower()
-                for match in _LEGACY_PREP_PRESCRIPTIVE.finditer(item["solver_impact"])
-            })
-            is_retained = retained_key in retained
+            raw_sources = raw_item.get("sources")
+            item = {
+                "title": str(raw_item.get("title") or "").strip(),
+                "claim": str(raw_item.get("observation") or "").strip(),
+                "writer_action": str(raw_item.get("writer_action") or "").strip(),
+                "local_source": ";".join(
+                    str(source).strip() for source in raw_sources
+                ) if isinstance(raw_sources, list) else "",
+                "do_not_infer": str(raw_item.get("do_not_infer") or "").strip(),
+            }
+            item["solver_impact"] = item["writer_action"]
+            is_retained = item["title"] in retained
             reasons: list[str] = []
             if not is_retained:
-                # v8 removed the old prescriptive-word filter. Keep the word
-                # columns as diagnostics, but never attribute a v8+ rejection
-                # to a filter that did not run.
-                if protocol_version is None or protocol_version <= 7:
-                    if claim_words:
-                        reasons.append("prescriptive_claim")
-                    if impact_words:
-                        reasons.append("prescriptive_impact")
-                if is_v18:
-                    required_values = {
-                        key: item[key]
-                        for key in ("claim", "writer_action", "local_source")
-                    }
-                elif is_v13:
-                    required_values = {
-                        key: value for key, value in item.items()
-                        if key != "artifact_path"
-                    }
-                else:
-                    required_values = item
-                if not all(required_values.values()):
+                if not all(
+                    item[key] for key in ("claim", "writer_action", "local_source")
+                ):
                     reasons.append("missing_field")
-                source_values = item["local_source"].split(";")
-                for source in source_values:
+                for source in item["local_source"].split(";"):
                     path = source.split("#", 1)[0]
                     if not (
                         source.startswith(("runtime:", "https://", "http://"))
-                        or path.startswith("input/")
-                        or path.startswith("software/")
+                        or path.startswith(("input/", "software/"))
                     ):
                         reasons.append("invalid_source")
                         break
-                if (
-                    is_v11
-                    and (
-                        item.get("kind") == "external_prior"
-                        or item.get("focus_kind") == "external_semantics"
-                    )
-                    and not any(
-                        source.startswith(("https://", "http://"))
-                        for source in source_values
-                    )
-                ):
-                    reasons.append("external_prior_without_url")
-                if item["confidence"] not in {"high", "medium"}:
-                    reasons.append("invalid_confidence")
                 if not reasons:
                     reasons.append("report_rejected" if not retained else "unknown")
             rows.append({
                 "endpoint": run.endpoint,
                 "task": run.task,
                 "index": index,
-                "decision": (response or {}).get("decision"),
                 "retained": is_retained,
                 "filter_reason": ";".join(reasons),
-                "prescriptive_claim_words": ";".join(claim_words),
-                "prescriptive_impact_words": ";".join(impact_words),
                 **item,
                 "parse_error": error,
             })
@@ -798,27 +642,23 @@ def prep_writer_rows(runs: dict[tuple[str, str], Run]) -> list[dict[str, Any]]:
                 else path
             )
             revisited += bool(marker and marker in later_arguments)
-        protocol_version = _prep_protocol_version(run)
-        raw_items = (response or {}).get(
-            "deliverables" if protocol_version is not None and protocol_version >= 13
-            else "entries" if protocol_version is not None and protocol_version >= 11
-            else "findings"
-        ) or []
+        raw_items = (response or {}).get("findings") or []
         raw_count = len(raw_items) if isinstance(raw_items, list) else None
         prep_meta = _read_json(
             run.run_dir / "origin_log" / "ale-claw" / "task_prep_meta.json"
         ) or {}
+        # Consumption, not delivery: a prep artifact earns its place when the
+        # writer actually calls or reads it, so tool calls that reference the
+        # staged artifact directory are the success metric for job 3.
+        artifact_calls = sum(
+            1 for _, arguments in calls if "task_prep/artifacts/" in arguments
+        )
         rows.append({
             "endpoint": run.endpoint,
             "task": run.task,
             "arm": SHORT_ARM[run.arm],
             "prep_status": _prep_metrics(run).get("prep_status"),
-            "raw_decision": (response or {}).get("decision"),
-            "raw_findings": raw_count,
-            "raw_entries": raw_count if protocol_version and protocol_version >= 11 else None,
-            "raw_deliverables": (
-                raw_count if protocol_version and protocol_version >= 13 else None
-            ),
+                "raw_findings": raw_count,
             "retained_findings": len(_retained_prep_claims(report)),
             "writer_tool_calls": len(calls),
             "report_read_call": read_call,
@@ -826,11 +666,9 @@ def prep_writer_rows(runs: dict[tuple[str, str], Run]) -> list[dict[str, Any]]:
             "report_exposed": bool(report.strip() and (read_call or report_inlined)),
             "report_sources": len(sources),
             "sources_revisited": revisited,
-            "report_modified": prep_meta.get("report_modified"),
-            "initial_report_sha256": prep_meta.get("initial_report_sha256"),
-            "final_report_sha256": prep_meta.get("final_report_sha256"),
             "artifact_count": prep_meta.get("artifact_count"),
             "artifact_chars": prep_meta.get("artifact_chars"),
+            "artifact_calls": artifact_calls,
             "parse_error": error,
         })
     return rows

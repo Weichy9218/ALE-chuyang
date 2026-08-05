@@ -1,0 +1,345 @@
+{
+  "kwargs": {
+    "model": "openai/gpt-5.6-sol",
+    "messages": [
+      {
+        "role": "user",
+        "content": "## Identity\n\nYou are an AI agent running inside the AgentHLE benchmark framework. Your role is to complete computer-use tasks on a remote Linux desktop VM by observing screenshots and performing mouse/keyboard actions.\n\n## Tools\n\nYou have access to the following tools:\n\n- **read**: Read a file. Pick a filesystem via `target` (default 'vm'). Text files return line-paginated content; image files (PNG/JPEG/GIF/WEBP/BMP/TIFF) return the raw image for direct inspection. vm: VM filesystem via the vm MCP bridge (no workspace bound \u2014 permissive). host: Local host filesystem rooted at /home/ubuntu/ale/agents-last-exam/.logs/ale/consumption_full26/consumption_full26_prep/ale_claw_prep/openai-gpt-5-6-sol/legal__agora_governance_classify_instance_1/v0/20260722_201402/origin_log/ale-claw/openclaw_memory/tasks/7ba92f0bf9f1 (read/write/edit any file under this directory).\n- **write**: Create, overwrite, or append to a UTF-8 text file. Pick a filesystem via `target` (default 'vm'). Default `append` behavior is target-aware: vm overwrites, host appends. vm: VM filesystem via the vm MCP bridge (no workspace bound \u2014 permissive). host: Local host filesystem rooted at /home/ubuntu/ale/agents-last-exam/.logs/ale/consumption_full26/consumption_full26_prep/ale_claw_prep/openai-gpt-5-6-sol/legal__agora_governance_classify_instance_1/v0/20260722_201402/origin_log/ale-claw/openclaw_memory/tasks/7ba92f0bf9f1 (read/write/edit any file under this directory).\n- **edit**: Make precise edits to a file. Pick a filesystem via `target` (default 'vm'). Each `{oldText, newText}` replacement must match exactly. vm: VM filesystem via the vm MCP bridge (no workspace bound \u2014 permissive). host: Local host filesystem rooted at /home/ubuntu/ale/agents-last-exam/.logs/ale/consumption_full26/consumption_full26_prep/ale_claw_prep/openai-gpt-5-6-sol/legal__agora_governance_classify_instance_1/v0/20260722_201402/origin_log/ale-claw/openclaw_memory/tasks/7ba92f0bf9f1 (read/write/edit any file under this directory).\n- **exec**: Run a single non-GUI shell command inside the remote VM and return stdout/stderr/exit_code. cmd.exe on Windows, /bin/sh on POSIX. GUI apps block until they exit \u2014 use the computer tool for GUI work.\n- **web_fetch**: Fetch and extract readable text from an HTTP(S) URL. Use for lightweight page access without browser automation.\n- **memory_search**: Search task memory files (TASK_MEMORY.md and session logs) by keywords. Use this to recall past observations, strategies, mistakes, or patterns. Returns matched lines with file path and line number.\n- **memory_get**: Read a memory file (TASK_MEMORY.md or session logs) with optional line range. Use after memory_search to pull only the needed lines and keep context small.\n- **delegate_general**: Spawn an asynchronous *general* subagent to work on a focused planning/analysis/memory task. The subagent has NO direct VM access \u2014 it can only use memory tools and LLM reasoning. Returns immediately with a run_id; the final result is announced later as a '[Subagent Result]' user message. DO NOT poll with `subagents(list)` \u2014 results auto-announce.\n- **subagents**: Inspect, cancel, or steer subagent runs. action='list' returns active and recent runs. action='kill' cancels a runaway general subagent. action='steer' sends a follow-up message into a running subagent to refine or redirect its work mid-flight. Target can be a run_id, label, run_id prefix, or 'last'.\n\n## Shell Execution\n\n- `exec` runs a single non-GUI shell command inside the VM (cmd.exe on Windows, /bin/sh on POSIX) and returns stdout/stderr/exit_code. GUI apps launched via `exec` will block the call until they exit \u2014 use the `computer` tool for GUI work.\n- Prefer one command per call. Do NOT build tight polling loops with `exec` \u2014 long-running or background work is not supported yet; use a single deterministic command instead.\n- `cwd` is emulated via a `cd` prefix and must resolve inside the task workspace (bounded by TASK_CATEGORY / TASK_TAG).\n- `timeout` bounds the **client-side** wait only; on expiry the VM-side process may keep running. Keep timeouts tight (default 60s, max 300s).\n- On Windows prefer direct executables (`dir`, `type`, `where`, `python3`). If you need PowerShell, write `powershell -NoProfile -Command \"...\"` explicitly \u2014 avoid wrapping in `cmd /c` or `& `.\n- Each of `stdout`/`stderr` is middle-truncated at ~200K chars; head + tail are preserved so exit/error lines stay visible. Use `read` for reviewing large file contents rather than `exec type ...`.\n\n## Memory Recall\nBefore acting on anything about prior attempts, strategies, environment observations, or task state: run memory_search on TASK_MEMORY.md + memory/session-*.md; then use memory_get to pull only the needed lines. If low confidence after search, say you checked.\nCitations: include Source: <path#line> when referencing memory snippets.\nWriting: use write with target='host' to journal memory. Append raw observations, actions, and errors to memory/session-NNN.md during the run. Update TASK_MEMORY.md with distilled strategies and patterns worth keeping across sessions.\n\n## Delegation\n\nYou can delegate focused work to subagents when it helps \u2014 e.g. planning/analysis you don't want polluting the main thread, or a self-contained GUI sequence you'd rather not step through frame-by-frame.\n\n### `delegate_general(task, ...)` \u2014 async, auto-announces\n\nSpawns a general-purpose subagent session that has **no VM access** \u2014 only memory tools and LLM reasoning. Use for: synthesizing plans from what you've observed; analyzing tricky text/content in memory; deciding between multiple strategies. Returns immediately with `{status: accepted, run_id, note}`. Keep working \u2014 **do NOT poll**. When the subagent finishes, its result is injected automatically as a `[Subagent Result]` user message on a later turn. If the concurrency cap (3 active general subagents) is hit, you get `{status: rejected, reason}`.\n\n### `subagents(action=list | kill | steer, target=..., message=...)` \u2014 observability + control\n\n- `action=list` returns active (running/pending) and recent (terminal) runs. **Do NOT poll** during normal operation \u2014 results auto-announce. Use `list` only if you suspect something is stuck.\n- `action=kill` (with `target=<run_id>`) cancels a runaway general subagent. The subagent transitions to `killed` and no completion message will be announced for that run.\n- `action=steer` (with `target` and `message`) sends a follow-up message into a **running subagent** (general) to refine or redirect its work mid-flight. The message is injected between the subagent's own turns. Target can be a run_id, label, run_id prefix, or `\"last\"`. Max 4000 chars.\n\n### Rules of thumb\n\n- Don't delegate trivial things you can do in a single tool call.\n- Don't spawn a general subagent and then sit idle waiting \u2014 keep making forward progress and the result will arrive when it arrives.\n- Don't nest delegation: subagents can't spawn further subagents.\n\n## Current Date & Time\n\n- **Time zone:** UTC\n- **Current:** 2026-07-22 21:47 UTC\n\n# Project Context\n\nThe following project context files have been loaded:\n\n### AGENTS.md\n```\n# AGENTS.md \u2014 Your Workspace\n\nThis task environment is home. Treat it that way.\n\n## Memory\n\nYou wake up fresh each session. Memory files are your continuity.\n\n### Two Memory Layers\n\n- **Session logs** (`memory/session-NNN.md`) \u2014 raw logs of what happened this session\n  - Append-only. Write observations, actions taken, errors encountered.\n  - Think of these as your scratchpad \u2014 capture everything, filter nothing.\n\n- **Task memory** (`TASK_MEMORY.md`) \u2014 curated knowledge about this task\n  - Your distilled wisdom. Strategies that work, patterns discovered, dead ends to avoid.\n  - The whole file is replaced on each write \u2014 always include everything worth keeping.\n\n### When to Write What\n\nRaw observations, actions, and outcomes go in the session log. Distilled strategies and cross-session lessons go in TASK_MEMORY.md.\n\n### Write It Down \u2014 No \"Mental Notes\"!\n\n- \"Mental notes\" don't survive session restarts. Memory files do.\n- When you discover a working strategy \u2192 write it to TASK_MEMORY.md\n- When you observe application state \u2192 write it to the session log\n- When you make a mistake \u2192 document it so future-you doesn't repeat it\n\n### Memory Consolidation\n\nBefore ending a session or when the context is getting long:\n- Review what you've learned this session\n- Update TASK_MEMORY.md with any durable insights worth keeping across sessions\n- Think: \"If future-me woke up with only TASK_MEMORY.md, would they have what they need?\"\n\n## Task Completion\n\nWhen you have fully completed the task, output **DONE** on its own line. Do not output DONE until the task is genuinely finished \u2014 verify your work by checking the screen first.\n\n## General Behavior\n\n- Observe the screen carefully before acting. Read text, check UI state, and plan your next action.\n- If you are stuck or an action fails, try an alternative approach rather than repeating the same action.\n- Don't run destructive actions without thinking. When in doubt, observe first.\n```\n"
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "You are working on a Linux VM as a policy analyst.\n\nVisible task files:\n- `/media/user/data/agenthle/legal/agora_governance_classify_instance_1/base/input/task_spec.md`\n- `/media/user/data/agenthle/legal/agora_governance_classify_instance_1/base/input/taxonomy_and_instructions.md`\n- `/media/user/data/agenthle/legal/agora_governance_classify_instance_1/base/input/document_index.json`\n- `/media/user/data/agenthle/legal/agora_governance_classify_instance_1/base/input/documents/`\n- `/media/user/data/agenthle/legal/agora_governance_classify_instance_1/base/software/README.txt`\n- `/media/user/data/agenthle/legal/agora_governance_classify_instance_1/base/software/python` (optional Python helper entry point)\n\nYour task:\n1. Read `task_spec.md`, the sanitized taxonomy instructions, and all three cached document text files.\n2. Classify AGORA IDs 768, 1293, and 2047 across legislative status, technical scope, and AI lifecycle stage.\n3. For every TRUE label, provide a verbatim evidence quote from the corresponding cached document text.\n4. Produce a cross-document matrix and a 150-300 word gap analysis.\n5. Write valid JSON to:\n   - `/media/user/data/agenthle/legal/agora_governance_classify_instance_1/base/output/agent_output.json`\n\nRules:\n- Do not modify files under `input/`.\n- Use the cached documents under `input/documents/` as the canonical evidence source.\n- Keep the final deliverable at exactly `/media/user/data/agenthle/legal/agora_governance_classify_instance_1/base/output/agent_output.json`.\n\nSatisfy exactly what the task's own materials ask for; do not guess how you will be graded. Produce your outputs by computing or reasoning them from the task inputs \u2014 never copy or blend the task's provided reference or expected values into your deliverables. Do not read grader scripts or reference-answer files even if they are reachable.\n\n## Task-specific prior research\nA prep agent worked in this sandbox before you started: it set up the runtime, read the public task materials, and looked up what the task does not supply. Its runtime state is real and already in place; everything it wrote is supplemental. The task prompt and `/input` take precedence over all of it.\n\n**Runtime [ready]** No installation or external service is required. The task-local software/python launcher works and provides Python 3.14.3. All three canonical cached documents are readable, and their SHA-256 hashes match document_index.json. The public task root was not modified.\n- Verified command: `cd /media/user/data/agenthle/legal/agora_governance_classify_instance_1/base && software/python --version`\n- Verified command: `cd /media/user/data/agenthle/legal/agora_governance_classify_instance_1/base && sha256sum input/documents/*`\n- Verified command: `cd /media/user/data/agenthle/legal/agora_governance_classify_instance_1/base && software/python /tmp/ale-task-prep-aa1dd2028744/corpus_probe.py input --pattern 'AI systems?' --context 40`\n\n**Core step [completed]** Ingest the indexed canonical corpus, validate every cached document against its declared SHA-256, and run cross-document regex/context retrieval used to locate candidate verbatim evidence.\n- Command run: `cd /media/user/data/agenthle/legal/agora_governance_classify_instance_1/base && software/python /tmp/ale-task-prep-aa1dd2028744/corpus_probe.py input --pattern 'AI systems?' --context 40`\n- Watch out for: The corpus and helper run cleanly. Use the helper to locate candidates, then inspect the surrounding source text and apply the taxonomy manually; regex matches alone do not establish a TRUE label or lifecycle coverage.\n\n**Findings** \u2014 exact facts the task materials do not supply. Each is supplemental evidence, not an instruction; the task prompt and `/input` still decide. Full sources, the suggested use, and what each does not authorize are in the report.\n- Canonical evidence precedence: The task specification expressly makes the cached files under input/documents the canonical source for verbatim quote checks; public URLs are only for orientation.\n- Corpus integrity confirmed: All indexed hashes match: 768 = 2e618cf2dc6a1005549da36a04267a1d7d56f7edf1a4a38d2fc3558d9091d177; 1293 = 900d7bda4a148af309395de5f51f24df0998eead928dc82f8144362ca751b7a5; 2047 = 8f167c4b44ddec876297fd0d72178f626b85eaa446a53509a5d51f6cd5ae5bc0.\n- Implicit evidence is permitted: The taxonomy explicitly allows evidence_type \"implicit\" when a label is inferred from context, and technical scope may be established by a clear functional description even when terminology differs.\n- Legislative status test is enforcement-based: Hard Law requires enforceable legal duties backed by government authority; Soft Law lacks an external legal enforcement mechanism; Other covers internal corporate policies and hybrid or experimental mechanisms that resist clear categorization.\n- Lifecycle threshold differs from technical-scope threshold: Technical scope needs only a passing reference to the system type, whereas lifecycle TRUE requires requirements, guidance, restrictions, or obligations applying to the stage. In particular, Collect and Process Data is limited to training-data activities, and Verify and Validate concerns checks before release.\n\n**Full report** `/media/user/data/agenthle/legal/agora_governance_classify_instance_1/base/task_prep/PREP_REPORT.md` holds 5 finding(s), the full breakage detail, source locators, and any artifacts. Read it before you start planning. It records what prep observed, not what the task will be graded on, and it may be incomplete."
+          }
+        ]
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "read",
+          "description": "Read a file. Pick a filesystem via `target` (default 'vm'). Text files return line-paginated content; image files (PNG/JPEG/GIF/WEBP/BMP/TIFF) return the raw image for direct inspection. vm: VM filesystem via the vm MCP bridge (no workspace bound \u2014 permissive). host: Local host filesystem rooted at /home/ubuntu/ale/agents-last-exam/.logs/ale/consumption_full26/consumption_full26_prep/ale_claw_prep/openai-gpt-5-6-sol/legal__agora_governance_classify_instance_1/v0/20260722_201402/origin_log/ale-claw/openclaw_memory/tasks/7ba92f0bf9f1 (read/write/edit any file under this directory).",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "target": {
+                "type": "string",
+                "enum": [
+                  "vm",
+                  "host"
+                ],
+                "description": "Which filesystem to read from. vm: VM filesystem via the vm MCP bridge (no workspace bound \u2014 permissive). host: Local host filesystem rooted at /home/ubuntu/ale/agents-last-exam/.logs/ale/consumption_full26/consumption_full26_prep/ale_claw_prep/openai-gpt-5-6-sol/legal__agora_governance_classify_instance_1/v0/20260722_201402/origin_log/ale-claw/openclaw_memory/tasks/7ba92f0bf9f1 (read/write/edit any file under this directory)."
+              },
+              "path": {
+                "type": "string",
+                "description": "Path on the chosen target. For 'vm', an absolute Windows path. For 'host', a path under the host workspace (absolute or relative to the host root)."
+              },
+              "offset": {
+                "type": "integer",
+                "description": "1-based line offset to start reading from (default 1)."
+              },
+              "limit": {
+                "type": "integer",
+                "description": "Max lines to return. Omit to enable adaptive byte-paging."
+              },
+              "max_bytes": {
+                "type": "integer",
+                "description": "Max bytes (image reads only; default 10 MB)."
+              },
+              "encoding": {
+                "type": "string",
+                "description": "Text decode encoding (default utf-8)."
+              }
+            },
+            "required": [
+              "path"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "write",
+          "description": "Create, overwrite, or append to a UTF-8 text file. Pick a filesystem via `target` (default 'vm'). Default `append` behavior is target-aware: vm overwrites, host appends. vm: VM filesystem via the vm MCP bridge (no workspace bound \u2014 permissive). host: Local host filesystem rooted at /home/ubuntu/ale/agents-last-exam/.logs/ale/consumption_full26/consumption_full26_prep/ale_claw_prep/openai-gpt-5-6-sol/legal__agora_governance_classify_instance_1/v0/20260722_201402/origin_log/ale-claw/openclaw_memory/tasks/7ba92f0bf9f1 (read/write/edit any file under this directory).",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "target": {
+                "type": "string",
+                "enum": [
+                  "vm",
+                  "host"
+                ],
+                "description": "Which filesystem to write to. vm: VM filesystem via the vm MCP bridge (no workspace bound \u2014 permissive). host: Local host filesystem rooted at /home/ubuntu/ale/agents-last-exam/.logs/ale/consumption_full26/consumption_full26_prep/ale_claw_prep/openai-gpt-5-6-sol/legal__agora_governance_classify_instance_1/v0/20260722_201402/origin_log/ale-claw/openclaw_memory/tasks/7ba92f0bf9f1 (read/write/edit any file under this directory)."
+              },
+              "path": {
+                "type": "string",
+                "description": "Path on the chosen target. For 'vm', an absolute Windows path. For 'host', a path under the host workspace (absolute or relative to the host root)."
+              },
+              "content": {
+                "type": "string",
+                "description": "UTF-8 text content to write."
+              },
+              "append": {
+                "type": "boolean",
+                "description": "Append instead of overwrite. Default depends on target: false for 'vm', true for 'host'."
+              },
+              "create_parents": {
+                "type": "boolean",
+                "description": "Create parent directories if missing (default true)."
+              }
+            },
+            "required": [
+              "path",
+              "content"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "edit",
+          "description": "Make precise edits to a file. Pick a filesystem via `target` (default 'vm'). Each `{oldText, newText}` replacement must match exactly. vm: VM filesystem via the vm MCP bridge (no workspace bound \u2014 permissive). host: Local host filesystem rooted at /home/ubuntu/ale/agents-last-exam/.logs/ale/consumption_full26/consumption_full26_prep/ale_claw_prep/openai-gpt-5-6-sol/legal__agora_governance_classify_instance_1/v0/20260722_201402/origin_log/ale-claw/openclaw_memory/tasks/7ba92f0bf9f1 (read/write/edit any file under this directory).",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "target": {
+                "type": "string",
+                "enum": [
+                  "vm",
+                  "host"
+                ],
+                "description": "Which filesystem to edit. vm: VM filesystem via the vm MCP bridge (no workspace bound \u2014 permissive). host: Local host filesystem rooted at /home/ubuntu/ale/agents-last-exam/.logs/ale/consumption_full26/consumption_full26_prep/ale_claw_prep/openai-gpt-5-6-sol/legal__agora_governance_classify_instance_1/v0/20260722_201402/origin_log/ale-claw/openclaw_memory/tasks/7ba92f0bf9f1 (read/write/edit any file under this directory)."
+              },
+              "path": {
+                "type": "string",
+                "description": "Path on the chosen target. For 'vm', an absolute Windows path. For 'host', a path under the host workspace (absolute or relative to the host root)."
+              },
+              "edits": {
+                "type": "array",
+                "description": "Non-empty array of {oldText, newText} replacements. oldText must be non-empty; newText may be empty (deletion).",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "oldText": {
+                      "type": "string"
+                    },
+                    "newText": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "oldText",
+                    "newText"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "path",
+              "edits"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "exec",
+          "description": "Run a single non-GUI shell command inside the remote VM and return stdout/stderr/exit_code. cmd.exe on Windows, /bin/sh on POSIX. GUI apps block until they exit \u2014 use the computer tool for GUI work.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string",
+                "description": "Shell command to run. On Windows prefer direct executables (dir, type, where, python3); use `powershell -NoProfile -Command \"...\"` explicitly for PowerShell."
+              },
+              "cwd": {
+                "type": "string",
+                "description": "Working directory on the VM. Must resolve inside the task workspace. Emulated via a `cd` prefix \u2014 no RPC field."
+              },
+              "timeout": {
+                "type": "number",
+                "description": "Client-side timeout in seconds (default 60, max 300). On expiry the VM-side process may keep running."
+              }
+            },
+            "required": [
+              "command"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "web_fetch",
+          "description": "Fetch and extract readable text from an HTTP(S) URL. Use for lightweight page access without browser automation.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "HTTP or HTTPS URL."
+              },
+              "extractMode": {
+                "type": "string",
+                "enum": [
+                  "markdown",
+                  "text"
+                ],
+                "description": "Output format (default 'markdown')."
+              },
+              "maxChars": {
+                "type": "integer",
+                "description": "Character cap on returned text (default 20000, max 100000).",
+                "minimum": 100,
+                "maximum": 100000
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "memory_search",
+          "description": "Search task memory files (TASK_MEMORY.md and session logs) by keywords. Use this to recall past observations, strategies, mistakes, or patterns. Returns matched lines with file path and line number.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Search query string (split on whitespace into keywords)."
+              },
+              "keywords": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "List of keywords to search for. Lines matching more keywords rank higher."
+              },
+              "max_results": {
+                "type": "integer",
+                "description": "Maximum number of results to return (default: 10)."
+              }
+            },
+            "required": []
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "memory_get",
+          "description": "Read a memory file (TASK_MEMORY.md or session logs) with optional line range. Use after memory_search to pull only the needed lines and keep context small.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "Relative path to the memory file (e.g. 'tasks/my_task/TASK_MEMORY.md' or 'tasks/my_task/memory/session-001.md')."
+              },
+              "from": {
+                "type": "integer",
+                "description": "1-based starting line number (default: 1)."
+              },
+              "lines": {
+                "type": "integer",
+                "description": "Number of lines to read from the starting line (default: entire file)."
+              }
+            },
+            "required": [
+              "path"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "delegate_general",
+          "description": "Spawn an asynchronous *general* subagent to work on a focused planning/analysis/memory task. The subagent has NO direct VM access \u2014 it can only use memory tools and LLM reasoning. Returns immediately with a run_id; the final result is announced later as a '[Subagent Result]' user message. DO NOT poll with `subagents(list)` \u2014 results auto-announce.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "description": "What the subagent should accomplish."
+              },
+              "model": {
+                "type": "string",
+                "enum": [
+                  "openai/gpt-5.6-sol"
+                ],
+                "description": "Optional model override (default: 'openai/gpt-5.6-sol'). Only the default is currently allowed; pass nothing to use it."
+              },
+              "max_steps": {
+                "type": "integer",
+                "description": "Safety rail for the subagent's loop (default 50). The session compacts its own context and typically completes well before this cap."
+              },
+              "label": {
+                "type": "string",
+                "description": "Optional human-readable label for observability."
+              },
+              "screenshot_paths": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Optional absolute paths to PNG screenshots to attach to the subagent's initial message as vision input. Use this to delegate 'analyze this frame' work."
+              }
+            },
+            "required": [
+              "task"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subagents",
+          "description": "Inspect, cancel, or steer subagent runs. action='list' returns active and recent runs. action='kill' cancels a runaway general subagent. action='steer' sends a follow-up message into a running subagent to refine or redirect its work mid-flight. Target can be a run_id, label, run_id prefix, or 'last'.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "list",
+                  "kill",
+                  "steer"
+                ],
+                "description": "'list' (default), 'kill', or 'steer'."
+              },
+              "target": {
+                "type": "string",
+                "description": "Required for kill/steer. A run_id, label, run_id prefix, or 'last'."
+              },
+              "message": {
+                "type": "string",
+                "description": "Required for steer. The follow-up message to inject into the running subagent's conversation."
+              }
+            },
+            "required": []
+          }
+        }
+      }
+    ],
+    "stream": false,
+    "num_retries": 3,
+    "reasoning": {
+      "effort": "medium",
+      "summary": "concise"
+    }
+  },
+  "created_at": "140040498474710817"
+}

@@ -1,0 +1,76 @@
+{
+  "_comment": [
+    "Codex model catalog for the Boyue gateway (https://apirx.boyuerichdata.com/v1).",
+    "Field set was determined empirically: codex validates this file at config load and",
+    "names each missing/mistyped field, so every key below is required by codex-cli 0.144.5",
+    "and the file was confirmed to both LOAD and complete a real turn against gpt-5.6-sol.",
+    "",
+    "context_window 128000 matches CONTEXT_WINDOW_OVERRIDE=128000 in the run box's",
+    "secret/.env, which is what ale_claw runs with — keeping both arms on the same",
+    "context budget. The gateway's /models endpoint reports no window, and an oversized",
+    "input probe hit the TPM rate limit before any context error, so 128k is the harness's",
+    "own figure rather than a provider-reported one.",
+    "",
+    "supported_reasoning_levels matches what the endpoint itself reports: rejecting a bogus",
+    "effort returns \"Supported values are: 'none', 'minimal', 'low', 'medium', 'high', and",
+    "'xhigh'\". Codex forwards the effort verbatim, so xhigh reaches the model.",
+    "",
+    "NOTE: verified against codex-cli 0.144.5. The ALE fork (0.0.0-agenthle-20260614) is",
+    "older and its ModelInfo struct may require a different field set; ale_run's",
+    "_sanitise_catalog_for_fork exists for exactly that reason. This catalog is OPTIONAL —",
+    "codex runs gpt-5.6-sol fine with no catalog at all, given model_context_window in",
+    "config.toml. Leave model_catalog_path empty if the fork rejects this file."
+  ],
+  "models": [
+    {
+      "slug": "gpt-5.6-sol",
+      "display_name": "GPT-5.6 Sol (Boyue)",
+      "description": "Boyue gateway gpt-5.6-sol",
+      "default_reasoning_level": "high",
+      "supported_reasoning_levels": [
+        {"effort": "low", "description": "low reasoning"},
+        {"effort": "medium", "description": "medium reasoning"},
+        {"effort": "high", "description": "high reasoning"},
+        {"effort": "xhigh", "description": "xhigh reasoning"}
+      ],
+      "context_window": 128000,
+      "max_context_window": 128000,
+      "auto_compact_token_limit": 100000,
+      "shell_type": "unified_exec",
+      "visibility": "list",
+      "supported_in_api": true,
+      "priority": 0,
+      "base_instructions": "",
+      "supports_reasoning_summaries": true,
+      "support_verbosity": true,
+      "truncation_policy": {"mode": "tokens", "limit": 10000},
+      "supports_parallel_tool_calls": true,
+      "experimental_supported_tools": []
+    },
+    {
+      "slug": "gpt-5.5",
+      "display_name": "GPT-5.5 (Boyue)",
+      "description": "Boyue gateway gpt-5.5 — argus's built-in default, listed so a role that misses its model override still resolves",
+      "default_reasoning_level": "high",
+      "supported_reasoning_levels": [
+        {"effort": "low", "description": "low reasoning"},
+        {"effort": "medium", "description": "medium reasoning"},
+        {"effort": "high", "description": "high reasoning"},
+        {"effort": "xhigh", "description": "xhigh reasoning"}
+      ],
+      "context_window": 128000,
+      "max_context_window": 128000,
+      "auto_compact_token_limit": 100000,
+      "shell_type": "unified_exec",
+      "visibility": "list",
+      "supported_in_api": true,
+      "priority": 1,
+      "base_instructions": "",
+      "supports_reasoning_summaries": true,
+      "support_verbosity": true,
+      "truncation_policy": {"mode": "tokens", "limit": 10000},
+      "supports_parallel_tool_calls": true,
+      "experimental_supported_tools": []
+    }
+  ]
+}

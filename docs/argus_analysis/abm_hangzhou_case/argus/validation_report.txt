@@ -1,0 +1,4 @@
+R2 = 0.785409
+RMSE = 7.115853 minutes
+Total passengers = 1264325
+std(sim-real) = 6.952679

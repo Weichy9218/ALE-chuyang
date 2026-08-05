@@ -1,0 +1,28 @@
+# reviewer-arm A/B SMOKE list — price the audit mechanism before scaling to the full 26.
+#
+# Chosen to make the first authorized run maximally informative per dollar:
+#  - the 4 partial-credit DELIVERABLE tasks where cross-harness mining found the
+#    audit-edge strongest (memory: argus-edge-is-source-grounded-audit). These are
+#    where the reviewer arm's cell-by-cell recompute should bite hardest.
+#  - ct_geometry_calibration_catphan: a binary hard-compute task (dual-threshold
+#    → 1.0/0.0); tests whether the gate catches an unfinished/ungrounded compute.
+#  - agora_governance_classify: a classification/narrative task with few
+#    deterministically-recomputable fields — a NO-HARM control (reviewer should
+#    largely no-op here; base and reviewer should score alike).
+#
+# NOTE (target.md §6): CT + several of these are binary-scored → single A/B is
+# noisy. Run k>=3 repeats per arm, OR read the mechanism-level signals first
+# (reviewer_audit_meta.json: did the gate fire? did output change across rounds?)
+# rather than leaning on one-shot final score.
+
+# --- audit-edge deliverable tasks (recomputable semantic fields) ---
+business_finance/sec_10k_financial_parsing
+business_finance/digital_marketing_audience_segmentation_1
+health_medicine/healthcare_tcga_luad_survival_kras
+health_medicine/healthcare_variant_annotation_pipeline
+
+# --- binary hard-compute task ---
+health_medicine/ct_geometry_calibration_catphan
+
+# --- no-harm control (little to recompute) ---
+legal/agora_governance_classify_instance_1

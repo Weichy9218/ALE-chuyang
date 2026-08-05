@@ -1,0 +1,38 @@
+# WS2 argus skills-lever RELAUNCH — +skills arm ONLY, after the sandbox seed-path fix.
+#
+# WHY THIS EXISTS. The first argus A/B (exp_argus_skills_ab.yaml) ran the +skills
+# arm with ARGUS_SEED_SKILLS_DIR pointing at a HOST path that does not resolve
+# inside the sandbox mount namespace, so _seed_skills logged "is not a directory"
+# and seeded ZERO WS2 skills — the +skills arm was identical to base and is void.
+# The base arm from that run IS valid and is preserved under
+# /home/ubuntu/argus/runs/skills_ab/argus_skills_ab/argus_full4/ — do NOT rerun it.
+#
+# THE FIX (ale_run/agents/argus/_launcher.py::_seed_skills): the env var is now
+# only the on/off switch; the seed tree is resolved package-relative via
+# Path(__file__).parent/"seed_skills", which always resolves to the in-sandbox
+# copy that ships beside _launcher.py. agent_argus_full4_skills.yaml still sets
+# ARGUS_SEED_SKILLS_DIR (any value flips the switch on).
+#
+# SEED-COUNT GATE. After launch, confirm the first +skills episode's
+# origin_log/argus/argus_stderr.log contains:
+#     [argus-launcher] seeded 6 WS2 skill file(s) ...     (or "falling back to package seed tree")
+# If it instead says "package seed tree ... is absent" or seeds 0, the sandbox
+# build dropped the non-.py data files — abort and embed skill bodies in a .py module.
+#
+# This run is the +skills half only (single agent). Pair it against the preserved
+# base arm for the argus skills-lever delta.
+name: argus_skills_reskills
+secret_file: /home/ubuntu/ale/agents-last-exam/secret/.env.haoxiang
+
+agents:
+  - /home/ubuntu/ale/agents-last-exam/argus-run/config/agent_argus_full4_skills.yaml
+environment: /home/ubuntu/ale/agents-last-exam/configs/environments/docker_nogcs_keep.yaml
+tasks: /home/ubuntu/ale/agents-last-exam/argus-run/config/crossarch_skills_tasks.txt
+
+output:
+  root: /home/ubuntu/argus/runs/skills_ab_reskills
+concurrency: 3
+wall_time_s: 28800
+cleanup_mode: delete
+prompt_suffix: |
+  Satisfy exactly what the task's own materials ask for; do not guess how you will be graded. Produce your outputs by computing or reasoning them from the task inputs — never copy or blend the task's provided reference or expected values into your deliverables. Do not read grader scripts or reference-answer files even if they are reachable.

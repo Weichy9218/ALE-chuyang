@@ -1,23 +1,22 @@
 """Pre-solve preparation for ALE Claw.
 
 The prep worker runs in the writer's sandbox before the writer starts and has
-three jobs: make the task's runtime actually work, compile the deliverable's
-machine-checkable contract from the public task surface, and supply exact facts
-or reusable tools the writer would otherwise have to derive.
+three jobs: make the task's runtime actually work, run the task's core
+mechanical step once and report where it breaks, and supply exact facts or
+reusable tools the writer would otherwise have to derive.
 
-It never reads or writes the writer's candidate ``output/`` (which does not
-exist while prep runs); judging a candidate artifact is verifier work. Its
-writer-facing checks and tools may - and should - tell the writer how to verify
-the eventual deliverable under ``output/``: the boundary is who runs a check and
-when, not whether the deliverable path is mentioned.
+It does not compile a deliverable contract and does not ship a script that
+checks a candidate deliverable. Contract and schema conformance belong to the
+verifier, which measures the writer's real output; a second checklist compiled
+from the same public text carries no extra information and pulls the writer's
+effort toward whatever it happens to name. Prep never reads or writes the
+writer's ``output/``, which does not exist while it runs.
 """
 from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
 import logging
-import re
 import shlex
 import time
 from dataclasses import asdict, dataclass, field
@@ -29,13 +28,29 @@ from .harness.subagent.subagent_registry import (
     SubagentType,
 )
 from .harness.subagent.subagent_session import GeneralSubagentSession
+from .parsing import extract_json_object
 
 logger = logging.getLogger(__name__)
 
-PREP_PROTOCOL_VERSION = "task-prep-v23"
 NO_PREP_SENTINEL = "NO_TASK_SPECIFIC_PREP"
 
-MAX_PREP_CONTRACT_ITEMS = 24
+PREP_ATTEMPT_OUTCOMES = ("completed", "broke", "not_attempted")
+
+PREP_WRAP_UP_NOTICE = (
+    "Step budget notice: about {remaining} turns remain. Finish within the "
+    "next 10 turns and return your JSON object. Leave the runtime in the "
+    "state you verified, and report the core-step attempt honestly - "
+    "outcome `broke` with the real error is a useful result, and outcome "
+    "`not_attempted` is better than a guess. Running out of turns returns "
+    "nothing at all."
+)
+"""Fired once when the step budget is ~80% spent.
+
+Prep now spends part of its budget actually running the task's core step,
+which is open-ended work, so exhausting the budget mid-run is a real risk -
+and the loop returns a sentinel, discarding everything the run learned.
+"""
+
 MAX_PREP_FINDINGS = 6
 MAX_PREP_ARTIFACTS = 4
 MAX_PREP_ARTIFACT_BYTES = 64_000
@@ -67,7 +82,6 @@ one disk, 60 s proved too tight; the command is also retried once because a
 retry has no side effects.
 """
 PREP_AGENT_TIMEOUT_S = 1_800
-PREP_SELF_CHECK_TIMEOUT_S = 120
 
 PREP_ENV_STATUSES = ("ready", "partial", "not_needed", "blocked")
 PREP_ARTIFACT_SUFFIXES = frozenset({
@@ -87,10 +101,8 @@ class TaskPrepResult:
     report: str = ""
     artifacts: dict[str, str] = field(default_factory=dict)
     environment_status: str = ""
-    contract_items: int = 0
     finding_count: int = 0
-    contract: list[dict[str, str]] = field(default_factory=list)
-    self_check: dict[str, str] | None = None
+    attempt: dict[str, str] = field(default_factory=dict)
     environment: dict[str, Any] = field(default_factory=dict)
     findings: list[dict[str, Any]] = field(default_factory=list)
     dropped: list[str] = field(default_factory=list)
@@ -107,7 +119,7 @@ class TaskPrepResult:
         data = asdict(self)
         data.pop("report", None)
         artifacts = data.pop("artifacts", {})
-        data["protocol"] = PREP_PROTOCOL_VERSION
+        data["protocol_digest"] = prep_protocol_digest()
         data["report_chars"] = len(self.report)
         data["report_sha256"] = (
             hashlib.sha256(self.report.encode("utf-8")).hexdigest()
@@ -129,6 +141,19 @@ class TaskPrepResult:
 def prep_scratch_dir(task_root: str) -> str:
     digest = hashlib.sha256(task_root.encode()).hexdigest()[:12]
     return f"/tmp/ale-task-prep-{digest}"
+
+
+def prep_protocol_digest() -> str:
+    """Content hash of the prep contract: the prompt text and output schema.
+
+    A hand-bumped version number inflates with every edit and cannot be mapped
+    back to what actually ran, which is how two rounds ended up compared under
+    labels that did not describe their real difference. This digest is derived
+    from the prompt the agent is actually given, so two runs share it exactly
+    when they were given the same contract.
+    """
+    prompt = build_task_prep_system_prompt("<task_root>", scratch_dir="<scratch>")
+    return "prep-" + hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:12]
 
 
 def build_task_prep_system_prompt(
@@ -167,49 +192,41 @@ artifacts there after you finish, so you never write to it yourself. Installs,
 caches, and temporary files belong in the runtime environment, `/tmp`, or
 `{scratch}`.
 
-## 2. Compile the deliverable contract
+## 2. Run this task's core mechanical step once
 
-Read the task prompt and `input/` and enumerate the obligations the deliverable
-must satisfy that a machine could check: required files and their locations,
-required fields and their spelling, identifiers that must be preserved,
-consistency required across two files, ordering, units, row or record counts,
-value ranges, encoding, and any explicitly weighted requirement.
+Identify the one mechanical step the task is built around - parse the filings,
+run the annotation pipeline, fit the model, transform the records, drive the
+task's own software - and actually run it end to end on the real inputs, with
+your working files under `{scratch}`. You are not producing the deliverable.
+You are finding out where this task breaks before the writer spends its budget
+finding out.
 
-Every item must carry the locator it came from. Give the check a writer could
-run against its own draft deliverable under `output/` before submitting - an
-exact command or an exact comparison, not "verify carefully". Explain the items
-that are easy to miss or easy to read the wrong way, and say which reading the
-task text supports.
+Report what broke, with the exact command and the verbatim error. A breakage you
+hit yourself outranks any obligation you could read off the task text, because
+it is measured rather than predicted. Reading the prompt tells you what the task
+says; running the step tells you what the task does. If the step runs clean, say
+so and set outcome `completed` - that is also information.
 
-When the contract has more than a handful of mechanical items - many required
-fields, cross-file consistency rules, exhaustive ID preservation - do not leave
-the checklist manual: implement it as one runnable self-check script, attach it
-as an artifact, and register it in the `self_check` output field so the writer
-gets a single exact command. The script takes the draft directory as an
-argument and prints what passed, what failed, and what it cannot check. It must
-report to stdout even when the draft directory is empty or files are missing -
-a missing file is a finding to print, not a reason to exit silently. The
-harness probes the script once on an empty draft and withholds it if it
-crashes or prints nothing. Test it on a tiny synthetic draft you create under
-the scratch directory, never on the real task root.
+Some tasks have no mechanical core: when the only step is reading staged
+materials and writing prose, set outcome `not_attempted` with a one-line reason
+instead of inventing a step to run.
 
-The self-check reports structural coverage, never correctness. It may check
-that a file exists, that a field is present and spelled as the task spells it,
-that row and record counts match a stated number, that identifiers are
-preserved, that two files agree where the task says they must, and that
-encoding and ordering follow the stated rule. It must not hardcode expected
-values, decide whether an answer is right, or score anything: it answers "is
-anything missing", not "is this correct". Judging the content of a candidate
-deliverable is the verifier's role, and where no verifier runs, the writer
-rechecks the task itself.
+When the step broke and you did not solve it, attach the exact repro script you
+ran as an artifact, and report the breakage as one observation: the command and
+the verbatim error. Do not rank the writer's priorities, do not label anything
+a primary or critical problem, and do not direct where its budget goes. A
+breakage you could not solve is a fact about the task, not an agenda for the
+writer - the observed failure mode is a writer that spends its budget where an
+unresolved prep note pointed, on a task it would otherwise have done well.
 
-This is a reading of the public task, not a grading rubric and not a guess at
-the hidden reference. Do not invent obligations the materials do not state. Do
-not tell the writer what value to put in a field. If the task states an
-obligation once and clearly, it still belongs on the list; completeness of the
-list is what makes it useful. A checklist pulls effort toward the dimensions it
-names, so phrase items as minimum obligations, never as targets to maximize,
-and say explicitly what the list does not cover.
+Do not compile a checklist of deliverable obligations, and do not write a script
+that checks a candidate deliverable. Contract and schema conformance belong to
+the verifier, which measures the writer's real output; a second checklist
+compiled from the same public text adds no information and pulls the writer's
+effort toward whatever it happens to name.
+
+Do not treat the step's result as an answer, and do not leave it anywhere the
+writer could mistake it for one.
 
 ## 3. Supply what the writer cannot derive
 
@@ -223,28 +240,38 @@ Report exact facts and reusable tools, each with its source:
 - A tested implementation of an exact metric or formula the task defines but
   does not implement.
 - A read-only resolver for a cross-file join that has to be repeated many times.
-- A runnable self-check script that verifies contract items against a draft
-  deliverable directory the writer passes as an argument. The writer runs it
-  on its own `output/` as often as it wants; you never run it, because no
-  candidate output exists while you work. Where the contract has many
-  mechanical obligations (dozens of required fields, cross-file consistency
-  rules, exhaustive ID preservation), this is the single most valuable
-  artifact you can leave.
 
-Attach reusable mappings, resolvers, metric code, and self-check scripts as
-artifacts under `{scratch}`. Test an artifact before you declare it; test a
-self-check script on a tiny synthetic draft you create under `{scratch}`,
-never on the real task root.
+A finding is an exact fact with a source. A method choice, a modeling
+assumption, or a framing of the task ("treat these series as independent",
+"no calendar expansion needed") is not a finding and must not be reported as
+one: it does the writer's reasoning for it, and a wrong frame costs more than
+a missing fact. If a statement cannot be checked against its source, it is not
+a finding.
+
+Attach reusable mappings, resolvers and metric code as artifacts under
+`{scratch}`. Test an artifact before you declare it, and test it on data you
+create under `{scratch}`, never on the real task root. Prefer a tested
+artifact over prose: a resolver the writer can call is worth more than a
+paragraph telling it what to re-derive.
+
+## When the task gives you nothing to do
+
+Decide early whether your jobs exist here. On a closed-book task whose runtime
+already works, whose only step is reading and writing prose, and whose
+materials are fully staged, all three jobs are empty - and an empty result is
+a successful prep, not a failure to produce. Return environment.status
+`not_needed` with the other sections empty and finish; the harness will then
+put nothing in front of the writer. Do not stretch observations into findings
+and do not invent a step: on a task the writer can already do well, an agenda
+set at turn zero is pure downside.
 
 ## Boundaries
 
 - The task prompt and `input/` outrank everything you produce. When your evidence
   contradicts them, drop your evidence.
-- Never read, write, lint, score, or check the writer's `output/`. Judging a
-  candidate artifact is the verifier's role, not yours. Telling the writer how
-  to check its own draft is different and encouraged: contract checks and
-  self-check artifacts should reference the deliverable paths under `output/`
-  that the writer will create.
+- Never read, write, lint, score, or check the writer's `output/`. It does not
+  exist while you work, and judging a candidate deliverable is the verifier's
+  role. Do not leave a tool whose purpose is to check one.
 - Do not choose final labels, values, models, forecasts, or missing-data
   policies. Observing that a field is absent does not authorize `NA`, zero, or
   omission unless the task says so.
@@ -264,14 +291,14 @@ return an empty list or omit a section you have nothing for.
     "commands": ["exact verified command the writer should use"],
     "blocked_reason": "what could not be made to work, if anything"
   }},
-  "contract": [
-    {{
-      "requirement": "one machine-checkable obligation",
-      "locator": "task_prompt or input/path#locator",
-      "check": "how the writer verifies it",
-      "note": "why it is easy to miss, optional"
-    }}
-  ],
+  "attempt": {{
+    "step": "the core mechanical step you tried to run",
+    "outcome": "completed" | "broke" | "not_attempted",
+    "command": "the exact command you ran",
+    "breakage": "where it broke and the verbatim error, if it broke",
+    "writer_action": "the observed risk stated as a fact; never a priority
+                      ranking or a directive on where the writer spends budget"
+  }},
   "findings": [
     {{
       "title": "short name",
@@ -283,52 +310,41 @@ return an empty list or omit a section you have nothing for.
   ],
   "artifacts": [
     {{"path": "relative path under the scratch directory", "purpose": "what it is for"}}
-  ],
-  "self_check": {{
-    "command": "exact command the writer runs against its draft, taking the draft directory as an argument, e.g. python3 task_prep/artifacts/check_contract.py output",
-    "artifact": "the artifact path (relative to the scratch directory) implementing it",
-    "covers": "which structural obligations it checks and what it cannot check"
-  }}
+  ]
 }}
 
-At most {MAX_PREP_CONTRACT_ITEMS} contract items, {MAX_PREP_FINDINGS} findings,
-and {MAX_PREP_ARTIFACTS} artifacts. `self_check` is optional and must name a
-declared artifact. A working runtime, a complete contract checklist, and a
-runnable self-check are worth more than a long findings list."""
+At most {MAX_PREP_FINDINGS} findings and {MAX_PREP_ARTIFACTS} artifacts. A
+working runtime and one honestly reported breakage are worth more than a long
+findings list."""
 
 
 def build_task_prep_request(task_prompt: str) -> str:
     return (
-        "Prepare this task for the writer. Get its runtime working, compile the "
-        "deliverable contract from the public materials, and report the exact "
-        "facts or tools the writer cannot easily derive.\n\n"
+        "Prepare this task for the writer. Get its runtime working, run the "
+        "task's core mechanical step once and report where it breaks, and "
+        "report the exact facts or tools the writer cannot easily derive.\n\n"
         f"PUBLIC TASK PROMPT:\n{task_prompt.strip()}"
     )
 
 
-def _parse_json_object(text: str) -> dict[str, Any]:
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        stripped = re.sub(r"^```(?:json)?\s*", "", stripped)
-        stripped = re.sub(r"\s*```$", "", stripped)
-    decoder = json.JSONDecoder()
-    for index, char in enumerate(stripped):
-        if char != "{":
-            continue
-        try:
-            value, end = decoder.raw_decode(stripped[index:])
-        except json.JSONDecodeError:
-            continue
-        if stripped[index + end :].strip():
-            continue
-        if isinstance(value, dict):
-            return value
-    raise ValueError("prep response does not contain one JSON object")
+def _clean(value: Any) -> str:
+    """Whitespace-collapse a free-text field without truncating it.
+
+    Content fields (runtime summaries, breakage tracebacks, findings
+    observations) are kept in full. A silent character cut drops real content
+    the writer needs and, unlike a list-length cap, leaves nothing in
+    ``dropped`` to mark the loss - the audit trail would then claim prep
+    returned less than it did. The writer-facing digest applies its own
+    injection budget; the report file keeps the whole thing, and the only
+    remaining size guard is the recorded ``report:truncated`` safety cap.
+    """
+    return " ".join(str(value or "").split())
 
 
 def _text(value: Any, *, limit: int) -> str:
-    text = " ".join(str(value or "").split())
-    return text[:limit]
+    """Whitespace-collapse and hard-cap. Reserved for enum guards and the
+    digest's injection budget, never for storing report content."""
+    return _clean(value)[:limit]
 
 
 def _artifact_path_ok(path: str) -> bool:
@@ -350,13 +366,11 @@ class PrepBundle:
     artifact_paths: list[str] = field(default_factory=list)
     dropped: list[str] = field(default_factory=list)
     environment_status: str = ""
-    contract_items: int = 0
     finding_count: int = 0
     environment: dict[str, Any] = field(default_factory=dict)
-    contract: list[dict[str, str]] = field(default_factory=list)
+    attempt: dict[str, str] = field(default_factory=dict)
     findings: list[dict[str, Any]] = field(default_factory=list)
     artifact_entries: list[dict[str, str]] = field(default_factory=list)
-    self_check: dict[str, str] | None = None
 
 
 def normalize_prep_bundle(text: str) -> PrepBundle:
@@ -368,7 +382,14 @@ def normalize_prep_bundle(text: str) -> PrepBundle:
     dropped: list[str] = []
     if not text or text.startswith(NO_PREP_SENTINEL):
         return PrepBundle(dropped=dropped)
-    value = _parse_json_object(text)
+    value = extract_json_object(text)
+
+    def _over_cap(name: str, raw: Any, cap: int) -> None:
+        # An entry beyond a cap is dropped like any other invalid entry, and
+        # like any other drop it is recorded - a silent slice would make the
+        # audit trail claim prep returned less than it did.
+        if isinstance(raw, list) and len(raw) > cap:
+            dropped.append(f"{name}: {len(raw) - cap} beyond the {cap} cap")
 
     raw_env = value.get("environment")
     env: dict[str, Any] = {}
@@ -376,59 +397,67 @@ def normalize_prep_bundle(text: str) -> PrepBundle:
         status = _text(raw_env.get("status"), limit=20)
         if status not in PREP_ENV_STATUSES:
             status = ""
+        _over_cap("environment.commands", raw_env.get("commands"), MAX_PREP_ENV_COMMANDS)
         commands = [
             command for command in (
-                _text(raw, limit=600)
+                _clean(raw)
                 for raw in (raw_env.get("commands") or [])[:MAX_PREP_ENV_COMMANDS]
             )
             if command
         ]
         env = {
             "status": status,
-            "summary": _text(raw_env.get("summary"), limit=1200),
+            "summary": _clean(raw_env.get("summary")),
             "commands": commands,
-            "blocked_reason": _text(raw_env.get("blocked_reason"), limit=600),
+            "blocked_reason": _clean(raw_env.get("blocked_reason")),
         }
         if not env["status"] and not env["summary"]:
             env = {}
     elif raw_env is not None:
         dropped.append("environment:not_an_object")
 
-    contract: list[dict[str, str]] = []
-    raw_contract = value.get("contract")
-    if isinstance(raw_contract, list):
-        for raw in raw_contract[:MAX_PREP_CONTRACT_ITEMS]:
-            if not isinstance(raw, dict):
-                dropped.append("contract:not_an_object")
-                continue
-            item = {
-                "requirement": _text(raw.get("requirement"), limit=400),
-                "locator": _text(raw.get("locator"), limit=300),
-                "check": _text(raw.get("check"), limit=400),
-                "note": _text(raw.get("note"), limit=400),
-            }
-            if not item["requirement"]:
-                dropped.append("contract:empty_requirement")
-                continue
-            contract.append(item)
-    elif raw_contract is not None:
-        dropped.append("contract:not_a_list")
+    attempt: dict[str, str] = {}
+    raw_attempt = value.get("attempt")
+    if isinstance(raw_attempt, dict):
+        outcome = _text(raw_attempt.get("outcome"), limit=20)
+        if outcome not in PREP_ATTEMPT_OUTCOMES:
+            outcome = ""
+        candidate = {
+            "step": _clean(raw_attempt.get("step")),
+            "outcome": outcome,
+            "command": _clean(raw_attempt.get("command")),
+            # The verbatim error is the whole point of this field: a paraphrased
+            # or truncated traceback is a guess about the breakage, not the
+            # breakage. Kept in full.
+            "breakage": _clean(raw_attempt.get("breakage")),
+            "writer_action": _clean(raw_attempt.get("writer_action")),
+        }
+        if not candidate["step"]:
+            dropped.append("attempt:empty_step")
+        elif not candidate["outcome"]:
+            dropped.append("attempt:unknown_outcome")
+        else:
+            attempt = candidate
+    elif raw_attempt is not None:
+        dropped.append("attempt:not_an_object")
 
     findings: list[dict[str, Any]] = []
     raw_findings = value.get("findings")
     if isinstance(raw_findings, list):
+        _over_cap("findings", raw_findings, MAX_PREP_FINDINGS)
         for raw in raw_findings[:MAX_PREP_FINDINGS]:
             if not isinstance(raw, dict):
                 dropped.append("finding:not_an_object")
                 continue
+            _over_cap("finding.sources", raw.get("sources"), 4)
             item = {
-                "title": _text(raw.get("title"), limit=160),
-                "observation": _text(raw.get("observation"), limit=1200),
-                "writer_action": _text(raw.get("writer_action"), limit=600),
-                "do_not_infer": _text(raw.get("do_not_infer"), limit=400),
+                "title": _clean(raw.get("title")),
+                "observation": _clean(raw.get("observation")),
+                "writer_action": _clean(raw.get("writer_action")),
+                "do_not_infer": _clean(raw.get("do_not_infer")),
                 "sources": [
                     source for source in (
-                        _text(entry, limit=400)
+                        _clean(entry)
                         for entry in (raw.get("sources") or [])[:4]
                     )
                     if source
@@ -444,56 +473,34 @@ def normalize_prep_bundle(text: str) -> PrepBundle:
     artifacts: list[dict[str, str]] = []
     raw_artifacts = value.get("artifacts")
     if isinstance(raw_artifacts, list):
+        _over_cap("artifacts", raw_artifacts, MAX_PREP_ARTIFACTS)
         for raw in raw_artifacts[:MAX_PREP_ARTIFACTS]:
             if not isinstance(raw, dict):
                 dropped.append("artifact:not_an_object")
                 continue
-            path = _text(raw.get("path"), limit=200)
+            path = _clean(raw.get("path"))
             if not _artifact_path_ok(path):
                 dropped.append(f"artifact:invalid_path:{path[:60]}")
                 continue
             artifacts.append({
                 "path": path,
-                "purpose": _text(raw.get("purpose"), limit=300),
+                "purpose": _clean(raw.get("purpose")),
             })
     elif raw_artifacts is not None:
         dropped.append("artifacts:not_a_list")
 
-    self_check: dict[str, str] | None = None
-    raw_self_check = value.get("self_check")
-    if isinstance(raw_self_check, dict):
-        candidate_check = {
-            "command": _text(raw_self_check.get("command"), limit=300),
-            "artifact": _text(raw_self_check.get("artifact"), limit=200),
-            # The coverage statement is the self-check's boundary declaration -
-            # what it does not check. Truncating it mid-sentence (observed on
-            # SEC at 300 chars) removes exactly the caveat it exists to make.
-            "covers": _text(raw_self_check.get("covers"), limit=900),
-        }
-        declared = {item["path"] for item in artifacts}
-        if not candidate_check["command"]:
-            dropped.append("self_check:empty_command")
-        elif candidate_check["artifact"] not in declared:
-            dropped.append("self_check:artifact_not_declared")
-        else:
-            self_check = candidate_check
-    elif raw_self_check is not None:
-        dropped.append("self_check:not_an_object")
-
-    if not env and not contract and not findings:
+    if not env and not attempt and not findings:
         return PrepBundle(dropped=dropped)
 
     bundle = PrepBundle(
         artifact_paths=[item["path"] for item in artifacts],
         dropped=dropped,
         environment_status=env.get("status", "") if env else "",
-        contract_items=len(contract),
         finding_count=len(findings),
         environment=env,
-        contract=contract,
+        attempt=attempt,
         findings=findings,
         artifact_entries=artifacts,
-        self_check=self_check,
     )
     bundle.report = render_prep_report(bundle, unavailable=frozenset())
     return bundle
@@ -507,17 +514,15 @@ def render_prep_report(bundle: PrepBundle, *, unavailable: frozenset[str]) -> st
     writer cannot open.
     """
     env = bundle.environment
-    self_check = bundle.self_check
-    if self_check and self_check["artifact"] in unavailable:
-        bundle.self_check = None
-        self_check = None
-        bundle.dropped.append("self_check:artifact_unavailable")
     lines = [
         "# Task-specific prep",
         "",
-        "Supplemental preparation done in this sandbox before you started. The "
-        "task prompt and `/input` take precedence; discard anything here that "
-        "conflicts with them.",
+        "Supplemental preparation done in this sandbox before you started.",
+        "",
+        "Authority order, highest first: (1) the task prompt, (2) `input/` and "
+        "`software/`, (3) your own re-check of those materials, (4) anything in "
+        "this report, (5) general knowledge. When anything here conflicts with "
+        "something above it, discard what is here.",
     ]
     if env:
         lines.extend(["", f"## Runtime [{env['status'] or 'unspecified'}]", ""])
@@ -528,38 +533,25 @@ def render_prep_report(bundle: PrepBundle, *, unavailable: frozenset[str]) -> st
             lines.extend(f"- `{command}`" for command in env["commands"])
         if env["blocked_reason"]:
             lines.extend(["", f"Not working: {env['blocked_reason']}"])
-    if self_check:
+    if bundle.attempt:
+        attempt = bundle.attempt
         lines.extend([
             "",
-            "## Self-check",
+            f"## Core step attempt [{attempt['outcome']}]",
             "",
-            f"Run `{self_check['command']}` against your draft whenever you "
-            "want a coverage readout. It was tested on a synthetic sample "
-            "only; it has no authority, and the checklist below stays the "
-            "source of truth.",
-            f"- Tool: `task_prep/artifacts/{self_check['artifact']}` - "
-            f"{self_check['covers'] or 'contract self-check'}",
+            "This step was actually run in this sandbox before you started. It "
+            "is a measurement of what this task does, not a reading of what it "
+            "says, and it is the one thing here you cannot get by rereading "
+            "the prompt.",
+            "",
+            f"- Step: {attempt['step']}",
         ])
-    if bundle.contract:
-        lines.extend([
-            "",
-            "## Deliverable contract checklist",
-            "",
-            "Compiled from the task prompt and `/input`. It is a reading of the "
-            "stated requirements, not a grading rubric, and it is incomplete "
-            "by construction. Recheck anything you rely on, and never trade a "
-            "quality the list does not name for a stricter pass on one it "
-            "does: satisfy each item in the most natural way the task allows.",
-            "",
-        ])
-        for index, item in enumerate(bundle.contract, 1):
-            lines.append(f"{index}. {item['requirement']}")
-            if item["locator"]:
-                lines.append(f"   - Source: `{item['locator']}`")
-            if item["check"]:
-                lines.append(f"   - Check: {item['check']}")
-            if item["note"]:
-                lines.append(f"   - Note: {item['note']}")
+        if attempt["command"]:
+            lines.append(f"- Command: `{attempt['command']}`")
+        if attempt["breakage"]:
+            lines.extend(["", "Where it broke:", "", "```", attempt["breakage"], "```"])
+        if attempt["writer_action"]:
+            lines.extend(["", f"Watch out for: {attempt['writer_action']}"])
     if bundle.findings:
         lines.extend(["", "## Findings", ""])
         for index, item in enumerate(bundle.findings, 1):
@@ -599,65 +591,56 @@ def render_prep_report(bundle: PrepBundle, *, unavailable: frozenset[str]) -> st
     return report
 
 
-def withhold_self_check(bundle: PrepBundle) -> None:
-    """Remove the self-check and its artifact from everything the writer sees.
-
-    Delivery switch for the self-check A/B (``task_specific_prep_self_check``):
-    the prep agent behaves identically - same prompt, same budget, the script
-    is still written and declared - and only the delivery differs, so a paired
-    run isolates the net effect of the self-check channel from the rest of
-    prep. The artifact is withheld too: a staged script the report lists is
-    still discoverable, and the off arm must not deliver it through a side
-    door.
-    """
-    if bundle.self_check is None:
-        return
-    withheld = bundle.self_check["artifact"]
-    bundle.self_check = None
-    bundle.artifact_paths = [
-        path for path in bundle.artifact_paths if path != withheld
-    ]
-    bundle.artifact_entries = [
-        entry for entry in bundle.artifact_entries if entry["path"] != withheld
-    ]
-    bundle.dropped.append("self_check:withheld_by_config")
-    if bundle.report:
-        bundle.report = render_prep_report(bundle, unavailable=frozenset())
-
-
 def build_prep_digest(
     bundle_or_result: Any, report_path: str | None
 ) -> str:
     """The only prep content injected into the writer's first prompt.
 
-    Everything else lives in the report file. Four things must arrive at t=0
+    Everything else lives in the report file. Three things must arrive at t=0
     because they change what the writer does before it reads anything: the
-    runtime state (a real fact about the sandbox), the exact self-check command
-    (a staged file nobody names is a file nobody runs), the findings, and where
-    the rest is.
+    runtime state (a real fact about the sandbox), the core-step breakage (a
+    measurement of what this task does, which no amount of rereading the prompt
+    would produce), and the findings.
 
     Findings are here because they are the one class of prep output with no
-    other carrier. Runtime state sinks into commands and the self-check sinks
-    into a script, but an exact external fact the task omits - an official
-    ordering, a versioned rule - can only travel as prose. The v21 six-task run
-    showed the writer never opens the report file (it has the commands and the
-    script it needs), so a finding left only in that file reaches nobody:
-    Variant's Ensembl severity ordering was delivered, staged, and never seen.
-    Only the title and the observation travel; sources, writer_action, and the
-    do-not-infer caveat stay in the report for the writer that follows up.
+    other carrier. Runtime state sinks into the sandbox itself, but an exact
+    external fact the task omits - an official ordering, a versioned rule - can
+    only travel as prose, and a finding left only in the report file has been
+    observed to reach nobody. Only the title and observation travel; sources,
+    the suggested use, and the do-not-infer caveat stay in the report.
+    Prep's own prescriptions (writer_action) never travel at t=0: the digest
+    sets the writer's opening agenda, and an unresolved prep note framed as a
+    priority has been observed to pull a writer's budget into a pit on a task
+    it would otherwise have done well.
     """
     env = getattr(bundle_or_result, "environment", None) or {}
-    self_check = getattr(bundle_or_result, "self_check", None)
-    contract_items = getattr(bundle_or_result, "contract_items", 0)
+    attempt = getattr(bundle_or_result, "attempt", None) or {}
     finding_count = getattr(bundle_or_result, "finding_count", 0)
     findings = getattr(bundle_or_result, "findings", None) or []
+
+    # An empty prep puts nothing in front of the writer. Ready-with-nothing
+    # and not_needed carry no information the writer can act on, so injecting
+    # "a prep agent worked here" would be agenda without content; partial and
+    # blocked runtimes are real constraints and always travel.
+    if not (
+        attempt
+        or findings
+        or (env.get("commands") or [])
+        or env.get("blocked_reason")
+        or env.get("status") in ("partial", "blocked")
+    ):
+        return ""
 
     lines = [
         "A prep agent worked in this sandbox before you started: it set up the "
         "runtime, read the public task materials, and looked up what the task "
         "does not supply. Its runtime state is real and already in place; "
-        "everything it wrote is supplemental. The task prompt and `/input` "
-        "take precedence over all of it."
+        "everything it wrote is supplemental.",
+        "",
+        "Authority order, highest first: (1) the task prompt, (2) `input/` and "
+        "`software/`, (3) your own re-check of those materials, (4) anything in "
+        "this prep output, (5) general knowledge. When this prep output "
+        "conflicts with anything above it, discard the prep output.",
     ]
     if env.get("status") or env.get("summary"):
         lines.append("")
@@ -667,15 +650,24 @@ def build_prep_digest(
             lines.append(f"- Verified command: `{command}`")
         if env.get("blocked_reason"):
             lines.append(f"- Not working: {env['blocked_reason']}")
-    if self_check:
+    if attempt:
         lines.extend([
             "",
-            f"**Self-check** `{self_check['command']}`",
-            "Run it against your draft before you finish and read what it "
-            "reports. It checks structural coverage only "
-            f"({self_check['covers'] or 'see the report'}); it has no "
-            "authority and passing it is not evidence the task is complete.",
+            f"**Core step [{attempt.get('outcome') or 'unknown'}]** "
+            f"{attempt.get('step', '')}".rstrip(),
         ])
+        if attempt.get("command"):
+            lines.append(f"- Command run: `{attempt['command']}`")
+        if attempt.get("breakage"):
+            lines.append(
+                f"- Broke here: {_text(attempt['breakage'], limit=DIGEST_FINDING_CHARS)}"
+            )
+        if attempt.get("outcome") == "broke":
+            lines.append(
+                "- Prep did not solve this. It is one observation about the "
+                "task, not a ranking of your priorities; your own reading of "
+                "the task decides where your budget goes."
+            )
     if findings:
         lines.extend([
             "",
@@ -690,16 +682,14 @@ def build_prep_digest(
             lines.append(f"- {title}: {observation}")
     if report_path:
         counts = (
-            f"{contract_items} contract item(s) and {finding_count} finding(s)"
-            if (contract_items or finding_count) else "no checklist items"
+            f"{finding_count} finding(s)" if finding_count else "no findings"
         )
         lines.extend([
             "",
-            f"**Full report** `{report_path}` holds {counts}, source locators, "
-            "and any artifacts. Read it before you start planning; it is a "
-            "reading of the stated requirements, not a grading rubric, and it "
-            "may be incomplete. Never trade a quality it does not name for a "
-            "stricter pass on one it does.",
+            f"**Full report** `{report_path}` holds {counts}, the full breakage "
+            "detail, source locators, and any artifacts. Read it before you "
+            "start planning. It records what prep observed, not what the task "
+            "will be graded on, and it may be incomplete.",
         ])
     else:
         lines.extend([
@@ -786,51 +776,6 @@ async def collect_prep_artifacts(
     return artifacts, dropped
 
 
-async def preflight_self_check(
-    *,
-    interface: Any,
-    scratch_dir: str,
-    self_check: dict[str, str],
-) -> str:
-    """Run the declared self-check once against an empty draft.
-
-    The self-check is the highest-frequency signal prep emits and the writer
-    can run it without limit, so a script that crashes is a high-frequency
-    wrong signal. This is the minimum version of the fixture discipline the
-    verifier already applies: the script must start, finish, say something,
-    and not die of its own bug. Reporting failures against an empty draft is
-    correct behaviour and passes; only a crash, a timeout, or silence fails.
-
-    Returns "" when the check is usable, otherwise a short reason.
-    """
-    probe = f"{scratch_dir.rstrip('/')}/selfcheck-probe"
-    command = self_check["command"].replace(
-        "task_prep/artifacts/", f"{scratch_dir.rstrip('/')}/"
-    )
-    if scratch_dir.rstrip("/") not in command:
-        return "command does not invoke the declared artifact"
-    script = (
-        f"rm -rf -- {shlex.quote(probe)} && "
-        f"mkdir -p -- {shlex.quote(probe)}/output && "
-        f"cd {shlex.quote(probe)} && {command}"
-    )
-    try:
-        result = await asyncio.wait_for(
-            interface.run_command(script), timeout=PREP_SELF_CHECK_TIMEOUT_S
-        )
-    except TimeoutError:
-        return f"timed out after {PREP_SELF_CHECK_TIMEOUT_S}s on an empty draft"
-    except Exception as exc:  # noqa: BLE001 - an unusable probe drops the check
-        return f"{type(exc).__name__}: {exc}"
-    stdout = str(getattr(result, "stdout", "") or "").strip()
-    stderr = str(getattr(result, "stderr", "") or "")
-    if "Traceback (most recent call last)" in stderr:
-        return "raised an unhandled exception on an empty draft"
-    if not stdout:
-        return "printed nothing on an empty draft"
-    return ""
-
-
 async def run_task_specific_prep(
     *,
     interface: Any,
@@ -849,7 +794,6 @@ async def run_task_specific_prep(
     summary_runtime: Any | None = None,
     api_key: str | None = None,
     api_base: str | None = None,
-    deliver_self_check: bool = True,
 ) -> TaskPrepResult:
     """Run prep in the writer's sandbox and return its report and artifacts.
 
@@ -906,6 +850,7 @@ async def run_task_specific_prep(
         ),
         api_key=api_key,
         api_base=api_base,
+        wrap_up_notice=PREP_WRAP_UP_NOTICE,
     )
     registry.attach_inbox(run.run_id, session.inbox)
     started = time.monotonic()
@@ -914,8 +859,6 @@ async def run_task_specific_prep(
         if raw.startswith("(subagent reached max steps"):
             raise RuntimeError("task prep reached max steps without a final report")
         bundle = normalize_prep_bundle(raw)
-        if not deliver_self_check:
-            withhold_self_check(bundle)
         report = bundle.report
         artifacts: dict[str, str] = {}
         unavailable: frozenset[str] = frozenset()
@@ -933,16 +876,6 @@ async def run_task_specific_prep(
             )
             if unavailable and report:
                 report = render_prep_report(bundle, unavailable=unavailable)
-        if bundle.self_check and report:
-            reason = await preflight_self_check(
-                interface=interface,
-                scratch_dir=scratch_dir,
-                self_check=bundle.self_check,
-            )
-            if reason:
-                bundle.self_check = None
-                bundle.dropped.append(f"self_check:preflight_failed:{reason}")
-                report = render_prep_report(bundle, unavailable=unavailable)
         registry.complete(run.run_id, raw, session.usage)
         if bundle.dropped:
             logger.info(
@@ -953,10 +886,8 @@ async def run_task_specific_prep(
             report=report,
             artifacts=artifacts,
             environment_status=bundle.environment_status,
-            contract_items=bundle.contract_items,
             finding_count=bundle.finding_count,
-            contract=bundle.contract,
-            self_check=bundle.self_check,
+            attempt=bundle.attempt,
             environment=bundle.environment,
             findings=bundle.findings,
             dropped=bundle.dropped,

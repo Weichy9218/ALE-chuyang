@@ -137,6 +137,142 @@ def _tools_to_litellm_schema(tools: list[BaseTool]) -> list[dict[str, Any]]:
     """Convert BaseTool instances to litellm function-calling schema."""
     return [{"type": "function", "function": tool.function} for tool in tools]
 
+# ---------------------------------------------------------------------------
+# Responses-API transport (opt-in via ALE_MODEL_TRANSPORT=responses)
+#
+# gpt-5.6-sol rejects function tools + reasoning_effort on /v1/chat/completions
+# ("Please use /v1/responses instead") on the boyue gateway. When the env flag
+# is set the subagent runs its chat loop over litellm.aresponses instead. The
+# loop stays chat-shaped: the request is translated to Responses input and the
+# response is wrapped in a chat-shaped shim so the rest of the loop is
+# unchanged. Reconstructed function_call items carry only ``call_id`` (no
+# linking ``id``), so the API treats them as caller-authored and does not
+# demand a paired reasoning item - the chat store keeps no reasoning to replay.
+# ---------------------------------------------------------------------------
+
+def _subagent_use_responses() -> bool:
+    return os.getenv("ALE_MODEL_TRANSPORT", "").strip().lower() == "responses"
+
+
+def _subagent_messages_to_responses_input(messages):
+    """Chat messages -> Responses-API input items."""
+    items = []
+    for m in messages:
+        role = m.get("role")
+        if role == "tool":
+            content = m.get("content")
+            items.append({
+                "type": "function_call_output",
+                "call_id": m.get("tool_call_id"),
+                "output": content if isinstance(content, str) else _json.dumps(content),
+            })
+            continue
+        if role == "assistant":
+            content = m.get("content")
+            if isinstance(content, str) and content:
+                items.append({
+                    "type": "message", "role": "assistant",
+                    "content": [{"type": "output_text", "text": content}],
+                })
+            for tc in m.get("tool_calls") or []:
+                fn = tc.get("function") or {}
+                items.append({
+                    "type": "function_call",
+                    "call_id": tc.get("id"),
+                    "name": fn.get("name"),
+                    "arguments": fn.get("arguments") or "{}",
+                })
+            continue
+        content = m.get("content")
+        text = content if isinstance(content, str) else _json.dumps(content)
+        items.append({
+            "type": "message", "role": role or "user",
+            "content": [{"type": "input_text", "text": text}],
+        })
+    return items
+
+
+def _subagent_tools_to_responses(tool_schemas):
+    """Chat function tools -> flat Responses-API function tools."""
+    out = []
+    for t in tool_schemas or []:
+        if t.get("type") == "function" and isinstance(t.get("function"), dict):
+            fn = t["function"]
+            out.append({
+                "type": "function",
+                "name": fn.get("name"),
+                "description": fn.get("description", ""),
+                "parameters": fn.get("parameters", {}),
+            })
+        else:
+            out.append(t)
+    return out
+
+
+class _ShimFn:
+    def __init__(self, name, arguments):
+        self.name = name
+        self.arguments = arguments
+
+
+class _ShimToolCall:
+    def __init__(self, call_id, name, arguments):
+        self.id = call_id
+        self.type = "function"
+        self.function = _ShimFn(name, arguments)
+
+
+class _ShimMessage:
+    def __init__(self, content, tool_calls):
+        self.content = content
+        self.tool_calls = tool_calls or None
+
+
+class _ShimUsage:
+    def __init__(self, prompt_tokens, completion_tokens):
+        self.prompt_tokens = prompt_tokens
+        self.completion_tokens = completion_tokens
+
+
+class _ShimChoice:
+    def __init__(self, message):
+        self.message = message
+
+
+class _ShimResponse:
+    """Chat-completions-shaped view over an aresponses result, so the subagent
+    loop reads ``.choices[0].message`` and ``.usage`` unchanged."""
+
+    def __init__(self, response):
+        payload = (
+            response.model_dump() if hasattr(response, "model_dump")
+            else dict(response or {})
+        )
+        text_parts = []
+        tool_calls = []
+        for item in payload.get("output") or []:
+            if not isinstance(item, dict):
+                continue
+            itype = item.get("type")
+            if itype == "message":
+                for c in item.get("content") or []:
+                    if isinstance(c, dict) and c.get("type") in ("output_text", "text"):
+                        text_parts.append(c.get("text", ""))
+            elif itype == "function_call":
+                tool_calls.append(_ShimToolCall(
+                    item.get("call_id") or item.get("id"),
+                    item.get("name"),
+                    item.get("arguments") or "{}",
+                ))
+        usage = payload.get("usage") or {}
+        pt = usage.get("input_tokens") or usage.get("prompt_tokens") or 0
+        ct = usage.get("output_tokens") or usage.get("completion_tokens") or 0
+        self.choices = [_ShimChoice(_ShimMessage(
+            "\n".join(t for t in text_parts if t), tool_calls))]
+        self.usage = _ShimUsage(int(pt), int(ct))
+
+
+
 
 def _rewind_kept_index_to_tool_call_boundary(
     messages: list[dict[str, Any]],
@@ -244,6 +380,8 @@ class GeneralSubagentSession:
         system_prompt: str | None = None,
         api_key: str | None = None,
         api_base: str | None = None,
+        wrap_up_notice: str | None = None,
+        wrap_up_remaining_fraction: float = 0.2,
     ) -> None:
         self._run_id = run_id
         self._task = task
@@ -258,6 +396,13 @@ class GeneralSubagentSession:
         self._api_key = api_key
         self._api_base = api_base
         self._max_tool_result_chars_per_turn = max_tool_result_chars_per_turn
+        # One budget notice, fired once when the step budget is nearly
+        # spent. A subagent that runs out mid-thought returns the max-steps
+        # sentinel and its whole run is wasted; telling it how many turns
+        # remain lets it land what it has.
+        self._wrap_up_notice = wrap_up_notice
+        self._wrap_up_at = max(1, round(max_steps * wrap_up_remaining_fraction))
+        self._wrap_up_sent = False
         if (
             max_tool_result_chars_per_turn is not None
             and max_tool_result_chars_per_turn <= 0
@@ -360,6 +505,18 @@ class GeneralSubagentSession:
             # 1.5. Poll inbox for steer messages (at most one per turn).
             self._poll_inbox()
 
+            # 1.6. Budget notice, once, near the end of the step budget.
+            remaining = self._max_steps - _step
+            if (
+                self._wrap_up_notice
+                and not self._wrap_up_sent
+                and remaining <= self._wrap_up_at
+            ):
+                notice = self._wrap_up_notice.format(remaining=remaining)
+                self._messages.append({"role": "user", "content": notice})
+                self.session_mgr.append_message("user", f"[Budget] {notice}")
+                self._wrap_up_sent = True
+
             # 2. Pre-call token estimate. Single source of truth for
             #    current_tokens / needs_compaction; also truncates oversized
             #    tool results in-place.
@@ -412,8 +569,54 @@ class GeneralSubagentSession:
         # Loop exhausted.
         return "(subagent reached max steps without a final response)"
 
+    async def _call_llm_responses(self, litellm_mod, resolved: ResolvedModel):
+        """Invoke litellm.aresponses (Responses API) and return a chat-shaped shim.
+
+        The only route on which gpt-5.6-sol accepts function tools together with
+        a reasoning effort. ``reasoning_effort`` is translated to the Responses
+        ``reasoning`` object. Runs with ``store=False`` so each request is self-
+        contained on the load-balanced boyue gateway (Azure multi-resource: a
+        stored rs_ reasoning item created on one resource 400s on the next turn's
+        resource -> "Item with id not found"; store=False avoids that lookup).
+        summary="auto" requests a readable reasoning summary to persist; boyue
+        currently strips it (no-op today, future-proof).
+        """
+        kwargs: dict[str, Any] = {
+            "model": resolved.model,
+            "input": _subagent_messages_to_responses_input(self._messages),
+            "temperature": 1.0,
+            "store": False,
+        }
+        tp = dict(self._thinking_params or {})
+        effort = tp.pop("reasoning_effort", None)
+        reasoning = tp.pop("reasoning", None)
+        if not effort and isinstance(reasoning, dict):
+            effort = reasoning.get("effort")
+        if effort:
+            kwargs["reasoning"] = {"effort": effort, "summary": "auto"}
+        for k, v in tp.items():
+            if v is not None:
+                kwargs[k] = v
+        if self._tool_schemas:
+            kwargs["tools"] = _subagent_tools_to_responses(self._tool_schemas)
+        if self._api_key is not None:
+            kwargs["api_key"] = self._api_key
+        if self._api_base is not None:
+            kwargs["api_base"] = self._api_base
+        # Shared-quota gateway: ride out transient 429s instead of failing the
+        # whole subagent (and with it the unit) after litellm's 3 default tries.
+        kwargs.setdefault("num_retries", 24)
+        kwargs.setdefault("retry_strategy", "exponential_backoff_retry")
+        return _ShimResponse(await litellm_mod.aresponses(**kwargs))
+
     async def _call_llm(self, litellm_mod, resolved: ResolvedModel):
-        """Invoke litellm.acompletion with the current message + tool state."""
+        """Invoke litellm over the current message + tool state.
+
+        Routes to the Responses API when ALE_MODEL_TRANSPORT=responses (boyue
+        needs it for tools + reasoning), otherwise chat completions.
+        """
+        if _subagent_use_responses():
+            return await self._call_llm_responses(litellm_mod, resolved)
         kwargs: dict[str, Any] = {
             "model": resolved.model,
             "messages": self._messages,

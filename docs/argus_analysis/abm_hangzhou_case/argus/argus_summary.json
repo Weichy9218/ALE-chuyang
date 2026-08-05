@@ -1,0 +1,68 @@
+{
+  "ok": true,
+  "summary": {
+    "missions_started": 2,
+    "missions_run": 2,
+    "planning_cycles": 2,
+    "results": [
+      {
+        "item_id": "0f39c72e821e",
+        "title": "ALE task",
+        "tags": [
+          "ale",
+          "ale_last_exam"
+        ],
+        "execution_workdir": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__transport_safety__abm_hangzhou_metro__v0__20260725_131003/project",
+        "success": true,
+        "status": "done",
+        "review_status": "done",
+        "stop_reason": "All observable hard gates pass. Both required files exist at the exact output-root paths and parse successfully. Independent full-row validation confirmed the exact nine-column schema, integer fields, 1,264,325/1,264,325 AFC identity coverage, observed-value alignment, duration arithmetic, valid stations, and internally consistent report metrics. The strongest measured result is R² 0.781964 with RMSE 7.172751 minutes and mean residual −1.763835 minutes. Source inspection confirms simulation-owned values are generated through network routing and train-event simulation rather than copied AFC labels. A fresh reviewer replay completed with zero unserved trips and reproduced both deliverables byte-for-byte.",
+        "rounds": 1,
+        "cost_usd": 4.485225,
+        "known_cost_usd": 4.485225,
+        "pricing_status": "unpriced",
+        "iteration": null,
+        "auth_failure": false,
+        "review_reason": "",
+        "expected_plan_id": "",
+        "expected_plan_version": 0,
+        "context_packet": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__transport_safety__abm_hangzhou_metro__v0__20260725_131003/argus_home/projects/ale/handoffs/0f39c72e821e/latest.json"
+      },
+      {
+        "item_id": "7fea74f2ac98",
+        "title": "Complete and certify the current Goal Gate",
+        "tags": [
+          "planner",
+          "scope:bounded",
+          "bounded_dag_node",
+          "stage_closing",
+          "review:required"
+        ],
+        "execution_workdir": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__transport_safety__abm_hangzhou_metro__v0__20260725_131003/project",
+        "success": true,
+        "status": "done",
+        "review_status": "done",
+        "stop_reason": "Independent final audit certifies the Goal Gate. Both exact required deliverables parse successfully; all 1,264,325 AFC trips are covered and aligned; model-owned outputs are simulation-derived rather than copied; the report independently recomputes to R² 0.785409, RMSE 7.115853 minutes, and residual standard deviation 6.952679; network provenance, route selections, workflow completion, hashes, and cross-artifact consistency all pass. CHECKPOINT.md was updated with the certification evidence. The Manager may record final completion.",
+        "rounds": 1,
+        "cost_usd": 1.519283,
+        "known_cost_usd": 1.519283,
+        "pricing_status": "unpriced",
+        "iteration": null,
+        "auth_failure": false,
+        "review_reason": "",
+        "expected_plan_id": "plan-0290e7ed96a6",
+        "expected_plan_version": 1,
+        "context_packet": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__transport_safety__abm_hangzhou_metro__v0__20260725_131003/argus_home/projects/ale/handoffs/7fea74f2ac98/latest.json"
+      }
+    ],
+    "total_cost_usd": 10.117161,
+    "known_cost_usd": 10.117161,
+    "pricing_status": "unpriced",
+    "stopped_by": "planner_retry",
+    "suggested_sleep": 15.0
+  },
+  "thread_id": null,
+  "project_root": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__transport_safety__abm_hangzhou_metro__v0__20260725_131003/argus_home/projects/ale",
+  "events_path": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__transport_safety__abm_hangzhou_metro__v0__20260725_131003/argus_home/projects/ale/events.jsonl",
+  "work_dir": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__transport_safety__abm_hangzhou_metro__v0__20260725_131003"
+}

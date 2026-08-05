@@ -1,0 +1,32 @@
+# legal_ma re-run on BOYUE, with two changes vs the failed boyue attempt:
+#   1. thinking.py now sends reasoning_effort (chat style) -> boyue accepts it
+#      (the reasoning object 400'd); also enables reasoning_content capture.
+#   2. refined typo hint: report the misprint verbatim as an explicit finding,
+#      while first satisfying every /input requirement.
+# Goal: does legal_ma flip from 0 (catch target_a) without losing b/c/d?
+
+arms: [prep, verifier]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000
+  thinking_level: medium
+
+prep:
+  max_steps: 50
+  timeout_s: 1800
+
+verifier:
+  max_steps: 30
+  max_review_rounds: 1
+  writer_checks: 8
+
+run:
+  name: legalma_boyue
+  tasks: docs/harness/results/legalma_boyue_tasks.txt
+  concurrency: 2
+  cleanup_mode: delete
+  secret_file: secret/.env.boyue
+  api_endpoints: []
+  output_root: .logs/ale/legalma_boyue
+  wall_time_s: 86400

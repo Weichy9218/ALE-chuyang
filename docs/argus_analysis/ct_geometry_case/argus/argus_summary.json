@@ -1,0 +1,68 @@
+{
+  "ok": true,
+  "summary": {
+    "missions_started": 2,
+    "missions_run": 2,
+    "planning_cycles": 2,
+    "results": [
+      {
+        "item_id": "841005df55a6",
+        "title": "ALE task",
+        "tags": [
+          "ale",
+          "ale_last_exam"
+        ],
+        "execution_workdir": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__health_medicine__ct_geometry_calibration_catphan__v0__20260724_182349/project",
+        "success": true,
+        "status": "done",
+        "review_status": "done",
+        "stop_reason": "All observable requirements pass. Both required files exist at the exact paths and parse correctly. Independent canonical Python/LEAP replay from the measured sinogram using the submitted geometry was byte-for-byte identical to the saved float32 512x512 reconstruction. Independently measured SSIM is 0.9964346364141674 and unnormalized MSE is 3.683554124722991e-08, satisfying both thresholds; JSON metrics match exactly, all values are finite, the output differs from the reference, and the calibration logs document iterative measured optimization. CHECKPOINT.md was corrected with the verified evidence.",
+        "rounds": 2,
+        "cost_usd": 10.31642,
+        "known_cost_usd": 10.31642,
+        "pricing_status": "partial",
+        "iteration": null,
+        "auth_failure": false,
+        "review_reason": "",
+        "expected_plan_id": "",
+        "expected_plan_version": 0,
+        "context_packet": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__health_medicine__ct_geometry_calibration_catphan__v0__20260724_182349/argus_home/projects/ale/handoffs/841005df55a6/latest.json"
+      },
+      {
+        "item_id": "94eb4a0119b8",
+        "title": "Complete and certify the current Goal Gate",
+        "tags": [
+          "planner",
+          "scope:bounded",
+          "bounded_dag_node",
+          "stage_closing",
+          "review:required"
+        ],
+        "execution_workdir": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__health_medicine__ct_geometry_calibration_catphan__v0__20260724_182349/project",
+        "success": true,
+        "status": "done",
+        "review_status": "done",
+        "stop_reason": "Goal Gate independently verified. Both exact required deliverables exist and parse correctly. A fresh reconstruction using the canonical software/python and submitted geometry reproduced reconstructed_calibrated.npy exactly (maximum difference 0.0; matching SHA-256). Independently measured SSIM is 0.9964346364141674 and unnormalized MSE is 3.683554124722991e-08, passing the required thresholds. JSON metrics match exactly, calibration logs contain 395 finite measured evaluations including the final geometry, the reconstruction is not copied from the reference, inputs remained unchanged, and the final hard-gate audit passes every current-stage checklist item. CHECKPOINT.md was updated with the independent evidence.",
+        "rounds": 1,
+        "cost_usd": 2.912416,
+        "known_cost_usd": 2.912416,
+        "pricing_status": "unpriced",
+        "iteration": null,
+        "auth_failure": false,
+        "review_reason": "",
+        "expected_plan_id": "plan-f13aec3d5dd3",
+        "expected_plan_version": 1,
+        "context_packet": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__health_medicine__ct_geometry_calibration_catphan__v0__20260724_182349/argus_home/projects/ale/handoffs/94eb4a0119b8/latest.json"
+      }
+    ],
+    "total_cost_usd": 16.194293000000002,
+    "known_cost_usd": 16.194293000000002,
+    "pricing_status": "partial",
+    "stopped_by": "planner_retry",
+    "suggested_sleep": 15.0
+  },
+  "thread_id": null,
+  "project_root": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__health_medicine__ct_geometry_calibration_catphan__v0__20260724_182349/argus_home/projects/ale",
+  "events_path": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__health_medicine__ct_geometry_calibration_catphan__v0__20260724_182349/argus_home/projects/ale/events.jsonl",
+  "work_dir": "/home/user/.ale/argus/argus_full4__gpt-5-6-sol__health_medicine__ct_geometry_calibration_catphan__v0__20260724_182349"
+}

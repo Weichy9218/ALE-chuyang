@@ -1,0 +1,32 @@
+---
+name: containerized-chromosome-germline-pipeline-recovery
+description: Use when the input root contains paired germline FASTQs, a chromosome-scoped reference and known sites, VEP resources, and broken workflow configuration, especially when core bioinformatics executables are unavailable natively.
+category: computer-use-execution
+version: 1
+scientist_model: gpt-5.5
+created_at: 2026-08-04T00:00:00+00:00
+---
+
+## Operating method
+
+1. **Create an output-local execution area.** Make `<output_root>/work/{ref,known_sites,align,bqsr,calls,annotation,qc}` and the required submission directories. Copy the reference FASTA, FAI, dictionary, and intervals into `work/ref`; never modify the visible input tree. Detect resources with `nproc` and `/proc/meminfo`. Set per-process CPUs no higher than `nproc`, Java heap no higher than 70% of available RAM, and total configured workflow memory no higher than 80% of available RAM.
+
+2. **Repair the input metadata and configuration.** Preserve the samplesheet's required columns, assign the file containing mate 1 to `fastq_1` and mate 2 to `fastq_2`, and retain one consistent sample identifier for the read group and output names. Confirm paired files contain equal numbers of four-line FASTQ records. Point the workflow configuration at the corrected samplesheet, FASTA/FAI/dictionary, intervals, normalized known sites, and `<output_root>` results directory. Configure a local executor and container support even if the actual run must be performed directly because Nextflow is unavailable.
+
+3. **Resolve tools without relying on Docker Hub.** Record `command -v` results for `docker`, `apptainer`, `bwa-mem2`, `samtools`, `bcftools`, `bgzip`, `tabix`, `fastqc`, and `multiqc`. Pull pinned compatible images such as `quay.io/biocontainers/bwa-mem2:<tag>`, `quay.io/biocontainers/gatk4:<tag>`, and `quay.io/biocontainers/ensembl-vep:<release-tag>`. Match the VEP major release to the supplied annotation resources. Bind the input root read-only and the output work root read-write.
+
+4. **Make all reference namespaces identical.** Obtain the target contig from the FASTA index, for example `cut -f1 <reference.fa.fai>`. For each known-sites VCF, identify its source contig, subset it with `bcftools view -r <source_contig>`, rename it using a two-column `<source_contig>\t<reference_contig>` map through `bcftools annotate --rename-chrs`, and rewrite the header against the FAI with `bcftools reheader --fai <reference.fa.fai>`. Write BGZF-compressed output and create a `.tbi` with `tabix -p vcf`. Build the copied FASTA's bwa-mem2 index using `bwa-mem2 index <reference.fa>`.
+
+5. **Align and preprocess.** Run `bwa-mem2 mem -t <cpus> -R '@RG\\tID:<rg>\\tSM:<sample>\\tPL:ILLUMINA' <reference.fa> <R1.fastq.gz> <R2.fastq.gz> | samtools sort -@ <cpus> -o <sample>.sorted.bam -`, then index the BAM. Run GATK `MarkDuplicates` with a metrics file, followed by `BaseRecalibrator` using every normalized `--known-sites` VCF and the supplied intervals, then `ApplyBQSR`. Index the recalibrated BAM.
+
+6. **Call and hard-filter variants.** Run GATK `HaplotypeCaller -R <reference.fa> -I <recal.bam> -L <intervals> -O <raw.vcf.gz>`. Use `SelectVariants` to produce SNP and indel streams. Apply SNP labels for `QD < 2.0`, `QUAL < 30.0`, `SOR > 3.0`, `FS > 60.0`, `MQ < 40.0`, `MQRankSum < -12.5`, and `ReadPosRankSum < -8.0`; apply indel labels for `QD < 2.0`, `QUAL < 30.0`, `FS > 200.0`, and `ReadPosRankSum < -20.0`. Merge the two filtered streams with `MergeVcfs`, BGZF-compress if necessary, and create the required tabix index. State these exact thresholds and whether filtered records were retained or removed in `DECISIONS.md`.
+
+7. **Annotate with supplied resources.** Run VEP in offline VCF mode with `--assembly <assembly> --species homo_sapiens --offline --gtf <annotation.gtf.gz> --vcf --compress_output bgzip`. Add each indexed custom VCF with `--custom <vcf>,<label>,vcf,exact,0,<INFO fields>`, choosing INFO fields from its header rather than inventing names. Write the annotated `.vcf.gz` and index it with `tabix -p vcf`.
+
+8. **Generate QC from pipeline products.** Run FastQC on both FASTQs, `samtools flagstat` and `samtools stats` on the final BAM, `samtools coverage` for the target chromosome, and retain the MarkDuplicates metrics. Run `multiqc <qc_directory> -f -o <report_directory>`. If the installed MultiQC does not emit `multiqc_software_versions.txt`, create a tab-separated file from actual `<tool> --version` output. Compute `alignment_rate = 100 * primary_mapped / primary_total`, keep `dup_rate` as the MarkDuplicates `PERCENT_DUPLICATION` fraction, and take `mean_coverage_chr22` from the declared target-contig coverage denominator. Serialize them as the flat object `{"alignment_rate": NUMBER, "dup_rate": NUMBER, "mean_coverage_chr22": NUMBER}`.
+
+9. **Stage acceptance gates.** Require exit status 0 for every pipeline stage; at least 5 nonempty bwa-mem2 index components; exactly 1 data contig in each chromosome-scoped known-sites and final VCF, equal to the FASTA contig; more than 0 final variant records; a tabix query that exits 0 for both final VCFs; a VEP `CSQ` header and at least 1 record with nonempty `CSQ`; and numeric QC values satisfying `0 <= alignment_rate <= 100`, `0 <= dup_rate <= 1`, and `mean_coverage_chr22 >= 0`. Copy only the contract-required artifacts from work into the submission tree.
+
+## Yield condition
+
+Yield only with fresh, verbatim evidence for the concrete work just landed: list every required artifact, reopen/parse it, and confirm the numeric acceptance check above passed on the actual outputs. If incomplete, preserve partial outputs and state the single highest-priority remaining repair; do not claim completion. Never access or guess the hidden reference.

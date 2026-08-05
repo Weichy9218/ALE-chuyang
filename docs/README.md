@@ -14,7 +14,7 @@ ALE-Test 在 agents-last-exam(ALE)基准上研究 agent harness:对比两套 har
   工具预运行，DONE 后照常复核。
 - prep_verifier 臂新增机械合同对账：比较两份独立阅读引用的公开文件，分歧注入 writer。
 - 设计、证据和版本演化见 [harness/](harness/)：README、ARCHITECTURE、PREP、VERIFIER、
-  EVOLUTION、FABLE（2026-07-21 两轮优化的完整记录）、results/。
+  FABLE（教训总账：有价值的教训与死路）、results/。
 
 ## 逐题分析（26 题）与 harness 复盘：不在本仓库
 

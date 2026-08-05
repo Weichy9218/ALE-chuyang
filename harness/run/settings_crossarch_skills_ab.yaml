@@ -1,0 +1,90 @@
+# ============================================================================
+# WS2 skills-lever A/B — full 2x2 (harness x skills) on ale_claw.
+#
+#   arm            harness switches            skill_sources (6 crossarch skills)
+#   ------------   -------------------------   ----------------------------------
+#   base           all off                     OFF   <- skills-lever control
+#   base_skills    all off                     ON    <- skills lever, no audit
+#   reviewer       reviewer_audit on           OFF   <- audit-harness lever (WS1)
+#   reviewer_skills reviewer_audit on          ON    <- "+both" cell
+#
+# Clean attribution (memory: three-lever-separation-ws2-drops-audit):
+#   base -> base_skills        : ISOLATES the skills lever (no harness change)
+#   reviewer -> reviewer_skills: skills lever ON TOP of the audit harness
+#   base -> reviewer           : ISOLATES the audit-harness lever (WS1, no skills)
+# The two skill arms differ from their controls ONLY by with_skills=True in
+# launch.py (SKILL_ARMS); switches are copied verbatim, so no confound.
+#
+# The 6 injected skills are the confirmatory crossarch batch: each targets one
+# task where claude-code solved and argus/ale-claw-base scored 0. All 6 load into
+# every +skills arm; load-on-demand is model-gated via memory_get, so on any one
+# task only the matching method-<name>.md should be pulled. This directly answers
+# "can the skills lever move a 0-score task off 0 on ale_claw".
+#
+# DRY-RUN FIRST (no API cost, no Docker) — from the stack dir:
+#   .venv/bin/python harness/run/launch.py --stack . \
+#       --settings harness/run/settings_crossarch_skills_ab.yaml \
+#       --per-arm --allow-endpoint-rotation
+# Regenerates configs/agents/ale_claw_{base,base_skills,reviewer,reviewer_skills}.yaml,
+# verifies each preset against declared switches, prints the arm matrix + the exact
+# launch command, and EXITS. Add --launch only AFTER operator authorization.
+# Read back:  python3 harness/run/summarize.py .logs/ale/crossarch_skills_ab \
+#                --baseline ale_claw_base
+# ============================================================================
+
+arms: [base, base_skills, reviewer, reviewer_skills]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000        # effectively uncapped; COGNITION forbids turn/time caps.
+  thinking_level: medium
+
+# Inject ONLY the 6 confirmatory crossarch skills. The 2 audit skills
+# (deliverable-contract, evidence-audit) are the WS1 harness lever and are
+# EXCLUDED here so the skills lever stays orthogonal to the reviewer arm.
+# NOTE: load_settings only parses INLINE [..] lists, so this stays on one line.
+#   001 public-atlas -> life_sciences/tms_marrow_cell_type_annotation_instance_1
+#   002 joint-leap   -> health_medicine/ct_geometry_calibration_catphan
+#   003 red-dominance-> life_sciences/yeast_colony_detection
+#   004 replay-safe  -> computing_math/ranking_node_feature_parity_recovery_instance_1
+#   005 germline     -> life_sciences/hg002_chr22_germline_variant_pipeline
+#   006 acs-source   -> physical_sciences/hst_acs_wfc_visit_reduction
+skills:
+  which: [public-atlas-exact-cell-label-transfer, joint-leap-fanbeam-geometry-calibration, adaptive-red-dominance-colony-segmentation, replay-safe-evidence-driven-node-recovery, containerized-chromosome-germline-pipeline-recovery, acs-source-based-visit-registration]
+
+# reviewer audit budgets (only the two reviewer arms consume these).
+reviewer:
+  max_steps: 40
+  max_rounds: 2
+
+run:
+  name: crossarch_skills_ab
+  tasks: docs/harness/crossarch_skills_tasks.txt   # the 6 target task_classes
+  concurrency: 1           # PER ARM under --per-arm; 4 arms => 4 units in flight.
+                           # These tasks are heavy (germline pipeline, CT calib),
+                           # so keep it lean.
+  cleanup_mode: delete
+
+  # --- endpoint (haoxiang gpt_sub2api) ---
+  # secret_file is reloaded by the runner with override=True. It MUST carry
+  # ALE_MODEL_TRANSPORT=responses (gpt-5.6-sol only speaks /v1/responses) and MUST
+  # NOT define OPENAI_API_KEY/OPENAI_API_BASE/OPENAI_BASE_URL, or it would clobber
+  # the per-arm key set by api_endpoints below. The existing secret/.env.haoxiang
+  # CANNOT be used directly (it sets OPENAI_* => would clobber rotation). Compose
+  # a minimal sibling on pgl (GPT_sub2api creds + transport, NO OPENAI_*):
+  #   cd secret && { grep -E '^(GPT_sub2api_apikey|GPT_sub2api_apikey_2|GPT_sub2api_URL|CONTEXT_WINDOW_OVERRIDE)=' .env.haoxiang; \
+  #                   grep -E '^ALE_MODEL_TRANSPORT=' .env.boyue; } > .env.haoxiang_ale
+  # The generated env_block hardcodes `. secret/.env` (which lacks GPT_sub2api_*),
+  # so PREPEND `set -a; . secret/.env.haoxiang_ale; set +a` to the launch command
+  # to populate $GPT_sub2api_* + $GPT_SUB2API_OPENAI_BASE before the per-arm prefix.
+  secret_file: secret/.env.haoxiang_ale
+
+  # One key per arm. Only 2 GPT_sub2api keys exist on pgl (apikey, apikey_2), so
+  # 4 arms rotate over 2 keys (base->1, base_skills->2, reviewer->1, reviewer_skills->2).
+  # Same base URL, only the key differs => no gateway confound; --allow-endpoint-rotation
+  # is still required to permit per-arm prefixes.
+  # NOTE: load_settings only parses INLINE [..] lists, so this stays on one line.
+  api_endpoints: [OPENAI_API_KEY=$GPT_sub2api_apikey OPENAI_API_BASE=$GPT_SUB2API_OPENAI_BASE OPENAI_BASE_URL=$GPT_SUB2API_OPENAI_BASE, OPENAI_API_KEY=$GPT_sub2api_apikey_2 OPENAI_API_BASE=$GPT_SUB2API_OPENAI_BASE OPENAI_BASE_URL=$GPT_SUB2API_OPENAI_BASE]
+
+  output_root: .logs/ale/crossarch_skills_ab
+  wall_time_s: 86400

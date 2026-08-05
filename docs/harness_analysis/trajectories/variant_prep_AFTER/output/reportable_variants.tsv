@@ -1,0 +1,4 @@
+variant_id	chrom	pos	ref	alt	gene	consequence	max_population_af	clinvar_significance	is_reportable
+chr1_1310876_CGGCTCTGGGTCACAGGT_C	chr1	1310876	CGGCTCTGGGTCACAGGT	C	PUSL1	frameshift_variant	NA	not_reported	yes
+chr1_1387763_CCT_C	chr1	1387763	CCT	C	CCNL2	frameshift_variant	NA	not_reported	yes
+chr1_1635982_G_GC	chr1	1635982	G	GC	CDK11B	frameshift_variant	NA	not_reported	yes

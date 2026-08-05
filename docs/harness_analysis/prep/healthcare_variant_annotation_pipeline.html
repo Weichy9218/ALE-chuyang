@@ -1,0 +1,141 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>变异注释：prep 把做对的地方改错了｜ALE</title><style>
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}
+.wrap{max-width:980px;margin:0 auto;padding:32px 22px 90px}
+h1{font-size:25px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:34px 0 10px}
+h3{font-size:15px;margin:18px 0 6px}
+.sub{color:var(--muted);font-size:14.5px;margin:0 0 4px}
+.tid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted)}
+p{margin:10px 0}
+a{color:var(--accent)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--codebg);padding:1px 5px;border-radius:4px;word-break:break-word}
+pre{background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+pre code{background:none;padding:0}
+section{border-top:1px solid var(--line);padding-top:8px;margin-top:26px}
+.spec{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:2px 18px;margin:16px 0;display:grid;grid-template-columns:auto 1fr;gap:0 18px}
+.spec dt{font-weight:600;font-size:12.5px;padding:8px 0;color:var(--muted);border-top:1px solid var(--line)}
+.spec dd{margin:0;font-size:13.5px;padding:8px 0;border-top:1px solid var(--line)}
+.spec dt:first-of-type,.spec dd:first-of-type{border-top:none}
+.tblwrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--card);font-weight:600;white-space:nowrap}
+.badge{display:inline-block;font-weight:700;font-size:12px;padding:1px 8px;border-radius:5px}
+.b-good{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+.b-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+.b-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.callout{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 16px;margin:14px 0;background:var(--card);font-size:14px}
+.callout.warn{border-left-color:var(--warn)}
+.callout.bad{border-left-color:var(--bad)}
+ul,ol{margin:10px 0;padding-left:22px}li{margin:5px 0}
+.back{font-size:13px;margin-bottom:10px;display:inline-block}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+/* 流程图组件：纵向步骤流，纯 CSS，无外部依赖 */
+.flow{margin:16px 0}
+.fstep{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px 14px;position:relative}
+.fstep+.fstep{margin-top:26px}
+.fstep+.fstep::before{content:"↓";position:absolute;top:-23px;left:22px;color:var(--muted);font-size:15px}
+.fstep .ft{font-weight:600;font-size:14px;margin:0 0 4px}
+.fstep .fb{font-size:13.5px;color:var(--fg);margin:0}
+.fstep .fn{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);margin-right:8px}
+.fstep.ok{border-left:3px solid var(--good)}
+.fstep.miss{border-left:3px solid var(--bad)}
+.fstep.risk{border-left:3px solid var(--warn)}
+/* 图：题目自带素材、agent 产出图、自画的对照图，一律 data URI 内嵌 */
+.fig{margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px}
+.fig img{width:100%;height:auto;display:block;border-radius:6px;background:#fff}
+.fig figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.figrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0}
+.figrow .fig{margin:0}
+.scorebar{display:flex;align-items:center;gap:10px;margin:10px 0}
+.scorebar .bar{flex:1;height:10px;background:var(--codebg);border-radius:6px;overflow:hidden}
+.scorebar .fill{height:100%;background:var(--accent)}
+.scorebar .num{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:nowrap}
+/* 对比专用：三臂并列 */
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:16px 0}
+.cmpcol{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:12px 14px}
+.cmpcol h4{margin:0 0 8px;font-size:13.5px;display:flex;align-items:baseline;gap:8px}
+.cmpcol h4 .sc{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;font-weight:700}
+.cmpcol.base{border-left:3px solid var(--muted)}
+.cmpcol.up{border-left:3px solid var(--good)}
+.cmpcol.down{border-left:3px solid var(--bad)}
+.cmpcol p{margin:6px 0;font-size:13px}
+.cmpcol ul{margin:6px 0;padding-left:18px;font-size:13px}
+.q{border-left:2px solid var(--line);padding:2px 0 2px 12px;margin:8px 0;color:var(--muted);font-size:13px}
+.delta{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+.up-t{color:var(--good)}.down-t{color:var(--bad)}.flat-t{color:var(--muted)}
+.kv{font-size:13px;margin:4px 0}.kv b{font-weight:600}
+.lead{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;background:var(--card);padding:12px 16px;margin:16px 0}
+.lead p{margin:8px 0;font-size:14.5px}
+.lead b{font-weight:600}
+.lead .k{display:inline-block;min-width:3.4em;color:var(--muted);font-size:12.5px;font-weight:600;margin-right:6px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+td.num,th.num{text-align:right;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:nowrap}
+</style></head><body><div class="wrap">
+<a class="back" href="index.html">← 返回 Prep 对比列表</a>
+<h1>临床变异注释流水线</h1>
+<div class="tid">taskId：health_medicine/healthcare_variant_annotation_pipeline ｜ 同期 base 0.9990 ｜ prep 三轮 0.7930 / 0.9990 / 0.7930</div>
+<p class="sub">prep 断言 indel 的频率要用 VEP 归一化后的等位基因去查，参考答案要的是原始 ALT。base 自己做对了这个区分，prep 把它改错了。</p>
+<div class="callout"><b>最新（fixval13，2026-07-23）：锚定缺陷已修复。</b>prep 臂从 0.794 恢复到 <b>0.999</b>（+0.205）。修复后 prep 的处方（<code>writer_action</code>）不再进 writer 首轮、broke 不许标「头号难题」；本轮该单元<b>无锚定 note 送达 writer</b>。本页下文是<b>修复前</b>的缺陷复盘；最新逐题结果见 <a href="index.html">prep 修复后逐题效果</a> 与 <a href="README.md">prep/README.md</a>。</div>
+<dl class="spec">
+  <dt>交付物</dt><dd><code>output/</code> 下四个文件，<code>annotated_variants.tsv</code> 50 行</dd>
+  <dt>评分方式</dt><dd>按项累加，可报告一项 20 分是全有或全无</dd>
+  <dt>同期 base</dt><dd>0.9990（九次 base 在 0.793 到 1.0 之间，双峰）</dd>
+  <dt>prep 三轮</dt><dd>0.7930／0.9990（报告未送达）／0.7930</dd>
+  <dt>分差归属</dt><dd>频率 3 行错扣 0.6 分，可报告一项整块丢 20 分</dd>
+  <dt>轨迹路径</dt><dd><code>prep_v21_verifier_v18_full26/…/health_medicine__healthcare_variant_annotation_pipeline/</code> 等</dd>
+</dl>
+<div class="callout bad"><b>和 SEC 10-K 完全同型的机制，方向相反。</b>prep 在一个题面没规定的点上下了断言，writer 照做，参考答案要的是另一边，分数从 0.999 掉到 0.793。base 自己做对了这个区分。</div>
+<section><h2>一、这道题怎么评分</h2>
+<p>把一份 VEP 注释快照变成可报告变异表，交四个文件，其中 <code>annotated_variants.tsv</code> 50 行、<code>reportable_variants.tsv</code> 参考是 3 行。</p>
+<p>评分按项累加，其中两项是这次分差的落点：</p>
+<div class="tblwrap"><table>
+<tr><th>评分项</th><th class="num">满分</th><th>判定</th></tr>
+<tr><td>max_population_af</td><td class="num">10</td><td>逐行 0.2 分，50 行</td></tr>
+<tr><td>reportable</td><td class="num">20</td><td><b>全有或全无</b>：可报告表要逐行相等，且 50 个可报告标志全对</td></tr>
+</table></div>
+<p>可报告的规则写在可见的 <code>input/source_manifest.json</code> 里：「对提交的 ALT 等位基因，取所有可用频率来源中的最大数值」，以及「最大群体频率缺失或低于 0.01」。</p>
+</section>
+<section><h2>二、prep 说了什么</h2>
+<p>第一轮 prep 的第五条 finding，标题是「删除变异的频率等位基因归一化」：</p>
+<div class="q">Observation：For three deletion records — chr1_979034_CGAA_C、chr1_1387763_CCT_C、chr1_1629572_TG_T — the colocated frequency mappings use '-' as the alternate allele key rather than the literal submitted ALT.<br>Writer action：<b>Resolve the VEP-normalized alternate allele for indels before collecting frequency values; a literal frequencies[submitted_alt] lookup would incorrectly treat available data as missing.</b><br><span class="mono">— 第一轮 PREP_REPORT.md 的 findings 第 5 条</span></div>
+<p>这条断言听起来完全合理，还点名了三个具体的变异编号，并且附了边界声明「这条归一化事实不决定最终的频率取值或可报告标签」。第三轮换了个例子（插入变异 <code>allele_string '-/C'</code>）说同一件事。</p>
+<div class="callout warn">第二轮的 finding 恰好说了相反的话，而且是对的：「Match the submitted ALT from variants_to_annotate.tsv … For frequencies, inspect only frequencies[ALT]」。第二轮的报告没送到 writer 手里，所以这条正确的建议没起作用，分数是 0.999。</div>
+</section>
+<section><h2>三、base 自己做对了</h2>
+<p>base 的 <code>pipeline.py</code> 在这一点上是有意识地区分的，代码里还写了注释：</p>
+<div class="q"># Frequency/ClinVar rules are explicitly keyed to the submitted ALT<br># from the staged variant list (rather than to other alleles present<br># in a multiallelic colocated record).<br>af, clinvar = population_af_and_clinvar(response, alt)   # 用原始 TSV 的 alt<br><span class="mono">— base 臂 output/pipeline.py</span></div>
+<p>同一份代码里，base 在选转录本时用的是归一化等位基因，取频率时用的是原始 ALT。这正是参考答案要的做法。prep 的建议是把两处统一成归一化等位基因。</p>
+<p>顺带一提，这道题历史上被认为需要 prep 补充的那条外部事实（Ensembl 的 consequence 严重度排序）四轮都交付了，而 consequence 这一项在包括 base 在内的所有臂上都是 50/50 满分。base 自己就写出了完整的官方排序表。这条 finding 的实测边际价值是零。</p>
+</section>
+<section><h2>四、分数落在哪</h2>
+<div class="tblwrap"><table>
+<tr><th>分项</th><th class="num">满分</th><th>base / 第二轮 / nosc</th><th>第一轮 prep</th><th>第三轮 prep</th></tr>
+<tr><td>max_population_af</td><td class="num">10</td><td>10.0（50 行全对）</td><td>9.4（错 3 行）</td><td>9.4（错 3 行）</td></tr>
+<tr><td>reportable</td><td class="num">20</td><td><b>20.0</b></td><td><b>0.0</b></td><td><b>0.0</b></td></tr>
+<tr><td>consequence</td><td class="num">25</td><td>25.0（50/50）</td><td>25.0（50/50）</td><td>25.0（50/50）</td></tr>
+<tr><td>其余各项</td><td class="num">45</td><td>相同</td><td>相同</td><td>相同</td></tr>
+<tr><td><b>总分</b></td><td class="num"></td><td><b>0.999</b></td><td><b>0.793</b></td><td><b>0.793</b></td></tr>
+</table></div>
+<p>错的三行正是 prep 那条 finding 点名的三个删除变异。参考答案里它们的频率是 <code>NA</code>，按 prep 的规则查出来分别是 0.01059、0.8255、0.4747。</p>
+<p>真正的代价在 reportable 那 20 分。它是全有或全无的：只要可报告表有一行内容对不上，整项归零。第三轮更严重，0.8255 这个值让一个变异的可报告标志从 yes 翻成 no，可报告表从 3 行变成 2 行。</p>
+</section>
+<section><h2>五、self-check 给了假信心</h2>
+<p>第一轮交付了 self-check 脚本，writer 跑了，全部通过。脚本的 <code>covers</code> 字段自己写明了测不了什么：</p>
+<div class="q">It explicitly cannot determine annotation correctness, submitted-allele matching correctness, consequence/ClinVar priority correctness, reportability-rule correctness…<br><span class="mono">— 第三轮 task_prep_meta.json 的 self_check.covers</span></div>
+<p>更值得注意的是 writer 之后做的事：它自己写了一段断言，确认「输出的 AF 等于按归一化等位基因查到的最大值」。这段自检验证的是它有没有忠实执行 prep 那条错误指令，执行得越忠实，断言越通过，分数越低。</p>
+</section>
+<section><h2>六、这道题说明什么</h2>
+<p><b>prep 报告里的断言，写得越具体越危险。</b>这条 finding 点名了三个变异编号、解释了机制、还附了边界声明，形式上比一句泛泛的提醒可信得多，而它是错的。writer 没有理由怀疑它，因为报告里所有条目看起来都一样可靠。</p>
+<p><b>base 在这道题上不需要帮助。</b>它自己写出了官方严重度排序，也自己做对了归一化等位基因与原始 ALT 的区分，拿 0.999。prep 的介入把一个已经做对的地方改错了。这是 prep 边际价值为负的干净例子。</p>
+<p><b>同一份报告的两轮给出了相反的建议。</b>第一轮和第三轮说用归一化等位基因，第二轮说只查原始 ALT。prep 每轮独立读一遍公开材料，在没有判准的地方，它的结论本身就是随机的。</p>
+</section><footer>数据来源：pgl 机器 <code>~/ale/agents-last-exam/.logs/ale/</code> 下的运行记录，路径见第一节表格。题目定义、打分脚本与隐藏参考在 batchcom 机器 <code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/</code>。本页的分数取自各次运行的 <code>eval_result.json</code>；题面背景与 base 失分的完整复盘见 <a href="../../task_analysis/healthcare_variant_annotation_pipeline.html">题目逐题分析</a>。</footer>
+</div></body></html>

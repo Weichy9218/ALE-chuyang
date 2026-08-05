@@ -1,0 +1,134 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SEC 10-K：prep 押对了一个没规定的接口｜ALE</title><style>
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}
+.wrap{max-width:980px;margin:0 auto;padding:32px 22px 90px}
+h1{font-size:25px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:34px 0 10px}
+h3{font-size:15px;margin:18px 0 6px}
+.sub{color:var(--muted);font-size:14.5px;margin:0 0 4px}
+.tid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted)}
+p{margin:10px 0}
+a{color:var(--accent)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--codebg);padding:1px 5px;border-radius:4px;word-break:break-word}
+pre{background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+pre code{background:none;padding:0}
+section{border-top:1px solid var(--line);padding-top:8px;margin-top:26px}
+.spec{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:2px 18px;margin:16px 0;display:grid;grid-template-columns:auto 1fr;gap:0 18px}
+.spec dt{font-weight:600;font-size:12.5px;padding:8px 0;color:var(--muted);border-top:1px solid var(--line)}
+.spec dd{margin:0;font-size:13.5px;padding:8px 0;border-top:1px solid var(--line)}
+.spec dt:first-of-type,.spec dd:first-of-type{border-top:none}
+.tblwrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--card);font-weight:600;white-space:nowrap}
+.badge{display:inline-block;font-weight:700;font-size:12px;padding:1px 8px;border-radius:5px}
+.b-good{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+.b-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+.b-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.callout{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 16px;margin:14px 0;background:var(--card);font-size:14px}
+.callout.warn{border-left-color:var(--warn)}
+.callout.bad{border-left-color:var(--bad)}
+ul,ol{margin:10px 0;padding-left:22px}li{margin:5px 0}
+.back{font-size:13px;margin-bottom:10px;display:inline-block}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+/* 流程图组件：纵向步骤流，纯 CSS，无外部依赖 */
+.flow{margin:16px 0}
+.fstep{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px 14px;position:relative}
+.fstep+.fstep{margin-top:26px}
+.fstep+.fstep::before{content:"↓";position:absolute;top:-23px;left:22px;color:var(--muted);font-size:15px}
+.fstep .ft{font-weight:600;font-size:14px;margin:0 0 4px}
+.fstep .fb{font-size:13.5px;color:var(--fg);margin:0}
+.fstep .fn{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);margin-right:8px}
+.fstep.ok{border-left:3px solid var(--good)}
+.fstep.miss{border-left:3px solid var(--bad)}
+.fstep.risk{border-left:3px solid var(--warn)}
+/* 图：题目自带素材、agent 产出图、自画的对照图，一律 data URI 内嵌 */
+.fig{margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px}
+.fig img{width:100%;height:auto;display:block;border-radius:6px;background:#fff}
+.fig figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.figrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0}
+.figrow .fig{margin:0}
+.scorebar{display:flex;align-items:center;gap:10px;margin:10px 0}
+.scorebar .bar{flex:1;height:10px;background:var(--codebg);border-radius:6px;overflow:hidden}
+.scorebar .fill{height:100%;background:var(--accent)}
+.scorebar .num{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:nowrap}
+/* 对比专用：三臂并列 */
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:16px 0}
+.cmpcol{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:12px 14px}
+.cmpcol h4{margin:0 0 8px;font-size:13.5px;display:flex;align-items:baseline;gap:8px}
+.cmpcol h4 .sc{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;font-weight:700}
+.cmpcol.base{border-left:3px solid var(--muted)}
+.cmpcol.up{border-left:3px solid var(--good)}
+.cmpcol.down{border-left:3px solid var(--bad)}
+.cmpcol p{margin:6px 0;font-size:13px}
+.cmpcol ul{margin:6px 0;padding-left:18px;font-size:13px}
+.q{border-left:2px solid var(--line);padding:2px 0 2px 12px;margin:8px 0;color:var(--muted);font-size:13px}
+.delta{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+.up-t{color:var(--good)}.down-t{color:var(--bad)}.flat-t{color:var(--muted)}
+.kv{font-size:13px;margin:4px 0}.kv b{font-weight:600}
+.lead{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;background:var(--card);padding:12px 16px;margin:16px 0}
+.lead p{margin:8px 0;font-size:14.5px}
+.lead b{font-weight:600}
+.lead .k{display:inline-block;min-width:3.4em;color:var(--muted);font-size:12.5px;font-weight:600;margin-right:6px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+td.num,th.num{text-align:right;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:nowrap}
+</style></head><body><div class="wrap">
+<a class="back" href="index.html">← 返回 Prep 对比列表</a>
+<h1>SEC 10-K 财务解析</h1>
+<div class="tid">taskId：business_finance/sec_10k_financial_parsing ｜ 同期 base 0.6916 ｜ prep 三轮 0.7103 / 0.9497 / 0.9540</div>
+<p class="sub">base 的三道分析题内容几乎全对，因为外层容器写成列表而非对象被整块判零。prep 的一条 finding 建议用对象，25% 的权重因此回来。</p>
+<dl class="spec">
+  <dt>交付物</dt><dd>100 份抽取 JSON、100 份原始文本、<code>qa_answers.json</code>、5 份二次抽取</dd>
+  <dt>评分方式</dt><dd>八个维度加权，分析题占 25%</dd>
+  <dt>同期 base</dt><dd>0.6916（五次历史 base 在 0.6394 到 0.7058 之间）</dd>
+  <dt>prep 三轮</dt><dd>0.7103（报告未送达）／0.9497／0.9540</dd>
+  <dt>分差归属</dt><dd>分析题一项贡献 0.2482，占差值的 96%</dd>
+  <dt>轨迹路径</dt><dd><code>prep_v22_verifier_v19_full26/…/business_finance__sec_10k_financial_parsing/</code> 等</dd>
+</dl>
+<div class="callout"><b>prep 效应最大的一题，+0.26，而且三分之二的分差来自报告里的一句话。</b>这句话不是领域知识，是对一个题面没规定的接口的建议：分析题答案该用对象还是列表。prep 押对了，25% 的权重整块回来。</div>
+<section><h2>一、base 丢的这 25% 和内容无关</h2>
+<p>这题要处理 100 份 10-K：每份抽一个归一化 JSON 和一份原始文本证据，再回答三道分析题，最后对 5 份做第二遍抽取验证确定性。分析题这一项权重 25%。</p>
+<p>base 的三道分析题<b>答案本身几乎全对</b>：Q1 的股票代码和涨幅与参考一致，Q2 差 0.03 落在容差内，Q3 的排序与后来拿高分的那一版完全相同。它拿 0 分的原因只有一个，外层容器写成了列表：</p>
+<div class="cmp"><div class="cmpcol base"><h4>base 的 qa_answers.json<span class="sc">0.0</span></h4><ul><li><span class='mono'>[ {"id":"Q1", "answer":{…}}, … ]</span></li><li>照着输入文件 <code>questions.json</code> 的样子写，那个文件本身就是列表</li><li>评分器用 <code>predictions.get("Q1")</code> 取值，列表取不到，三题全判 0</li></ul></div><div class="cmpcol up"><h4>prep 臂的 qa_answers.json<span class="sc">0.9926</span></h4><ul><li><span class='mono'>{"Q1":{…}, "Q2":{…}, "Q3":{…}}</span></li><li>以问题编号为键的对象</li><li>三题全部命中</li></ul></div></div>
+<p>题面从未规定这个外层容器。输入文件是列表，评分器要对象，两个信号互相矛盾，而只有后者算分。</p>
+</section>
+<section><h2>二、prep 说了什么</h2>
+<p>第二轮 prep 的第四条 finding 直接点在这里：</p>
+<div class="q">Observation：questions.json defines IDs and answer object formats, but neither it nor the prompt defines whether qa_answers.json is an object keyed by ID or a list of records.<br>Writer action：Choose one clear, consistent representation preserving Q1/Q2/Q3; <b>an object keyed by those IDs is the least ambiguous.</b><br><span class="mono">— task_prep_meta.json，第二轮 findings[3]</span></div>
+<p>其余三轮都没有这条 finding。它们只在清单条目的备注里两边放行，例如第三轮写的是「self-check 接受以 Q1/Q2/Q3 为键的对象，也接受带 id 的记录列表」。self-check 脚本的源码确实两种都放行，所以起作用的不是脚本，是这句建议。</p>
+</section>
+<section><h2>三、writer 读了，而且第一步就读</h2>
+<div class="flow">
+<div class="fstep ok"><p class="ft"><span class="fn">第 1 轮工具调用</span>读报告</p><p class="fb"><span class='mono'>sed -n '1,240p' task_prep/PREP_REPORT.md</span>，返回内容里能检索到「an object keyed by those IDs is the least ambiguous」原文。</p></div>
+<div class="fstep ok"><p class="ft"><span class="fn">写产物时</span>直接按对象写</p><p class="fb"><span class='mono'>qa={'Q1':{…},'Q2':{…},'Q3':{'ranking':[…]}}</span></p></div>
+<div class="fstep ok"><p class="ft"><span class="fn">提交前</span>跑了 3 到 4 次 self-check</p><p class="fb">输出里有 <span class='mono'>PASS qa_answers preserves exactly Q1, Q2, Q3 identifiers</span>。</p></div>
+</div>
+<p>第一轮和 <code>prep_nosc</code> 那两次运行的 transcript 里，<code>PREP_REPORT</code> 和 <code>check_contract</code> 的命中次数都是 0。不是 writer 没看，是文件没被写出来，日志里有对应的 warning。这两次的分数分别是 0.7103 和 0.6880，都在 base 的抖动范围内。</p>
+</section>
+<section><h2>四、分数落在哪</h2>
+<p>用题目自带的评分脚本对各臂产物重跑，分项如下（总分与运行记录一致）：</p>
+<div class="tblwrap"><table>
+<tr><th>分项</th><th>权重</th><th class="num">base</th><th class="num">第一轮<br>（报告丢失）</th><th class="num">第二轮</th><th class="num">第三轮</th></tr>
+<tr><td>analytical_qa</td><td>0.25</td><td class="num"><b>0.0</b></td><td class="num"><b>0.0</b></td><td class="num">0.9926</td><td class="num">0.9926</td></tr>
+<tr><td>financial_accuracy</td><td>0.30</td><td class="num">0.940</td><td class="num">0.969</td><td class="num">0.942</td><td class="num">0.954</td></tr>
+<tr><td>cross_validation</td><td>0.10</td><td class="num">0.60</td><td class="num">0.70</td><td class="num">0.70</td><td class="num">0.70</td></tr>
+<tr><td>metadata_accuracy</td><td>0.05</td><td class="num">1.0</td><td class="num">1.0</td><td class="num">0.986</td><td class="num">1.0</td></tr>
+<tr><td>其余四项</td><td>0.30</td><td class="num">满分</td><td class="num">满分</td><td class="num">满分</td><td class="num">满分</td></tr>
+<tr><td><b>总分</b></td><td></td><td class="num"><b>0.6916</b></td><td class="num"><b>0.7103</b></td><td class="num"><b>0.9497</b></td><td class="num"><b>0.9540</b></td></tr>
+</table></div>
+<p>分析题一项贡献 <code>0.25 × 0.9926 = 0.2482</code>，占第二轮与 base 差值的 96%。财务抽取的质量三臂互有胜负，第二轮反而在元数据上丢了 7 项。也就是说 prep 没有让 agent 把 100 份报表读得更准，它只是把一个接口猜对了。</p>
+<p>环境这一维 prep 的边际价值是零。prep 花力气跑通了带锁定依赖的 Python 3.10 环境并写进报告，而 base 从没调用过那个包装脚本，直接用 <code>pdftotext -layout</code> 批量抽文本；prep 臂虽然按建议用 pdfplumber 起步，但嫌慢也杀掉进程换回了同一条命令，最终两臂抽出来的文本逐字节相同。</p>
+</section>
+<section><h2>五、这道题说明什么</h2>
+<p><b>prep 在这里的作用是替 writer 押了一注，而不是提供了知识。</b>题面对容器形状没有规定，两种写法都说得通，base 选了输入文件的样子，prep 建议选另一种，隐藏评分器认后者。押对了就是 +0.25。</p>
+<p><b>同一份报告里，这条建议和那些扎实的领域条目长得一样。</b>它有来源、有 writer_action、有边界声明，格式与「八个货币字段必须是原始美元整数」这类真正从题面推得出来的条目没有区别。writer 无法从形式上分辨哪条是推论、哪条是猜测。</p>
+<p><b>这也是为什么这道题的 +0.26 不能当成 prep 的一般收益。</b>换一道题、换一个没规定的点，同样的机制可能反向，<a href="healthcare_variant_annotation_pipeline.html">变异注释那题</a>就是反向的例子。</p>
+</section><footer>数据来源：pgl 机器 <code>~/ale/agents-last-exam/.logs/ale/</code> 下的运行记录，路径见第一节表格。题目定义、打分脚本与隐藏参考在 batchcom 机器 <code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/</code>。本页的分数取自各次运行的 <code>eval_result.json</code>；题面背景与 base 失分的完整复盘见 <a href="../../task_analysis/sec_10k_financial_parsing.html">题目逐题分析</a>。</footer>
+</div></body></html>

@@ -1,0 +1,27 @@
+{
+  "SAD": 786.257,
+  "SDD": 1217.892,
+  "sad": 786.257,
+  "sdd": 1217.892,
+  "offset": -1.9875,
+  "detector_offset": -1.9875,
+  "tau": 0.0,
+  "angular_start_degrees": -0.00498611111109426,
+  "angular_range_degrees": 359.99,
+  "angular_step_degrees": -0.9999722222222223,
+  "angles_endpoint": false,
+  "ramp_filter_order": 2,
+  "detector_pixel_size": 1.0,
+  "voxel_size": 0.8,
+  "num_detector_elements": 1024,
+  "num_views": 360,
+  "angles_degrees": {
+    "start": -0.00498611111109426,
+    "stop_exclusive": -359.9949861111111,
+    "endpoint": false
+  },
+  "metrics": {
+    "ssim": 0.9964346364141674,
+    "mse": 3.683554124722991e-08
+  }
+}

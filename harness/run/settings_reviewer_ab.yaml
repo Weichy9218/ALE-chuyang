@@ -1,0 +1,65 @@
+# ============================================================================
+# A/B control panel for the `reviewer` arm — base vs. reviewer on the SAME tasks.
+#
+# The `reviewer` arm = the base ale_claw solver + an independent, source-grounded
+# delivery audit with a HARD zero-discrepancy gate (a faithful port of argus's
+# Reviewer role; see ale_run/agents/ale_claw/reviewer_audit.py and
+# docs/harness/REVIEWER_AUDIT.md). Everything else (prep, verifier,
+# self-review hint) is OFF in both arms, so any paired Δ isolates the audit gate.
+#
+# DRY-RUN FIRST (no API cost, no Docker) — from the stack dir:
+#   .venv/bin/python harness/run/launch.py --stack . \
+#       --settings harness/run/settings_reviewer_ab.yaml --per-arm
+# That regenerates configs/agents/ale_claw_base.yaml + ale_claw_reviewer.yaml,
+# verifies each preset line-exactly against the declared arm switches, prints the
+# arm matrix + resolved budgets + the exact launch command, and EXITS.
+#
+# Only add --launch AFTER operator authorization (real API spend + Docker compute).
+# Read back with:
+#   python3 harness/run/summarize.py .logs/ale/reviewer_ab --baseline ale_claw_base
+# ============================================================================
+
+# base = no audit (control);  reviewer = independent audit + hard zero-diff gate.
+arms: [base, reviewer]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000        # effectively uncapped; COGNITION forbids turn/time caps
+                           # (an unequal budget manufactures fake effects).
+  thinking_level: medium
+
+# --- reviewer audit budgets (only the `reviewer` arm consumes these) ---
+reviewer:
+  max_steps: 40            # per fresh audit session (read + exec to recompute).
+  max_rounds: 2            # audit->repair rounds; run always ends on the writer's
+                           # own last output (bounded to avoid oscillation).
+
+run:
+  name: reviewer_ab_smoke   # exp yaml + log filenames; keeps this off the old verifier_compare names.
+  # First A/B = a 6-task SMOKE that prices the audit mechanism (4 audit-edge
+  # deliverable tasks + 1 binary hard-compute + 1 no-harm control). Swap to the
+  # full 26-task list (docs/harness/results/latest/tasks.txt) once the smoke
+  # shows the gate fires without harming the control.
+  tasks: docs/harness/reviewer_smoke_tasks.txt
+  concurrency: 2           # boyue dislikes heavy parallelism (shared Azure quota
+                           # behind a load balancer). With --per-arm this is PER
+                           # ARM; the k=3 driver runs the two arms SEQUENTIALLY,
+                           # so at most 2 units are ever in flight at once.
+  cleanup_mode: delete
+  # secret_file selects the REAL endpoint: the runner reloads it with override,
+  # clobbering any env prefix. .env.boyue carries ALE_MODEL_TRANSPORT=responses
+  # (gpt-5.6-sol only accepts function tools + reasoning over /v1/responses) plus
+  # the boyue creds. The base secret/.env lacks the transport flag, so it must be
+  # .env.boyue here — same endpoint the full26 boyue runs used (no confound).
+  secret_file: secret/.env.boyue
+  api_endpoints: []        # one shared endpoint across arms (no gateway confound).
+  output_root: .logs/ale/reviewer_ab
+  wall_time_s: 86400
+
+# k=3 (target.md §6: binary tasks are noisy). There is NO repeat knob in the
+# launcher — run_writer timestamps each run dir, and summarize.py keeps only the
+# NEWEST run per (arm,task). k=3 is therefore achieved by running each arm's
+# generated exp yaml 3x SEQUENTIALLY (fresh timestamp per pass; sequential avoids
+# a same-second run-dir collision), then aggregating the 3 timestamps at read
+# time (mean + spread), NOT by re-listing tasks (concurrent same-task units would
+# collide on the timestamped dir). See the k=3 driver used to launch.

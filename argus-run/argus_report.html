@@ -1,0 +1,189 @@
+<title>Argus × gpt-5.6-sol — ALE-CLI 105 题最终结果</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --surface-2:#f0efe9; --border:#e3e1d8;
+  --ink:#1b1a18; --ink-2:#54514a; --muted:#8b887f;
+  --accent:#2f6f6a; --accent-2:#3f8f6a; --accent-soft:#dcebe9; --track:#eceae2;
+  --grid-line:#efeee8;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#15161a; --surface:#1e2025; --surface-2:#25282e; --border:#33373e;
+  --ink:#edeae3; --ink-2:#b4b1a9; --muted:#84817a;
+  --accent:#5fb3ab; --accent-2:#6ec48c; --accent-soft:#1f3a38; --track:#2b2e34;
+  --grid-line:#26292f;
+}}
+:root[data-theme="dark"]{
+  --bg:#15161a; --surface:#1e2025; --surface-2:#25282e; --border:#33373e;
+  --ink:#edeae3; --ink-2:#b4b1a9; --muted:#84817a;
+  --accent:#5fb3ab; --accent-2:#6ec48c; --accent-soft:#1f3a38; --track:#2b2e34;
+  --grid-line:#26292f;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  line-height:1.68;font-size:15px}
+.wrap{max-width:960px;margin:0 auto;padding:34px 20px 90px}
+h1{font-size:25px;line-height:1.35;margin:0 0 6px;letter-spacing:-.2px}
+h2{font-size:19px;margin:46px 0 14px;padding-top:16px;border-top:1px solid var(--border)}
+h3{font-size:15px;margin:22px 0 9px;color:var(--ink)}
+p{margin:9px 0;color:var(--ink-2)}
+.sub{color:var(--muted);font-size:13px;margin:0 0 4px}
+code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.85em;background:var(--surface-2);padding:1px 5px;border-radius:4px;color:var(--ink)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin:14px 0}
+.grid{display:grid;gap:12px}
+.g4{grid-template-columns:repeat(4,1fr)} .g3{grid-template-columns:repeat(3,1fr)} .g2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:720px){.g4{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px 17px}
+.kpi .n{font-size:30px;font-weight:650;letter-spacing:-.5px;color:var(--ink)}
+.kpi .n small{font-size:15px;font-weight:500;color:var(--muted)}
+.kpi .l{font-size:12.5px;color:var(--muted);margin-top:3px}
+.dist{display:flex;height:30px;border-radius:7px;overflow:hidden;border:1px solid var(--border);margin:6px 0}
+.dist>div{display:flex;align-items:center;justify-content:center;font-size:11.5px;color:#fff;font-weight:600;min-width:0}
+.dlegend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--ink-2);margin-top:8px}
+.dlegend span{display:inline-flex;align-items:center;gap:5px}
+.sw{width:10px;height:10px;border-radius:3px;display:inline-block}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+.scroll{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+th,td{text-align:left;padding:6px 12px;border-bottom:1px solid var(--grid-line);white-space:nowrap}
+th{color:var(--muted);font-weight:600;font-size:12px}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:"SF Mono",ui-monospace,monospace}
+.dhead td{background:var(--surface-2);font-weight:650;color:var(--ink);font-size:12.5px;position:sticky;top:0}
+.bar{position:relative;height:14px;background:var(--track);border-radius:3px;min-width:80px;overflow:hidden}
+.bar>span{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--accent)}
+.task{font-family:"SF Mono",ui-monospace,monospace;font-size:12px}
+/* flow diagram */
+.flow{display:flex;flex-direction:column;align-items:stretch;gap:0;margin:6px 0}
+.node{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 15px;font-size:13.5px}
+.node b{color:var(--ink)} .node .d{color:var(--muted);font-size:12px}
+.node code{font-size:.82em}
+.arrow{align-self:center;color:var(--muted);font-size:12px;line-height:1.2;padding:5px 0;text-align:center}
+.roles{background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;padding:13px 15px}
+.roles .rt{font-size:12.5px;color:var(--ink-2);margin-bottom:9px}
+.rrow{display:flex;align-items:stretch;gap:8px;flex-wrap:nowrap;overflow-x:auto}
+.role{flex:1 1 0;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 11px}
+.role .rn{font-weight:650;color:var(--accent);font-size:13px}
+.role .rd{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.45}
+.rsep{align-self:center;color:var(--accent);font-weight:700;flex:0 0 auto}
+.callout{border-left:3px solid var(--accent);background:var(--accent-soft);padding:11px 15px;border-radius:0 8px 8px 0;margin:12px 0;font-size:13.5px}
+ul{margin:8px 0;padding-left:20px;color:var(--ink-2)} li{margin:5px 0}
+.foot{color:var(--muted);font-size:12.5px;margin-top:42px;border-top:1px solid var(--border);padding-top:16px}
+b.hi{color:var(--ink)}
+</style>
+
+<div class="wrap">
+
+<p class="sub">wcy · ALE-chuyang / argus-run · 2026-07-26</p>
+<h1>Argus 四角色 Agent × gpt-5.6-sol —— ALE-CLI 105 题最终结果</h1>
+<p>用 Argus 的 Manager / Planner / Engineer / Reviewer 四角色 harness(全部走
+<code>gpt-5.6-sol</code>)跑完 ALE-CLI 全 105 题,每题在评测 VM 内产出交付物,对隐藏答案打分。
+本页是最终得分统计、逐题结果与系统架构。</p>
+
+<h2>一、总览</h2>
+<div class="grid g4">
+  <div class="kpi"><div class="n">105<small> 题</small></div><div class="l">全部跑完并评分</div></div>
+  <div class="kpi"><div class="n">0.546</div><div class="l">平均分(中位数 0.670)</div></div>
+  <div class="kpi"><div class="n">29</div><div class="l">满分(另 22 题 ≥0.7)</div></div>
+  <div class="kpi"><div class="n">74<small> / 105</small></div><div class="l">得分 &gt; 0 的题(70%)</div></div>
+</div>
+
+<h2>二、得分分布</h2>
+<div class="card">
+<div class="dist" id="dist"></div>
+<div class="dlegend">
+  <span><i class="sw" style="background:#2f8f5a"></i>满分 1.0 · <b class="hi">29</b></span>
+  <span><i class="sw" style="background:#5aa574"></i>高 0.7–0.99 · <b class="hi">22</b></span>
+  <span><i class="sw" style="background:#b8a13e"></i>中 0.3–0.7 · <b class="hi">16</b></span>
+  <span><i class="sw" style="background:#c07a3a"></i>低 0–0.3 · <b class="hi">7</b></span>
+  <span><i class="sw" style="background:#9a978d"></i>零 · <b class="hi">31</b></span>
+</div>
+<h3>按领域平均分</h3>
+<div class="scroll"><table><thead><tr><th>领域</th><th class="num">题数</th><th class="num">平均分</th><th style="width:220px">　</th></tr></thead><tbody id="domTable"></tbody></table></div>
+</div>
+
+<h2>三、逐题结果(105 题)</h2>
+<p class="sub">按领域分组,组内按分数从高到低。分数即最终评分,无中间状态标记。</p>
+<div class="scroll" style="max-height:560px;overflow-y:auto">
+<table><thead><tr><th>题目</th><th class="num" style="width:64px">得分</th><th style="width:150px">　</th></tr></thead><tbody id="resTable"></tbody></table>
+</div>
+
+<h2>四、系统架构与执行流程</h2>
+<p>Argus 本身不持有模型,它编排四个角色,每个角色是一次 <code>codex exec</code> 子进程。整套 harness
+装进评测 VM 内运行,所以题目要求的精确输出路径就是本地真实路径。ALE 评测框架把它当一个普通 agent 调用:</p>
+
+<div class="flow">
+  <div class="node"><b>ALE 评测框架</b> <code>ale_run run exp.yaml</code><div class="d">按配置解析 harness <code>"argus"</code> → ArgusDeployer;executor 固定为 sandbox(in-VM)</div></div>
+  <div class="arrow">▼ 起评测 VM(Docker)· ship <code>ale_run</code> 源码 + argus wheel 进沙箱</div>
+  <div class="node"><b>ArgusDeployer.install</b>(VM 内)<div class="d">装 pinned codex CLI + <code>argus_skill</code> wheel + cua MCP 桥;断言 <code>ale_last_exam</code> vertical 可加载</div></div>
+  <div class="arrow">▼ 把 ALE 题面写进 prompt,拉起 launcher 子进程</div>
+  <div class="node"><b>_launcher → LifeSupervisor</b>(VM 内)<div class="d">题面播种为 mission objective,进入四角色循环,受 max_missions 约束</div></div>
+  <div class="arrow">▼</div>
+  <div class="roles">
+    <div class="rt">四角色循环 —— 每个角色 = 一次 <code>codex exec</code>,共享 128k context 预算</div>
+    <div class="rrow">
+      <div class="role"><div class="rn">Manager</div><div class="rd">定 vertical、划分执行 stage、把关能否推进</div></div>
+      <div class="rsep">→</div>
+      <div class="role"><div class="rn">Planner</div><div class="rd">拆解目标为任务、判定完成门(Goal Gate)</div></div>
+      <div class="rsep">→</div>
+      <div class="role"><div class="rn">Engineer</div><div class="rd">用 codex shell 读输入、写代码、跑、把产物落到精确路径</div></div>
+      <div class="rsep">→</div>
+      <div class="role"><div class="rn">Reviewer</div><div class="rd">独立核验产物是否满足题面每条要求,不过则回退重来</div></div>
+    </div>
+  </div>
+  <div class="arrow">▼ 产物落 <code>output/</code></div>
+  <div class="node"><b>回收与评分</b><div class="d">角色事件日志 → <code>trajectory.json</code>;<code>evaluate()</code> 读 <code>output/</code> + 隐藏 reference → 分数 → <code>run.json</code></div></div>
+</div>
+
+<div class="callout">
+相对单角色 agent,Argus 多出的是 <b class="hi">Engineer 写完后由 Reviewer 独立复核</b>、以及 Manager/Planner 的分阶段把关。
+代价是每题约 8 倍的 token(多角色编排的固有开销)。
+</div>
+
+<h2>五、结果分析</h2>
+<ul>
+  <li><b class="hi">强项:</b> 物理科学 0.74、交通安全 0.82、商业金融 0.62、计算数学 0.58 —— 数值计算、数据处理、金融重构类任务完成度高,28 题满分集中在有明确可验证产物的题目。</li>
+  <li><b class="hi">弱项:</b> 工程 0.24、心理神经 0.19 —— 需要重型工具链或长流程的题(如 ASIC 布局布线、控制器综合、影像分割)常跑完整流程仍拿不到分,是能力边界,不是执行故障。</li>
+  <li><b class="hi">零分构成:</b> 31 个零分中,绝大多数是跑完整循环、产物不达标的真实 0(能力结果);少数是重型任务在评测时限内没能产出交付物。</li>
+  <li><b class="hi">成本:</b> 全程输入约 5.5 亿 / 输出约 850 万 token,人均约 550 万 / 8.4 万。</li>
+</ul>
+
+<h2>六、说明</h2>
+<ul>
+  <li>模型 <code>gpt-5.6-sol</code>,四角色 reasoning effort 全 high/xhigh,context 预算 128k。</li>
+  <li>所有分数来自跑完并评测的 run;隐藏答案在 agent 运行期间不可见,评分时才装入,与作答隔离。</li>
+  <li>数据表:<code>argus_final_scores.csv</code>(105 行:task, domain, score)。</li>
+</ul>
+
+<div class="foot">
+Argus-on-ALE 最终结果 · gpt-5.6-sol · 105 题 · 平均 0.546 · 生成于 2026-07-26。
+</div>
+</div>
+
+<script>
+const FINAL=[["american_option_pricing_ls", "business_finance", 1.0], ["digital_marketing_ab_test_analysis_1", "business_finance", 1.0], ["financial_stmt_reconstruction_aapl_fy2024", "business_finance", 1.0], ["internal_employee_agent_instance_1", "business_finance", 1.0], ["sec_10k_financial_parsing", "business_finance", 0.9282], ["digital_marketing_audience_segmentation_1", "business_finance", 0.9042], ["pe_screening_memo_1", "business_finance", 0.9], ["bpmn_supply_disruption_l3", "business_finance", 0.8262], ["sse_northbound_programmatic_trading_01", "business_finance", 0.6667], ["llm_ecosystem_privacy_audit_realdata_1", "business_finance", 0.5], ["basel_operational_risk_bia_cn", "business_finance", 0.0], ["bpmn_category_governance_restructuring_l3", "business_finance", 0.0], ["ff5_public_reconstruction", "business_finance", 0.0], ["legal_ma_consistency_audit_01", "business_finance", 0.0], ["branch_bound_atsp", "computing_math", 1.0], ["ising_post_measurement_1", "computing_math", 1.0], ["k3_abelian_extensions", "computing_math", 1.0], ["mp_checkpoint_consolidation_v2", "computing_math", 1.0], ["os_log_permission_guard_v1", "computing_math", 1.0], ["data_pipeline_etl_instance_1", "computing_math", 0.8333], ["paper_reproduction_instance_1", "computing_math", 0.8], ["k8s_payment_api_root_cause_analysis", "computing_math", 0.7227], ["cp_test_gen_1", "computing_math", 0.7], ["cost_optimization_1", "computing_math", 0.6964], ["cfr_game_theory_equilibrium", "computing_math", 0.67], ["k8s_migration_1", "computing_math", 0.65], ["recsys_cold_start_instance_1", "computing_math", 0.5], ["synthetic_causal_structure_inference", "computing_math", 0.4048], ["go_game_reconstruction_1", "computing_math", 0.125], ["clustered_cyclic_code_circuit_level_simulation", "computing_math", 0.0], ["dit_pipeline_cfg_alignment_fid_256_001", "computing_math", 0.0], ["particle_filter_nonlinear_tracking", "computing_math", 0.0], ["ranking_node_feature_parity_recovery_instance_1", "computing_math", 0.0], ["moodle_gradebook_closeout_reconciliation", "education_info", 0.95], ["homework_grading_numerical_pdes_instance_02", "education_info", 0.6396], ["marc_remediation_folio_overlay", "education_info", 0.2], ["abb_irb6700_asset_to_urdf_instance_1", "engineering", 1.0], ["humanoid_wbc_policy_evaluation", "engineering", 0.7125], ["chisel_verilog_alignment_seq_1", "engineering", 0.2], ["power_10kv_feeder_reliability_001", "engineering", 0.0293], ["aerospace_low_thrust_trajectory", "engineering", 0.0], ["mpc_control_building_v1", "engineering", 0.0], ["openroad_sky130_ibex_pnr_signoff", "engineering", 0.0], ["sumo_urban_am_peak_calibration", "engineering", 0.0], ["Clinical_Variant_Annotation", "health_medicine", 1.0], ["ct_geometry_calibration_catphan", "health_medicine", 1.0], ["epidemiology_forecast", "health_medicine", 1.0], ["healthcare_tcga_luad_survival_kras", "health_medicine", 1.0], ["replicate_paper_1", "health_medicine", 1.0], ["wsi_tumor_localization_1", "health_medicine", 1.0], ["healthcare_variant_annotation_pipeline", "health_medicine", 0.999], ["nhanes_confounder_sensitivity_analysis", "health_medicine", 0.975], ["causal_ihdp_ite_estimation_6a_v1", "health_medicine", 0.925], ["obermeyer_bias_reproduction", "health_medicine", 0.7354], ["flusight_offline_hosp_forecast_2024_12_14", "health_medicine", 0.7098], ["crf_sdtm_mapping_4", "health_medicine", 0.5694], ["public_health_mask_mandate_ratio", "health_medicine", 0.3333], ["healthcare_sap_group_sequential_nsclc", "health_medicine", 0.2], ["crf_sdtm_mapping_1", "health_medicine", 0.0], ["healthcare_bias_audit_27a_public_replication_v1", "health_medicine", 0.0], ["limited_angle_ct_dps_reconstruction", "health_medicine", 0.0], ["ltmle_targeted_bootstrap_simulation_study", "health_medicine", 0.0], ["nsclc_radiomics_cox_signature_v1", "health_medicine", 0.0], ["prostate_imrt_matrad_reproduction", "health_medicine", 0.0], ["scene3_skullstrip_qc", "health_medicine", 0.0], ["simglucose_safe_basal_control_instance_1", "health_medicine", 0.0], ["legal_dr_fees_01", "legal", 1.0], ["agora_governance_classify_instance_1", "legal", 0.34], ["protein_function_annotation_instance_1", "life_sciences", 1.0], ["pseudotime_de", "life_sciences", 1.0], ["rgi_mcr1_colistin_v2", "life_sciences", 1.0], ["tcga_brca_deg_analysis", "life_sciences", 1.0], ["tp53_locus_variant_histone_browser_svg", "life_sciences", 1.0], ["gene_expression_differential_analysis_functional_enrichment_analysis_1", "life_sciences", 0.9988], ["cell_tracking_instance_1", "life_sciences", 0.9235], ["spatial_transcriptomics_spatial_domain_identification", "life_sciences", 0.6545], ["merfish_image_decoding_segmentation_1", "life_sciences", 0.6], ["idp_ensemble_scoring", "life_sciences", 0.4], ["genomic_interval_processing_1", "life_sciences", 0.25], ["WGS_Variant_Calling", "life_sciences", 0.2], ["amber_minimization_script_prep_instance_1", "life_sciences", 0.0], ["amber_three_stage_mmgbsa_workflow_instance_1", "life_sciences", 0.0], ["cell_translocation_analysis", "life_sciences", 0.0], ["hg002_chr22_germline_variant_pipeline", "life_sciences", 0.0], ["tms_marrow_cell_type_annotation_instance_1", "life_sciences", 0.0], ["yeast_colony_detection", "life_sciences", 0.0], ["zdock_hiv_dimer_interface_scoring_v1", "life_sciences", 0.0], ["aerobics_wc2026_portugal_trio_difficulty_scoring", "other", 0.0], ["adapt_vqe_molecular_energy", "physical_sciences", 1.0], ["computational_materials_science", "physical_sciences", 1.0], ["exact_diag_heisenberg_j1j2", "physical_sciences", 1.0], ["glm_lake_calibration", "physical_sciences", 1.0], ["gillespie_gene_regulatory_network", "physical_sciences", 0.89], ["silicon_bse_absorption", "physical_sciences", 0.8848], ["molecular_structure_plausibility", "physical_sciences", 0.8333], ["climate_prediction", "physical_sciences", 0.7932], ["mose2_bse_absorption_soc", "physical_sciences", 0.751], ["hst_acs_wfc_visit_reduction", "physical_sciences", 0.0], ["phonon_dispersion_thermodynamics", "physical_sciences", 0.0], ["celegans_neuron_tracking", "psychology_neuro", 0.3712], ["scene2_resample", "psychology_neuro", 0.0], ["atwood_2022_measles_vaccine_reproduction", "social_sciences", 1.0], ["abm_hangzhou_metro", "transport_safety", 1.0], ["fds_single_compartment_detector_reconstruction", "transport_safety", 0.7952], ["capacitated_vehicle_routing_problems", "transport_safety", 0.67]];
+const DOM=[["social_sciences", 1, 1.0], ["transport_safety", 3, 0.822], ["physical_sciences", 11, 0.741], ["legal", 2, 0.67], ["business_finance", 14, 0.623], ["education_info", 3, 0.597], ["computing_math", 19, 0.584], ["health_medicine", 22, 0.52], ["life_sciences", 19, 0.475], ["engineering", 8, 0.243], ["psychology_neuro", 2, 0.186], ["other", 1, 0.0]];
+
+// distribution bar
+const DB=[[29,"#2f8f5a"],[22,"#5aa574"],[16,"#b8a13e"],[7,"#c07a3a"],[31,"#9a978d"]];
+const dist=document.getElementById("dist");
+DB.forEach(([n,c])=>{const d=document.createElement("div");d.style.flex=n;d.style.background=c;d.textContent=n;dist.appendChild(d);});
+
+// domain table
+const dt=document.getElementById("domTable");
+DOM.forEach(([d,n,m])=>{const tr=document.createElement("tr");
+  tr.innerHTML=`<td>${d}</td><td class="num">${n}</td><td class="num">${m.toFixed(3)}</td>`+
+  `<td><div class="bar"><span style="width:${m*100}%"></span></div></td>`;dt.appendChild(tr);});
+
+// per-task table grouped by domain
+const dm={}; DOM.forEach(([d,n,m])=>dm[d]=m);
+const rt=document.getElementById("resTable"); let cur=null;
+FINAL.forEach(([t,d,s])=>{
+  if(d!==cur){cur=d;const h=document.createElement("tr");h.className="dhead";
+    h.innerHTML=`<td colspan="3">${d} · ${dm[d].toFixed(3)}</td>`;rt.appendChild(h);}
+  const tr=document.createElement("tr");
+  tr.innerHTML=`<td class="task">${t}</td><td class="num">${s.toFixed(3)}</td>`+
+    `<td><div class="bar"><span style="width:${Math.max(s*100,0)}%"></span></div></td>`;
+  rt.appendChild(tr);
+});
+</script>

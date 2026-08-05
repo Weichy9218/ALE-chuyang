@@ -1,0 +1,149 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AGORA 分类：self-check 吃掉了注意力预算｜ALE</title><style>
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}
+.wrap{max-width:980px;margin:0 auto;padding:32px 22px 90px}
+h1{font-size:25px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:34px 0 10px}
+h3{font-size:15px;margin:18px 0 6px}
+.sub{color:var(--muted);font-size:14.5px;margin:0 0 4px}
+.tid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted)}
+p{margin:10px 0}
+a{color:var(--accent)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--codebg);padding:1px 5px;border-radius:4px;word-break:break-word}
+pre{background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+pre code{background:none;padding:0}
+section{border-top:1px solid var(--line);padding-top:8px;margin-top:26px}
+.spec{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:2px 18px;margin:16px 0;display:grid;grid-template-columns:auto 1fr;gap:0 18px}
+.spec dt{font-weight:600;font-size:12.5px;padding:8px 0;color:var(--muted);border-top:1px solid var(--line)}
+.spec dd{margin:0;font-size:13.5px;padding:8px 0;border-top:1px solid var(--line)}
+.spec dt:first-of-type,.spec dd:first-of-type{border-top:none}
+.tblwrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--card);font-weight:600;white-space:nowrap}
+.badge{display:inline-block;font-weight:700;font-size:12px;padding:1px 8px;border-radius:5px}
+.b-good{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+.b-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+.b-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.callout{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 16px;margin:14px 0;background:var(--card);font-size:14px}
+.callout.warn{border-left-color:var(--warn)}
+.callout.bad{border-left-color:var(--bad)}
+ul,ol{margin:10px 0;padding-left:22px}li{margin:5px 0}
+.back{font-size:13px;margin-bottom:10px;display:inline-block}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+/* 流程图组件：纵向步骤流，纯 CSS，无外部依赖 */
+.flow{margin:16px 0}
+.fstep{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px 14px;position:relative}
+.fstep+.fstep{margin-top:26px}
+.fstep+.fstep::before{content:"↓";position:absolute;top:-23px;left:22px;color:var(--muted);font-size:15px}
+.fstep .ft{font-weight:600;font-size:14px;margin:0 0 4px}
+.fstep .fb{font-size:13.5px;color:var(--fg);margin:0}
+.fstep .fn{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);margin-right:8px}
+.fstep.ok{border-left:3px solid var(--good)}
+.fstep.miss{border-left:3px solid var(--bad)}
+.fstep.risk{border-left:3px solid var(--warn)}
+/* 图：题目自带素材、agent 产出图、自画的对照图，一律 data URI 内嵌 */
+.fig{margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px}
+.fig img{width:100%;height:auto;display:block;border-radius:6px;background:#fff}
+.fig figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.figrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0}
+.figrow .fig{margin:0}
+.scorebar{display:flex;align-items:center;gap:10px;margin:10px 0}
+.scorebar .bar{flex:1;height:10px;background:var(--codebg);border-radius:6px;overflow:hidden}
+.scorebar .fill{height:100%;background:var(--accent)}
+.scorebar .num{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:nowrap}
+/* 对比专用：三臂并列 */
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:16px 0}
+.cmpcol{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:12px 14px}
+.cmpcol h4{margin:0 0 8px;font-size:13.5px;display:flex;align-items:baseline;gap:8px}
+.cmpcol h4 .sc{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;font-weight:700}
+.cmpcol.base{border-left:3px solid var(--muted)}
+.cmpcol.up{border-left:3px solid var(--good)}
+.cmpcol.down{border-left:3px solid var(--bad)}
+.cmpcol p{margin:6px 0;font-size:13px}
+.cmpcol ul{margin:6px 0;padding-left:18px;font-size:13px}
+.q{border-left:2px solid var(--line);padding:2px 0 2px 12px;margin:8px 0;color:var(--muted);font-size:13px}
+.delta{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+.up-t{color:var(--good)}.down-t{color:var(--bad)}.flat-t{color:var(--muted)}
+.kv{font-size:13px;margin:4px 0}.kv b{font-weight:600}
+.lead{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;background:var(--card);padding:12px 16px;margin:16px 0}
+.lead p{margin:8px 0;font-size:14.5px}
+.lead b{font-weight:600}
+.lead .k{display:inline-block;min-width:3.4em;color:var(--muted);font-size:12.5px;font-weight:600;margin-right:6px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+td.num,th.num{text-align:right;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:nowrap}
+</style></head><body><div class="wrap">
+<a class="back" href="index.html">← 返回 Prep 对比列表</a>
+<h1>AGORA 治理文件三维分类</h1>
+<div class="tid">taskId：legal/agora_governance_classify_instance_1 ｜ 同期 base 0.4830 ｜ prep 0.4141 / 未出分 / 0.3423 ｜ 撤 self-check 0.7163</div>
+<p class="sub">writer 花了最后八次工具调用让 self-check 全绿，最终报告 155 项通过零失败，而决定分数的引文选句质量清单没有点名，也测不到。</p>
+<dl class="spec">
+  <dt>交付物</dt><dd>单个 <code>output/agent_output.json</code></dd>
+  <dt>评分方式</dt><dd>引文需 ≥5 词、逐字子串、含判别关键词；单文档通过率不足 0.8 则该文档三项得分减半</dd>
+  <dt>同期 base</dt><dd>0.4830</dd>
+  <dt>prep 三轮</dt><dd>0.4141／未出分（agent 失败）／0.3423</dd>
+  <dt>分差归属</dt><dd>全部来自文档 768 的引文闸门从 1.0 掉到 0.5</dd>
+  <dt>轨迹路径</dt><dd><code>v23_v20_attribution/…/legal__agora_governance_classify_instance_1/</code> 等</dd>
+</dl>
+<div class="callout bad"><b>writer 把最后三分之一的预算花在让 self-check 全绿上，而 self-check 测不到决定分数的东西。</b>它最终报告「155 项通过、0 项失败」，真实分数 0.3423，是三道 prep 题里最低的。同一轮撤掉 self-check 的对照臂拿到 0.7163。</div>
+<section><h2>一、这道题的分数由引文质量决定</h2>
+<p>给三份 AI 治理文件按三套分类法打标，每个判 TRUE 的标签要配一句原文引文。评分器对每条引文查三件事，三条全过才算通过：</p>
+<div class="tblwrap"><table>
+<tr><th>条件</th><th>细节</th></tr>
+<tr><td>长度</td><td>至少 5 个词</td></tr>
+<tr><td>逐字</td><td>归一化后必须是缓存原文的子串</td></tr>
+<tr><td>判别性</td><td>必须命中该标签对应的关键词表。例如 <code>operate_and_monitor</code> 的词表是 <span class='mono'>monitor, monitoring, incident, remove, report, maintain, ongoing</span></td></tr>
+</table></div>
+<p>然后是一道悬崖式的闸门：单个文档的引文通过率达到 0.8 给系数 1.0，否则给 0.5，这个系数同时乘到该文档的立法性质、技术范围、生命周期三项得分上。一份文件的引文差几条，它的全部得分就减半。</p>
+</section>
+<section><h2>二、prep 的清单点名了什么，漏了什么</h2>
+<p>清单第 12 条要求引文是「原文的精确子串」且非空，备注还提醒要保留大小写、标点和空白。这条被 writer 执行得非常彻底。</p>
+<div class="callout warn">清单里<b>没有任何一条</b>提到引文至少 5 个词、要含判别性关键词、或者每份文档的通过率有 0.8 的门。这三件事都只存在于隐藏评分器里，从公开题面推不出来。清单是对公开材料的部分阅读，这就是它的盲区。</div>
+<p>prep 的清单在它点名的维度上是有效的：清单第 14、15 条要求跨文档矩阵覆盖全部类别并与文档分类一致，base 的矩阵缺了立法性质三行、不合规，prep 臂的矩阵完全合规。但这个改进换来零收益，因为两臂的总分都远低于矩阵不合规才会触发的 0.69 封顶线。</p>
+</section>
+<section><h2>三、writer 把预算花在了哪</h2>
+<div class="flow">
+<div class="fstep"><p class="ft"><span class="fn">步 3</span>读报告</p><p class="fb"><span class='mono'>read task_prep/PREP_REPORT.md</span></p></div>
+<div class="fstep"><p class="ft"><span class="fn">步 25</span>把 self-check 的源码也读了</p><p class="fb"><span class='mono'>read task_prep/artifacts/check_contract.py</span>。脚本的 covers 字段里写着「无法判断标签本身是否正确」，writer 看到了这句话。</p></div>
+<div class="fstep miss"><p class="ft"><span class="fn">步 29 到 43</span><b>连续 8 次 exec，全部在修空白字符</b></p><p class="fb">为了让引文通过 checker 的逐字子串检查，逐个替换换行和缩进，例如把 <span class='mono'>'human facial and body\n\nmovements'</span> 改成 <span class='mono'>'human facial and body \n\nmovements'</span>。</p></div>
+<div class="fstep"><p class="ft"><span class="fn">步 45</span>self-check 全部通过</p><p class="fb"></p></div>
+<div class="fstep miss"><p class="ft"><span class="fn">步 47</span>写进记忆：155 项通过、0 项失败、2 项无法检查</p><p class="fb">此时真实分数是 0.3423。</p></div>
+</div>
+<p>base 没有 checker，也做了空白修补，但只做了 3 次，其余步数花在跨文档检索和按行号回读原文上（步 10 是一次跨三份文档的关键词 grep，步 16、18 按行号范围回读）。base 最终交出 29 条引文，prep 臂交出 26 条。</p>
+</section>
+<section><h2>四、引文的实际数据</h2>
+<p>对每条 TRUE 标签的引文做统计。注意两轮 prep 的失败模式并不相同：</p>
+<div class="tblwrap"><table>
+<tr><th>臂</th><th class="num">引文条数</th><th class="num">字符均值</th><th class="num">词数均值</th><th class="num">通过率</th><th class="num">因 &lt;5 词失败</th><th class="num">因不含关键词失败</th></tr>
+<tr><td>base</td><td class="num">29</td><td class="num">121.0</td><td class="num">17.3</td><td class="num">0.759</td><td class="num">2</td><td class="num">5</td></tr>
+<tr><td>prep 第一轮</td><td class="num">25</td><td class="num"><b>42.3</b></td><td class="num"><b>6.5</b></td><td class="num">0.640</td><td class="num"><b>7</b></td><td class="num">3</td></tr>
+<tr><td>prep 第三轮</td><td class="num">26</td><td class="num"><b>151.5</b></td><td class="num">21.0</td><td class="num">0.654</td><td class="num">1</td><td class="num"><b>8</b></td></tr>
+<tr><td>prep_nosc</td><td class="num">29</td><td class="num">127.3</td><td class="num">18.1</td><td class="num">0.79</td><td class="num">—</td><td class="num">—</td></tr>
+</table></div>
+<p>第一轮是把引文压短了：均值只有 6.5 个词，七条因为不足 5 词直接判失败，例如技术范围的 <span class='mono'>"frontier AI models"</span>（3 词）、<span class='mono'>"model to generate content"</span>（4 词）。同一位置 base 给的是 14 词和 39 词的完整句子。</p>
+<p>第三轮反而比 base 更长，失败模式换成了选错句子。生命周期的 <code>operate_and_monitor</code> 这一项，base 选的句子里有 <span class='mono'>Monitoring</span>，命中词表；prep 臂选了一句 20 词、175 字符的句子，讲的是应对越狱和漏洞，读起来更贴切，但一个词表里的词都没有。</p>
+<div class="callout">所以「清单让 writer 把引文压到最短」这个说法只对第一轮成立。更准确的说法是：writer 按清单点名的维度（逐字子串）优化引文，而选句的判据在清单之外，于是选得好不好变成了运气。</div>
+</section>
+<section><h2>五、分数落在哪</h2>
+<div class="tblwrap"><table>
+<tr><th>文档</th><th>base 通过率 / 闸门</th><th>prep 第三轮 通过率 / 闸门</th></tr>
+<tr><td>768</td><td>12/14 = 0.857 → <b>1.0</b></td><td>9/12 = 0.75 → <b>0.5</b></td></tr>
+<tr><td>1293</td><td>2/4 = 0.50 → 0.5</td><td>2/4 = 0.50 → 0.5</td></tr>
+<tr><td>2047</td><td>8/11 = 0.727 → 0.5</td><td>6/10 = 0.60 → 0.5</td></tr>
+</table></div>
+<p><b>全部 0.1407 的分差来自 768 这一份文件的闸门从 1.0 掉到 0.5。</b>把这个闸门补回 1.0、其余全部不动，prep 臂算得 0.4921，反而高于 base 的 0.4830。也就是说 prep 在标签判断本身上并不比 base 差，2047 的生命周期 F1 还从 base 的 0.889 提到了 1.0。</p>
+<p>同一轮撤掉 self-check 的对照臂拿 0.7163，它的 768 通过率是 13/14、2047 是 8/10，两个闸门都拿满，引文长度均值 127.3 字符，与 base 相当。</p>
+</section>
+<section><h2>六、这道题说明什么</h2>
+<p><b>零权威的工具会争夺注意力预算。</b>self-check 不判对错、writer 也知道它不判对错（它读了源码里那句话），但它是唯一能给出确定反馈的东西。面对一个隐藏评分的任务，可测的信号会把努力吸过去，哪怕它测的不是要紧的事。</p>
+<p><b>清单点名的维度和评分器看重的维度错开时，代价是双份的。</b>prep 让 writer 修好了矩阵（清单点名、评分器此处不计分），同时让它把预算花在空白字符上（清单点名、评分器不看），而决定分数的引文选句质量两边都没管。</p>
+<p><b>这道题的对照臂读数需要重做。</b>撤掉 self-check 的那一臂在别的题上因为一个 staging 缺陷连报告一起丢了，所以 0.7163 与 0.3423 的差不能干净地归给 self-check。缺陷已修复，需要重跑才能定论。</p>
+</section><footer>数据来源：pgl 机器 <code>~/ale/agents-last-exam/.logs/ale/</code> 下的运行记录，路径见第一节表格。题目定义、打分脚本与隐藏参考在 batchcom 机器 <code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/</code>。本页的分数取自各次运行的 <code>eval_result.json</code>；题面背景与 base 失分的完整复盘见 <a href="../../task_analysis/agora_governance_classify_instance_1.html">题目逐题分析</a>。</footer>
+</div></body></html>

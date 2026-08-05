@@ -1,0 +1,20 @@
+{
+  "q1_multi_broker_reporting": {
+    "conclusion": "No",
+    "citation_document": "《上海证券交易所沪股通投资者程序化交易信息报告表》填报说明",
+    "evidence_snippet": "在多家联交所参与者开立账户（含机构管理人账户、管理人旗下的产品账户）的机构投资者，对于以同一证件号码开立的账户，可以选取一家联交所参与者并按机构维度（同一证件号码下开立的账户合计）填写账户资金信息相关字段（包括账户资金规模、账户资金来源、其他资金来源描述、资金来源占比、杠杆资金规模、杠杆资金来源、其他杠杆资金来源描述、杠杆率）。其以同一证件号码在其他联交所参与者开立的账户，不再重复填写上述信息，并在相应字段填写“已在其他联交所参与者报告”，上述字段以外的其他字段仍须按照要求填写。",
+    "answer_text": "No. For accounts opened under the same identification number (including the same LEI), the institution may consolidate the funding and leverage fields through one broker. The other account reports must mark those fields as already reported elsewhere, while still completing the remaining fields."
+  },
+  "q2_hft_cost_calculation": {
+    "conclusion": "No",
+    "citation_document": "上海证券交易所程序化交易管理实施细则",
+    "evidence_snippet": "第三十七条 本所可以对高频交易实施差异化收费，根据申报、撤单的笔数和频率等指标设置收费标准，加收流量费和撤单费等费用。具体收费标准由本所另行规定。",
+    "answer_text": "No. The staged rule authorizes flow and cancellation fees but gives no numerical amounts; it says the specific fee standards will be prescribed separately."
+  },
+  "q3_software_naming": {
+    "conclusion": "Unknown",
+    "citation_document": "上海证券交易所沪股通投资者程序化交易报告信息填报注意事项",
+    "evidence_snippet": "对于描述类字段（其他资金来源描述、其他杠杆资金来源描述、主策略概述、辅策略概述、指令执行方式概述等）以及高频交易系统测试报告及故障应急方案，填报语言原则上为简体中文。对于个别难以确定统一中文表述的字段，例如联交所参与者名称、账户名称、程序化交易软件名称等，可以填写英文。",
+    "answer_text": "Unknown. The instruction expressly permits English for a software name that lacks a uniform Chinese expression, but the facts do not say the software's original foreign-language name is English. It does not expressly permit French or every other foreign language."
+  }
+}

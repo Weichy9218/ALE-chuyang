@@ -25,7 +25,8 @@ agent:
 
 # --- task-specific prep agent (default-off outside explicit experiment arms) ---
 prep:
-  max_steps: 15            # v2 observed range was 3-12 LLM turns
+  max_steps: 50            # prep now runs the task's core step, not just reads it;
+                           # a wrap-up notice fires with ~20% of the budget left.
 
 # --- independent verifier (pre-freeze Builder/Auditor + isolated Executor) ---
 verifier:

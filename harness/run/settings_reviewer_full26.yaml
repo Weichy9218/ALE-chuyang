@@ -1,0 +1,55 @@
+# ============================================================================
+# Full 26-task REVIEWER-ONLY run. base is NOT re-run here — the control is the
+# historical base means baked into compare_vs_base.py (multi-run averages), so
+# this settings file lists only the `reviewer` arm. Apples-to-apples: same model
+# (gpt-5.6-sol), same endpoint (.env.boyue), same 26-task list, k=1 single pass.
+#
+# The `reviewer` arm = base ale_claw solver + an independent, source-grounded
+# delivery audit with a HARD zero-discrepancy gate (faithful port of argus's
+# Reviewer role; ale_run/agents/ale_claw/reviewer_audit.py + docs/harness/
+# REVIEWER_AUDIT.md). prep + self-review hint are OFF, so the arm isolates the
+# audit gate on top of the plain solver the base means were produced by.
+#
+# DRY-RUN FIRST (no API cost, no Docker) — from the stack dir:
+#   .venv/bin/python harness/run/launch.py --stack . \
+#       --settings harness/run/settings_reviewer_full26.yaml --per-arm
+# That regenerates configs/agents/ale_claw_reviewer.yaml, verifies the preset
+# line-exactly against the reviewer arm switches, prints the arm matrix + resolved
+# budgets + the exact launch command, and EXITS.
+#
+# Only add --launch AFTER operator authorization (real API spend + Docker compute).
+# Read back with:
+#   python3 compare_vs_base.py .logs/ale/reviewer_full26
+# ============================================================================
+
+# reviewer-only: independent audit + hard zero-diff gate. base = historical means.
+arms: [reviewer]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000        # effectively uncapped; COGNITION forbids turn/time caps
+                           # (an unequal budget manufactures fake effects).
+  thinking_level: medium
+
+# --- reviewer audit budgets (only the `reviewer` arm consumes these) ---
+reviewer:
+  max_steps: 40            # per fresh audit session (read + exec to recompute).
+  max_rounds: 2            # audit->repair rounds; run always ends on the writer's
+                           # own last output (bounded to avoid oscillation).
+
+run:
+  name: reviewer_full26     # exp yaml + log filenames.
+  # The exact 26-task list the base means were produced on (matches the base run
+  # rows one-to-one; see compare_vs_base.py's BASE dict).
+  tasks: selected_tasks/research_batch_26.txt
+  concurrency: 2           # boyue dislikes heavy parallelism (shared Azure quota
+                           # behind a load balancer). Low parallelism only.
+  cleanup_mode: delete
+  # secret_file selects the REAL endpoint: the runner reloads it with override,
+  # clobbering any env prefix. .env.boyue carries ALE_MODEL_TRANSPORT=responses
+  # (gpt-5.6-sol only accepts function tools + reasoning over /v1/responses) plus
+  # the boyue creds — same endpoint the full26 boyue base run used (no confound).
+  secret_file: secret/.env.boyue
+  api_endpoints: []        # one shared endpoint (no gateway confound).
+  output_root: .logs/ale/reviewer_full26
+  wall_time_s: 86400

@@ -1,0 +1,29 @@
+# Boyue Responses-API smoke: 1 task, prep arm, thinking=high.
+# Confirms gpt-5.6-sol accepts function tools + reasoning effort over
+# /v1/responses (chat 400s on boyue). ALE_MODEL_TRANSPORT=responses is set
+# in secret/.env.boyue.
+arms: [prep]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000
+  thinking_level: high
+
+prep:
+  max_steps: 50
+  timeout_s: 1800
+
+verifier:
+  max_steps: 30
+  max_review_rounds: 1
+  writer_checks: 8
+
+run:
+  name: smoke_boyue
+  tasks: docs/harness/results/smoke_boyue_tasks.txt
+  concurrency: 1
+  cleanup_mode: delete
+  secret_file: secret/.env.boyue
+  api_endpoints: []
+  output_root: .logs/ale/smoke_boyue
+  wall_time_s: 3600

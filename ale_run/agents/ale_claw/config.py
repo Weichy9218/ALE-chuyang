@@ -106,20 +106,11 @@ class AleClawConfig:
     task_specific_prep_model: str | None = None
     """Prep-agent model. None uses the main model, preserving full capability."""
 
-    task_specific_prep_max_steps: int = 30
+    task_specific_prep_max_steps: int = 50
     """Maximum multi-turn tool/LLM steps for the prep agent."""
 
     task_specific_prep_timeout_s: int = 1800
     """Wall-clock budget for one prep session. On timeout the writer continues."""
-
-    task_specific_prep_self_check: bool = True
-    """Deliver the prep self-check (script, report section, digest command).
-
-    ``False`` keeps prep itself identical - same prompt, same budget, the
-    script is still written and declared - but withholds the self-check and
-    its artifact from everything the writer sees. This is the A/B switch for
-    isolating the self-check channel's net effect from the rest of prep.
-    """
 
     task_specific_prep_task_id: str = ""
     """Lifecycle-populated task identity used for audited content-addressed caching."""
@@ -127,39 +118,30 @@ class AleClawConfig:
     task_specific_prep_task_root: str = ""
     """Lifecycle-populated public task root containing input/ and software/."""
 
-    verifier: bool = False
-    """Freeze an independent public verifier before the solver, then run it after."""
+    # ---- reviewer audit (the ``reviewer`` arm) ----
+    reviewer_audit: bool = False
+    """Run an independent, source-grounded delivery audit with a hard
+    zero-discrepancy gate after the writer produces its deliverable.
 
-    verifier_model: str | None = None
-    """Builder/auditor model. None uses the main model."""
-
-    verifier_max_steps: int = 30
-    """Maximum tool/LLM steps for each Builder or Auditor."""
-
-    verifier_max_review_rounds: int = 1
-    """Maximum Writer review rounds after the frozen suite runs.
-
-    A round feeds the report to the Writer; it becomes a revision only when the
-    Writer actually changes output. A round with no output change stops the loop.
+    The reviewer audit spawns a FRESH auditor sub-agent that never sees the
+    writer's pipeline, independently recomputes each groundable semantic field
+    from the public inputs, compares cell-by-cell, and — via a mechanical gate —
+    only lets the run finish when every discrepancy counter is zero. Ungroundable
+    fields are recorded as NA and left advisory. Hidden reference/grader are
+    unreachable (staged post-launch) and denylisted.
     """
 
-    verifier_writer_checks: int = 2
-    """Pre-submission runs of the frozen suite the Writer may trigger itself.
+    reviewer_audit_model: str | None = None
+    """Auditor model. None uses the main model (full capability for recompute)."""
 
-    When the verifier is on and this is positive, the Writer gets a ``verify``
-    tool that snapshots the current ``output/`` and runs the complete frozen
-    suite before DONE, so measurements arrive while the Writer still has budget
-    to act on them. 0 removes the tool and keeps the post-DONE-only behavior.
-    """
+    reviewer_audit_max_steps: int = 40
+    """Maximum tool/LLM steps for each fresh audit session."""
 
-    writer_self_review_hint: bool = False
-    """Append a short pre-submission self-review instruction to the writer prompt.
-
-    Control arm for pricing the verifier: no frozen tests and no tools, only
-    the instruction to recheck ``output/`` against the task's stated contract
-    before DONE. Run it with ``verifier=False`` to measure how much of the
-    verifier arm's effect the instruction alone reproduces.
-    """
+    reviewer_audit_max_rounds: int = 2
+    """Maximum audit→repair rounds. Each round runs a fresh auditor over a
+    read-only snapshot of ``output/``; a non-passing gate feeds source-grounded
+    findings back to the writer for repair. Bounded to mitigate oscillation
+    (the run always ends on the writer's own last output). Validated 1..3."""
 
     # ---- substrate transport ----
     substrate_transport: str = "mcp"
@@ -214,12 +196,10 @@ class AleClawConfig:
             raise ValueError("task_specific_prep_max_steps must be positive")
         if self.task_specific_prep_timeout_s <= 0:
             raise ValueError("task_specific_prep_timeout_s must be positive")
-        if self.verifier_max_steps <= 0:
-            raise ValueError("verifier_max_steps must be positive")
-        if not 1 <= self.verifier_max_review_rounds <= 3:
-            raise ValueError("verifier_max_review_rounds must be between 1 and 3")
-        if not 0 <= self.verifier_writer_checks <= 8:
-            raise ValueError("verifier_writer_checks must be between 0 and 8")
+        if self.reviewer_audit_max_steps <= 0:
+            raise ValueError("reviewer_audit_max_steps must be positive")
+        if not 1 <= self.reviewer_audit_max_rounds <= 3:
+            raise ValueError("reviewer_audit_max_rounds must be between 1 and 3")
         if self.disable_main_computer and self.disable_delegate_gui:
             raise ValueError(
                 "Both disable_main_computer and disable_delegate_gui set — "

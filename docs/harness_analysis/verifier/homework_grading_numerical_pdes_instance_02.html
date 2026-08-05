@@ -1,0 +1,136 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PDE 作业批改：全绿之后主动放宽给分｜ALE</title><style>
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}
+.wrap{max-width:980px;margin:0 auto;padding:32px 22px 90px}
+h1{font-size:25px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:34px 0 10px}
+h3{font-size:15px;margin:18px 0 6px}
+.sub{color:var(--muted);font-size:14.5px;margin:0 0 4px}
+.tid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted)}
+p{margin:10px 0}
+a{color:var(--accent)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--codebg);padding:1px 5px;border-radius:4px;word-break:break-word}
+pre{background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+pre code{background:none;padding:0}
+section{border-top:1px solid var(--line);padding-top:8px;margin-top:26px}
+.spec{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:2px 18px;margin:16px 0;display:grid;grid-template-columns:auto 1fr;gap:0 18px}
+.spec dt{font-weight:600;font-size:12.5px;padding:8px 0;color:var(--muted);border-top:1px solid var(--line)}
+.spec dd{margin:0;font-size:13.5px;padding:8px 0;border-top:1px solid var(--line)}
+.spec dt:first-of-type,.spec dd:first-of-type{border-top:none}
+.tblwrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--card);font-weight:600;white-space:nowrap}
+.badge{display:inline-block;font-weight:700;font-size:12px;padding:1px 8px;border-radius:5px}
+.b-good{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+.b-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+.b-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.callout{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 16px;margin:14px 0;background:var(--card);font-size:14px}
+.callout.warn{border-left-color:var(--warn)}
+.callout.bad{border-left-color:var(--bad)}
+ul,ol{margin:10px 0;padding-left:22px}li{margin:5px 0}
+.back{font-size:13px;margin-bottom:10px;display:inline-block}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+/* 流程图组件：纵向步骤流，纯 CSS，无外部依赖 */
+.flow{margin:16px 0}
+.fstep{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px 14px;position:relative}
+.fstep+.fstep{margin-top:26px}
+.fstep+.fstep::before{content:"↓";position:absolute;top:-23px;left:22px;color:var(--muted);font-size:15px}
+.fstep .ft{font-weight:600;font-size:14px;margin:0 0 4px}
+.fstep .fb{font-size:13.5px;color:var(--fg);margin:0}
+.fstep .fn{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);margin-right:8px}
+.fstep.ok{border-left:3px solid var(--good)}
+.fstep.miss{border-left:3px solid var(--bad)}
+.fstep.risk{border-left:3px solid var(--warn)}
+/* 图：题目自带素材、agent 产出图、自画的对照图，一律 data URI 内嵌 */
+.fig{margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px}
+.fig img{width:100%;height:auto;display:block;border-radius:6px;background:#fff}
+.fig figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.figrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0}
+.figrow .fig{margin:0}
+.scorebar{display:flex;align-items:center;gap:10px;margin:10px 0}
+.scorebar .bar{flex:1;height:10px;background:var(--codebg);border-radius:6px;overflow:hidden}
+.scorebar .fill{height:100%;background:var(--accent)}
+.scorebar .num{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:nowrap}
+/* 对比专用：三臂并列 */
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:16px 0}
+.cmpcol{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:12px 14px}
+.cmpcol h4{margin:0 0 8px;font-size:13.5px;display:flex;align-items:baseline;gap:8px}
+.cmpcol h4 .sc{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;font-weight:700}
+.cmpcol.base{border-left:3px solid var(--muted)}
+.cmpcol.up{border-left:3px solid var(--good)}
+.cmpcol.down{border-left:3px solid var(--bad)}
+.cmpcol p{margin:6px 0;font-size:13px}
+.cmpcol ul{margin:6px 0;padding-left:18px;font-size:13px}
+.q{border-left:2px solid var(--line);padding:2px 0 2px 12px;margin:8px 0;color:var(--muted);font-size:13px}
+.delta{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+.up-t{color:var(--good)}.down-t{color:var(--bad)}.flat-t{color:var(--muted)}
+.kv{font-size:13px;margin:4px 0}.kv b{font-weight:600}
+.lead{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;background:var(--card);padding:12px 16px;margin:16px 0}
+.lead p{margin:8px 0;font-size:14.5px}
+.lead b{font-weight:600}
+.lead .k{display:inline-block;min-width:3.4em;color:var(--muted);font-size:12.5px;font-weight:600;margin-right:6px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+td.num,th.num{text-align:right;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:nowrap}
+</style></head><body><div class="wrap">
+<a class="back" href="index.html">← 返回 Verifier 对比列表</a>
+<h1>数值 PDE 作业的按 rubric 批改</h1>
+<div class="tid">taskId：education_info/homework_grading_numerical_pdes_instance_02 ｜ 同期 base 0.6598 ｜ verifier 三轮 0.7132 / 0.6650 / 0.7090</div>
+<p class="sub">六条检查全部通过，agent 仍然主动放宽了两名学生的给分，而这一维 verifier 明确说过自己测不了。增益的另一半来自与 verifier 无关的写法差异。</p>
+<dl class="spec">
+  <dt>交付物</dt><dd><code>output/</code> 下五个文件</dd>
+  <dt>评分方式</dt><dd>五项算术平均，其中两项对照隐藏短语打分</dd>
+  <dt>base 抖动</dt><dd>11 次运行跨度 0.140，是这组里抖动最大的题</dd>
+  <dt>同期 base</dt><dd>0.6598</dd>
+  <dt>verifier 三轮</dt><dd>0.7132（v18）／0.6650（v19）／0.7090（v20）</dd>
+  <dt>轨迹路径</dt><dd><code>v23_v20_attribution/…/education_info__homework_grading_numerical_pdes_instance_02/</code></dd>
+</dl>
+<div class="callout"><b>同样是六条检查全部通过、零条失败，agent 在收到报告后主动放宽了两名学生的给分。</b>这次改动贡献了一半增益。另一半来自初稿里一个与 verifier 无关的写法差异。</div>
+<section><h2>一、这道题怎么评分</h2>
+<p>按给定的评分标准批改五份数值 PDE 作业，交五个文件：<code>grades.csv</code>、<code>error_tags.csv</code>、<code>per_student_feedback.json</code>、<code>common_mistakes_summary.md</code>、<code>grader_manifest.json</code>。</p>
+<p>评分是五项的算术平均：分数逐格比对（五名学生乘五个字段共 25 格）、错误标签的集合相似度、逐生反馈对隐藏短语的覆盖率、总结对隐藏短语的覆盖率、清单键齐全。三项里有两项对着隐藏短语打分，这意味着措辞对不上就丢分，而措辞要求从公开材料看不到。</p>
+<p>这题的 base 抖动很大：11 次运行的分数跨度是 0.140，所以单轮的正负要放在这个幅度里读。</p>
+</section>
+<section><h2>二、verifier 冻结了什么</h2>
+<p>六条可执行检查，全是结构契约：文件集合、表头与学生编号、标签词表、每条反馈不超过 70 词、总结非空、清单三个键。</p>
+<p>另有三条被列为不可验证，理由写得很清楚：</p>
+<div class="q">The public rubric gives maximum points and correctness descriptions but no deterministic partial-credit or deduction schedule for answers that satisfy only some elements. A frozen checker cannot prove exact numerical scores without inventing unstated grading rules.<br><span class="mono">— verifier_suite.json，contract.grades_csv.rubric_aligned_partial_credit_correctness</span></div>
+<p>也就是说，占分最重的「给分是否合理」这一维，verifier 明确声明测不了。</p>
+</section>
+<section><h2>三、agent 在「全部通过」之后做了什么</h2>
+<div class="flow">
+<div class="fstep"><p class="ft"><span class="fn">步 25</span>调用 <code>verify</code>，六条全过</p><p class="fb">报文里列出三条覆盖缺口，并写明「Execution errors and coverage gaps require no action」以及「an all-pass result does not mean the task is complete」。</p></div>
+<div class="fstep ok"><p class="ft"><span class="fn">步 27</span><b>主动放宽两名学生的给分</b></p><p class="fb">S02 的 problem_1b 从 0 改成 1，S03 的三个分项从 0 改成 1。没有任何一条检查要求这么做，恰恰相反，这一维 verifier 说过自己测不了。</p></div>
+<div class="fstep"><p class="ft"><span class="fn">步 29</span>自查一遍</p><p class="fb">打印成绩表，核对总分等于分项之和，核对五条反馈的词数都在 70 以内。</p></div>
+<div class="fstep miss"><p class="ft"><span class="fn">步 31</span>想给 S03 补一个错误标签，失败</p><p class="fb">文件是 CRLF 换行，编辑用的是 LF，没匹配上。这条标签因此丢了。</p></div>
+<div class="fstep"><p class="ft"><span class="fn">步 33</span>再次 <code>verify</code>，仍然全过</p><p class="fb"></p></div>
+</div>
+</section>
+<section><h2>四、分数落在哪</h2>
+<div class="tblwrap"><table>
+<tr><th>版本</th><th class="num">给分</th><th class="num">标签</th><th class="num">逐生反馈</th><th class="num">总结</th><th class="num">清单</th><th class="num">总分</th></tr>
+<tr><td>verifier 臂最终</td><td class="num"><b>0.76</b></td><td class="num">0.818</td><td class="num">0.633</td><td class="num">0.333</td><td class="num">1.0</td><td class="num"><b>0.7090</b></td></tr>
+<tr><td>verifier 臂改分前</td><td class="num">0.64</td><td class="num">0.818</td><td class="num">0.633</td><td class="num">0.333</td><td class="num">1.0</td><td class="num">0.6850</td></tr>
+<tr><td>base 臂</td><td class="num">0.64</td><td class="num">0.909</td><td class="num">0.417</td><td class="num">0.333</td><td class="num">1.0</td><td class="num">0.6598</td></tr>
+</table></div>
+<p>verifier 臂比 base 高 <span class="delta up-t">+0.0492</span>，拆开是：</p>
+<div class="tblwrap"><table>
+<tr><th>来源</th><th>值</th><th>说明</th></tr>
+<tr><td>verify 之后那次改分</td><td><span class="delta up-t">+0.0240</span></td><td>25 格里多对 3 格，改对的三格参考值确实是 1 分</td></tr>
+<tr><td>初稿的反馈写法</td><td><span class="delta up-t">+0.0433</span></td><td>verifier 臂用 ASCII 记号写公式（<span class='mono'>dt_max = 0.01</span>、<span class='mono'>-2*u_i^n</span>），base 用了 Unicode 数学符号，而隐藏短语要的正是 ASCII 形式。与 verifier 无关</td></tr>
+<tr><td>丢掉的那条标签</td><td><span class="delta down-t">-0.0182</span></td><td>就是第 31 步换行符不匹配那次；改成功还能再多这么多</td></tr>
+</table></div>
+</section>
+<section><h2>五、这道题说明什么</h2>
+<p><b>又一次「全绿之后才发生的改动」。</b>和 FluSight 一样，触发行为改变的不是失败项，是报告本身。而且这次改动落在 verifier 明确声明测不了的那一维上。</p>
+<p><b>增益的一半根本不属于 verifier。</b>反馈用 ASCII 还是 Unicode 写公式，是初稿阶段的写法偏好，与 verifier 没有关系，却贡献了 +0.043。这类差异在单次运行的对比里无法与组件效应分开，这也是为什么单题单次的 delta 不能直接当成组件的效果。</p>
+<p><b>换行符这种小事会吃掉真实的分。</b>第 31 步那次编辑失败无声无息，verifier 的六条检查不覆盖标签完整性，自查也没发现。机械检查只在它被写出来的地方起作用。</p>
+</section><footer>数据来源：pgl 机器 <code>~/ale/agents-last-exam/.logs/ale/</code> 下的运行记录，路径见第一节表格。题目定义、打分脚本与隐藏参考在 batchcom 机器 <code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/</code>。本页的分数取自各次运行的 <code>eval_result.json</code>；题面背景与 base 失分的完整复盘见 <a href="../../task_analysis/homework_grading_numerical_pdes_instance_02.html">题目逐题分析</a>。</footer>
+</div></body></html>

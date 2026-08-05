@@ -1,0 +1,32 @@
+# Full-26 typo-hint run, re-run on HAOXIANG.
+# Why not boyue: boyue multiplexes upstream distributors and ~60% reject the
+# `reasoning` parameter the harness sends (non-retryable litellm 400
+# "Unknown parameter: 'reasoning'"), so units die at random. haoxiang serves the
+# identical model (gpt-5.6-sol) and accepts reasoning (proven clean in fixval13).
+# Writer prompt has the typo-awareness line; focus task: legal_ma flip from 0.
+
+arms: [prep, verifier]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000
+  thinking_level: medium
+
+prep:
+  max_steps: 50
+  timeout_s: 1800
+
+verifier:
+  max_steps: 30
+  max_review_rounds: 1
+  writer_checks: 8
+
+run:
+  name: typohint26h
+  tasks: docs/harness/results/latest/tasks.txt
+  concurrency: 6
+  cleanup_mode: delete
+  secret_file: secret/.env.haoxiang
+  api_endpoints: []
+  output_root: .logs/ale/typohint26h
+  wall_time_s: 86400

@@ -1,0 +1,46 @@
+# Argus +skills arm = agent_argus_full4.yaml with the WS2 skills lever ON.
+# IDENTICAL to the base full4 config except `extra_env` seeds the 6 crossarch
+# engineer skills into the episode's ARGUS_SKILL_SKILLS_DIR (see
+# ale_run/agents/argus/_launcher.py::_seed_skills). base arm leaves the env
+# unset => no seeding. This is the clean skills-lever on/off switch for argus.
+#
+# The two argus arms (argus_full4 = base, argus_full4_skills = +skills) run the
+# SAME tasks so any paired delta isolates the skills lever.
+harness: argus
+id: argus_full4_skills
+executor: sandbox
+model: gpt-5.6-sol
+
+config:
+  provider: openrouter
+  base_url: ${env:OPENAI_BASE_URL}
+  api_key: ${env:OPENAI_API_KEY}
+
+  model_catalog_path: /home/ubuntu/argus/config/model_catalog_boyue.json
+  model_context_window: 128000
+  model_auto_compact_token_limit: 100000
+
+  manager_reasoning_effort: xhigh
+  planner_reasoning_effort: xhigh
+  engineer_reasoning_effort: xhigh
+  engineer_initial_reasoning_effort: high
+  reviewer_reasoning_effort: high
+
+  manager_division: false
+  vertical: ale_last_exam
+
+  max_missions: 1
+  max_rounds: 500
+  iterate: false
+  require_post_task_learning: false
+  cost_control: false
+  argus_package: ""
+
+  # --- WS2 skills lever (the ONLY difference from agent_argus_full4.yaml) ---
+  # Absolute HOST path to the seed tree (role-subdir layout: engineer/<name>.md).
+  # This is read by the launcher process ON THE HARNESS HOST, not in the sandbox,
+  # so it must resolve on the host where `python -m ale_run.agents.argus._launcher`
+  # runs. On pgl the ALE repo is /home/ubuntu/ale/agents-last-exam, hence:
+  #   CONFIRM this path on pgl before launch — adjust if the repo lives elsewhere.
+  extra_env:
+    ARGUS_SEED_SKILLS_DIR: /home/ubuntu/ale/agents-last-exam/ale_run/agents/argus/seed_skills

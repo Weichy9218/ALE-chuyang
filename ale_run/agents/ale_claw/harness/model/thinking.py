@@ -69,8 +69,19 @@ class ThinkingConfig:
     gui_level: ThinkLevel = ThinkLevel.OFF
 
     def to_api_params(self, model: str) -> dict[str, Any]:
-        """Return provider-specific kwargs for the main agent loop."""
-        return resolve_thinking_params(self.level, model, transport="responses")
+        """Return provider-specific kwargs for the main agent loop.
+
+        Uses ``chat`` transport (``reasoning_effort``) rather than the
+        Responses-style ``reasoning`` object. The main loop runs over litellm
+        Chat Completions (see unified_loop.py), so ``reasoning_effort`` is the
+        correct param: it is accepted by every OpenAI-compatible gateway
+        (boyue rejects the ``reasoning`` object with a non-retryable 400), and
+        it is what makes the gateway return ``reasoning_content`` — the source
+        the loop wraps into a reasoning summary and replays across turns. The
+        ``reasoning`` object yielded no ``reasoning_content`` back, so the
+        thinking summary was silently lost under the old transport.
+        """
+        return resolve_thinking_params(self.level, model, transport="chat")
 
     def flush_params(
         self, model: str, *, runtime: ResolvedModel | None = None

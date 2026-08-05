@@ -1,0 +1,39 @@
+# WS2 skills-lever A/B on argus — base (argus_full4) vs +skills (argus_full4_skills)
+# on the 6 crossarch task_classes. Both arms are the 4-role full4 harness; the
+# ONLY difference is extra_env.ARGUS_SEED_SKILLS_DIR in the skills agent, so any
+# paired delta isolates the skills lever. summarize/read by agent id.
+#
+# ============================ CONFIRM BEFORE LAUNCH ============================
+# 1) AGENT PATHS. The canonical base agent lives in a SEPARATE pgl tree
+#    (/home/ubuntu/argus/config/agent_argus_full4.yaml), while the +skills agent
+#    shipped with this A/B is in the ALE repo
+#    (/home/ubuntu/ale/agents-last-exam/argus-run/config/agent_argus_full4_skills.yaml).
+#    Either copy both into one dir or keep the two absolute paths below in sync
+#    with where they actually land on pgl.
+# 2) ENDPOINT = haoxiang gpt_sub2api (operator choice, same gateway as ale_claw).
+#    Uses the existing secret/.env.haoxiang (OPENAI_* already => haoxiang, single
+#    key, no per-arm rotation for argus). See the secret_file note below.
+# 3) SEED PATH. extra_env.ARGUS_SEED_SKILLS_DIR in agent_argus_full4_skills.yaml
+#    must resolve on the HARNESS HOST (the launcher runs there, not in-sandbox).
+# ==============================================================================
+name: argus_skills_ab
+# Existing purpose-built haoxiang file: OPENAI_* already point at
+# https://ie-crs.haoxiang.ai/v1 and it carries the GPT_sub2api creds. Argus drives
+# codex against this Responses gateway directly, so it does not need ale_run's
+# ALE_MODEL_TRANSPORT flag (that governs ale_run's own OpenAI client, which the
+# ale_claw arms use but argus bypasses). Single key for both arms => no confound.
+secret_file: /home/ubuntu/ale/agents-last-exam/secret/.env.haoxiang
+
+agents:
+  - /home/ubuntu/argus/config/agent_argus_full4.yaml
+  - /home/ubuntu/ale/agents-last-exam/argus-run/config/agent_argus_full4_skills.yaml
+environment: /home/ubuntu/ale/agents-last-exam/configs/environments/docker_nogcs_keep.yaml
+tasks: /home/ubuntu/ale/agents-last-exam/argus-run/config/crossarch_skills_tasks.txt
+
+output:
+  root: /home/ubuntu/argus/runs/skills_ab
+concurrency: 3            # Boyue gateway 429s above 3; 2 arms x 6 tasks = 12 units.
+wall_time_s: 28800
+cleanup_mode: delete
+prompt_suffix: |
+  Satisfy exactly what the task's own materials ask for; do not guess how you will be graded. Produce your outputs by computing or reasoning them from the task inputs — never copy or blend the task's provided reference or expected values into your deliverables. Do not read grader scripts or reference-answer files even if they are reachable.

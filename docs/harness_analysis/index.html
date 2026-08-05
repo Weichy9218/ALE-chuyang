@@ -1,0 +1,230 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verifier 修复后逐题效果 fixval13｜ALE</title><style>
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}
+.wrap{max-width:980px;margin:0 auto;padding:32px 22px 90px}
+h1{font-size:25px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:34px 0 10px}
+h3{font-size:15px;margin:18px 0 6px}
+.sub{color:var(--muted);font-size:14.5px;margin:0 0 4px}
+.tid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted)}
+p{margin:10px 0}
+a{color:var(--accent)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--codebg);padding:1px 5px;border-radius:4px;word-break:break-word}
+pre{background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+pre code{background:none;padding:0}
+section{border-top:1px solid var(--line);padding-top:8px;margin-top:26px}
+.spec{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:2px 18px;margin:16px 0;display:grid;grid-template-columns:auto 1fr;gap:0 18px}
+.spec dt{font-weight:600;font-size:12.5px;padding:8px 0;color:var(--muted);border-top:1px solid var(--line)}
+.spec dd{margin:0;font-size:13.5px;padding:8px 0;border-top:1px solid var(--line)}
+.spec dt:first-of-type,.spec dd:first-of-type{border-top:none}
+.tblwrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--card);font-weight:600;white-space:nowrap}
+.badge{display:inline-block;font-weight:700;font-size:12px;padding:1px 8px;border-radius:5px}
+.b-good{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+.b-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+.b-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.callout{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 16px;margin:14px 0;background:var(--card);font-size:14px}
+.callout.warn{border-left-color:var(--warn)}
+.callout.bad{border-left-color:var(--bad)}
+ul,ol{margin:10px 0;padding-left:22px}li{margin:5px 0}
+.back{font-size:13px;margin-bottom:10px;display:inline-block}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+/* 流程图组件：纵向步骤流，纯 CSS，无外部依赖 */
+.flow{margin:16px 0}
+.fstep{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px 14px;position:relative}
+.fstep+.fstep{margin-top:26px}
+.fstep+.fstep::before{content:"↓";position:absolute;top:-23px;left:22px;color:var(--muted);font-size:15px}
+.fstep .ft{font-weight:600;font-size:14px;margin:0 0 4px}
+.fstep .fb{font-size:13.5px;color:var(--fg);margin:0}
+.fstep .fn{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);margin-right:8px}
+.fstep.ok{border-left:3px solid var(--good)}
+.fstep.miss{border-left:3px solid var(--bad)}
+.fstep.risk{border-left:3px solid var(--warn)}
+/* 图：题目自带素材、agent 产出图、自画的对照图，一律 data URI 内嵌 */
+.fig{margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px}
+.fig img{width:100%;height:auto;display:block;border-radius:6px;background:#fff}
+.fig figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.figrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0}
+.figrow .fig{margin:0}
+.scorebar{display:flex;align-items:center;gap:10px;margin:10px 0}
+.scorebar .bar{flex:1;height:10px;background:var(--codebg);border-radius:6px;overflow:hidden}
+.scorebar .fill{height:100%;background:var(--accent)}
+.scorebar .num{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:nowrap}
+/* 对比专用：三臂并列 */
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:16px 0}
+.cmpcol{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:12px 14px}
+.cmpcol h4{margin:0 0 8px;font-size:13.5px;display:flex;align-items:baseline;gap:8px}
+.cmpcol h4 .sc{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;font-weight:700}
+.cmpcol.base{border-left:3px solid var(--muted)}
+.cmpcol.up{border-left:3px solid var(--good)}
+.cmpcol.down{border-left:3px solid var(--bad)}
+.cmpcol p{margin:6px 0;font-size:13px}
+.cmpcol ul{margin:6px 0;padding-left:18px;font-size:13px}
+.q{border-left:2px solid var(--line);padding:2px 0 2px 12px;margin:8px 0;color:var(--muted);font-size:13px}
+.delta{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+.up-t{color:var(--good)}.down-t{color:var(--bad)}.flat-t{color:var(--muted)}
+.kv{font-size:13px;margin:4px 0}.kv b{font-weight:600}
+.lead{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;background:var(--card);padding:12px 16px;margin:16px 0}
+.lead p{margin:8px 0;font-size:14.5px}
+.lead b{font-weight:600}
+.lead .k{display:inline-block;min-width:3.4em;color:var(--muted);font-size:12.5px;font-weight:600;margin-right:6px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+td.num,th.num{text-align:right;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:nowrap}
+</style></head><body><div class="wrap">
+<h1>Harness Analysis — prep 与 verifier 实验总览</h1>
+<div class="tid">base agent = ale-claw · 模型 openai/gpt-5.6-sol · 26 题 (research_batch_wcy) · 更新 2026-07-23</div>
+
+<div class="lead">
+<p><span class="k">一句话</span>在 base agent 上加了两个可选增强——<b>prep</b>(解题前先跑通运行时、跑一遍核心步骤、补外部事实)
+和 <b>verifier</b>(对产出做一次基于公开材料的机械检查)。本页汇总:它们怎么做的、我跑了哪些实验、26 题上的结果、以及现在的瓶颈。</p>
+<p><span class="k">三条结论</span>
+① 消费轮发现两个<b>倒扣 bug</b>(verifier 过度对冲、prep 锚定),已修复并在 13 题上验证——<b>先前所有负向题都回到 base 或以上</b>。
+② 修复只到"去掉害"为止:prep/verifier 净分都 <b>≈ base</b>,"高于 base"在这套题上测不出。
+③ 真正的瓶颈是<b>评测</b>:得分由逐字原文抄录 + 有时写错的 label + 二值门槛决定,而这三样恰是 prep/verifier 够不着的面。</p>
+<p><span class="k">怎么读这页</span>下面依次是:实验时间线 → prep/verifier 最新实现 → <b>26 题完整统计</b> → <b>价值案例研究</b> → 关键发现 → 评测层问题(为什么净≈base) → 深入入口 → 附加实验。
+逐题深挖走 <a href="verifier/index.html">verifier/</a>、<a href="prep/index.html">prep/</a>,或 <a href="../task_analysis/index.html">task_analysis/</a>(每题 base 失分归因)。</p>
+</div>
+
+<section><h2>1 · 实验时间线</h2>
+<div class="flow">
+<div class="fstep ok"><p class="ft"><span class="fn">① consumption_full26</span>基线消费轮 (26题×base/prep/verifier)</p><p class="fb">建立逐题读数;发现两个倒扣 bug。prep 均分 0.610、verifier 0.625、base 0.621——净效应≈0。</p></div>
+<div class="fstep ok"><p class="ft"><span class="fn">② 修复</span>fable5 改 verifier.py + task_prep.py</p><p class="fb">verifier:unverifiable 单列中性段 + "不是存疑信号"。prep:反锚定、method-choice 不算 finding、writer_action 不进首轮、闭卷题 not_needed。</p></div>
+<div class="fstep ok"><p class="ft"><span class="fn">③ fixval13</span>修复验证 (13题×prep/verifier, haoxiang)</p><p class="fb">只跑零分题+负向题。<b>先前所有负向题回到 base 或以上</b>:sse verifier 0.333→0.667、variant prep 0.794→0.999。</p></div>
+<div class="fstep miss"><p class="ft"><span class="fn">④ typohint26h + legalma_haox</span>错别字提示实验 (haoxiang)</p><p class="fb">writer prompt 加"注意错别字",看 <code>legal_ma</code>(base=0)能否翻盘。<b>结论:两版提示×两臂全 0.0,未翻盘,且疑似弄崩两道满分题</b>(§7)。<b>boyue 用不了</b>:其 gpt-5.6-sol 在 chat completions 上不支持"工具+思考"(需 /v1/responses),harness 走 chat → 改用 haoxiang。排查中顺手修好了一直被丢弃的 thinking summary(§7)。</p></div>
+</div>
+</section>
+
+<section><h2>2 · prep 与 verifier 最新是怎么做的</h2>
+<div class="cmp">
+<div class="cmpcol base"><h4>prep <span class="sc">解题前</span></h4>
+<p>一个看不到 writer 的子 agent,在 writer 开跑<b>前</b>做三件事(按价值排序):</p>
+<ul>
+<li><b>跑通运行时</b>:装依赖、起服务、找对入口,把 sandbox 留在可用状态。</li>
+<li><b>跑一遍核心步骤</b>:把这题的机械核心(解析/建模/转换)在真输入上跑一次,报告哪里崩(原始报错)。</li>
+<li><b>补外部事实</b>:公开材料没给、writer 推不出的官方映射/规则,附来源引原文;优先给<b>可调用的 artifact</b> 而非散文。</li>
+</ul>
+<p class="q">硬边界:不产出交付物、不定 label/值/格式、不检查 output。闭卷纯文本题 → not_needed 不注入。</p></div>
+<div class="cmpcol base"><h4>verifier <span class="sc">解题中/后</span></h4>
+<p>一个独立 agent 从公开材料<b>冻结</b>一组可执行检查;writer 可调 <code>verify</code> 跑,提交后再跑一轮。</p>
+<ul>
+<li>每条结果是 <b>pass / fail / unverifiable</b>(公开材料无法测)+ 原始输出,<b>无否决权</b>,writer 自行决定改不改。</li>
+<li><b>unverifiable 单列进中性段</b>,明写"不是存疑信号、别因此改答案"(这是本次修复的核心)。</li>
+<li>机械层能测:契约/格式/逐字引用一致性;<b>测不了</b>:预测精度、评语措辞、标签口径(公开材料无判准)。</li>
+</ul>
+<p class="q">设计文档:<a href="../harness/PREP.md">PREP.md</a> · <a href="../harness/VERIFIER.md">VERIFIER.md</a></p></div>
+</div>
+</section>
+
+<section><h2>3 · 26 题完整统计(base / prep / verifier,最新代码)</h2>
+<p>全部 26 题,<b>prep / verifier = 最新修复后代码、无错别字提示</b>。末列数据来源:<code>fixval13</code>=修复验证轮;<code>clean3</code>=本轮补测(agora/tcga/sec_10k);<code>稳定</code>=满分/半分/零分题,修复不改其分(值取消费轮)。
+颜色 <span class="badge b-good">≥0.8</span> <span class="badge b-warn">0.3–0.8</span> <span class="badge b-bad">&lt;0.3</span>,标注相对 base 的 delta(|Δ|≥0.02)。</p>
+<div class="tblwrap"><table>
+<tr><th>题目</th><th class="num">base</th><th class="num">prep</th><th class="num">verifier</th><th>来源</th></tr>
+<tr><td colspan="5" style="background:var(--codebg);font-weight:600;font-size:12px">金融/商业</td></tr>
+<tr><td><b>美式期权 LSMC</b><br><code style="font-size:10.5px">american_option_pricing_ls</code></td><td class="num"><span class="badge b-good">1.000</span></td><td class="num"><span class="badge b-good">1.000</span></td><td class="num"><span class="badge b-good">1.000</span></td><td style="font-size:11px;color:var(--muted)">稳定</td></tr>
+<tr><td><b>A/B 测试分析</b><br><code style="font-size:10.5px">digital_marketing_ab_test_analysis_1</code></td><td class="num"><span class="badge b-good">1.000</span></td><td class="num"><span class="badge b-good">1.000</span></td><td class="num"><span class="badge b-good">1.000</span></td><td style="font-size:11px;color:var(--muted)">稳定</td></tr>
+<tr><td><b>AAPL 财报重构</b><br><code style="font-size:10.5px">financial_stmt_reconstruction_aapl_fy2024</code></td><td class="num"><span class="badge b-good">1.000</span></td><td class="num"><span class="badge b-good">1.000</span></td><td class="num"><span class="badge b-good">1.000</span></td><td style="font-size:11px;color:var(--muted)">稳定</td></tr>
+<tr><td><b>内部员工 agent</b><br><code style="font-size:10.5px">internal_employee_agent_instance_1</code></td><td class="num"><span class="badge b-good">1.000</span></td><td class="num"><span class="badge b-good">1.000</span></td><td class="num"><span class="badge b-good">1.000</span></td><td style="font-size:11px;color:var(--muted)">稳定</td></tr>
+<tr><td><b>PE 尽调备忘</b><br><code style="font-size:10.5px">pe_screening_memo_1</code></td><td class="num"><span class="badge b-good">0.959</span></td><td class="num"><span class="badge b-good">1.000</span> <span class="delta up-t">+0.04</span></td><td class="num"><span class="badge b-good">0.969</span></td><td style="font-size:11px;color:var(--muted)">fixval13</td></tr>
+<tr><td><b>BPMN 供应中断</b><br><code style="font-size:10.5px">bpmn_supply_disruption_l3</code></td><td class="num"><span class="badge b-good">0.849</span></td><td class="num"><span class="badge b-good">0.864</span></td><td class="num"><span class="badge b-good">0.826</span> <span class="delta down-t">-0.02</span></td><td style="font-size:11px;color:var(--muted)">fixval13</td></tr>
+<tr><td><b>受众分群</b><br><code style="font-size:10.5px">digital_marketing_audience_segmentation_1</code></td><td class="num"><span class="badge b-good">0.812</span></td><td class="num"><span class="badge b-good">0.904</span> <span class="delta up-t">+0.09</span></td><td class="num"><span class="badge b-good">0.904</span> <span class="delta up-t">+0.09</span></td><td style="font-size:11px;color:var(--muted)">fixval13</td></tr>
+<tr><td><b>SEC 10-K 解析</b><br><code style="font-size:10.5px">sec_10k_financial_parsing</code></td><td class="num"><span class="badge b-warn">0.686</span></td><td class="num"><span class="badge b-warn">0.670</span></td><td class="num"><span class="badge b-warn">0.682</span></td><td style="font-size:11px;color:var(--muted)">clean3</td></tr>
+<tr><td><b>沪股通合规问答</b><br><code style="font-size:10.5px">sse_northbound_programmatic_trading_01</code></td><td class="num"><span class="badge b-warn">0.667</span></td><td class="num"><span class="badge b-warn">0.333</span> <span class="delta down-t">-0.33</span></td><td class="num"><span class="badge b-warn">0.667</span></td><td style="font-size:11px;color:var(--muted)">fixval13</td></tr>
+<tr><td><b>LLM 生态隐私审计</b><br><code style="font-size:10.5px">llm_ecosystem_privacy_audit_realdata_1</code></td><td class="num"><span class="badge b-warn">0.500</span></td><td class="num"><span class="badge b-warn">0.500</span></td><td class="num"><span class="badge b-warn">0.500</span></td><td style="font-size:11px;color:var(--muted)">稳定</td></tr>
+<tr><td><b>BPMN 治理重构</b><br><code style="font-size:10.5px">bpmn_category_governance_restructuring_l3</code></td><td class="num"><span class="badge b-bad">0.000</span></td><td class="num"><span class="badge b-bad">0.000</span></td><td class="num"><span class="badge b-bad">0.000</span></td><td style="font-size:11px;color:var(--muted)">fixval13</td></tr>
+<tr><td><b>M&A 一致性审计</b><br><code style="font-size:10.5px">legal_ma_consistency_audit_01</code></td><td class="num"><span class="badge b-bad">0.000</span></td><td class="num"><span class="badge b-bad">0.000</span></td><td class="num"><span class="badge b-bad">0.000</span></td><td style="font-size:11px;color:var(--muted)">fixval13</td></tr>
+<tr><td colspan="5" style="background:var(--codebg);font-weight:600;font-size:12px">教育/信息</td></tr>
+<tr><td><b>Moodle 成绩册</b><br><code style="font-size:10.5px">moodle_gradebook_closeout_reconciliation</code></td><td class="num"><span class="badge b-good">0.934</span></td><td class="num"><span class="badge b-good">0.950</span></td><td class="num"><span class="badge b-good">0.950</span></td><td style="font-size:11px;color:var(--muted)">稳定</td></tr>
+<tr><td><b>数值PDE批改</b><br><code style="font-size:10.5px">homework_grading_numerical_pdes_instance_02</code></td><td class="num"><span class="badge b-warn">0.640</span></td><td class="num"><span class="badge b-warn">0.642</span></td><td class="num"><span class="badge b-warn">0.645</span></td><td style="font-size:11px;color:var(--muted)">稳定</td></tr>
+<tr><td><b>MARC 编目修复</b><br><code style="font-size:10.5px">marc_remediation_folio_overlay</code></td><td class="num"><span class="badge b-bad">0.200</span></td><td class="num"><span class="badge b-bad">0.200</span></td><td class="num"><span class="badge b-bad">0.200</span></td><td style="font-size:11px;color:var(--muted)">稳定</td></tr>
+<tr><td colspan="5" style="background:var(--codebg);font-weight:600;font-size:12px">医疗</td></tr>
+<tr><td><b>流行病学预测</b><br><code style="font-size:10.5px">epidemiology_forecast</code></td><td class="num"><span class="badge b-good">1.000</span></td><td class="num"><span class="badge b-good">1.000</span></td><td class="num"><span class="badge b-good">1.000</span></td><td style="font-size:11px;color:var(--muted)">稳定</td></tr>
+<tr><td><b>变异注释流水线</b><br><code style="font-size:10.5px">healthcare_variant_annotation_pipeline</code></td><td class="num"><span class="badge b-good">0.930</span></td><td class="num"><span class="badge b-good">0.999</span> <span class="delta up-t">+0.07</span></td><td class="num"><span class="badge b-good">0.999</span> <span class="delta up-t">+0.07</span></td><td style="font-size:11px;color:var(--muted)">fixval13</td></tr>
+<tr><td><b>TCGA 生存分析</b><br><code style="font-size:10.5px">healthcare_tcga_luad_survival_kras</code></td><td class="num"><span class="badge b-good">0.840</span></td><td class="num"><span class="badge b-good">0.840</span></td><td class="num"><span class="badge b-good">0.840</span></td><td style="font-size:11px;color:var(--muted)">clean3</td></tr>
+<tr><td><b>FluSight 流感</b><br><code style="font-size:10.5px">flusight_offline_hosp_forecast_2024_12_14</code></td><td class="num"><span class="badge b-warn">0.713</span></td><td class="num"><span class="badge b-warn">0.750</span> <span class="delta up-t">+0.04</span></td><td class="num"><span class="badge b-warn">0.743</span> <span class="delta up-t">+0.03</span></td><td style="font-size:11px;color:var(--muted)">fixval13</td></tr>
+<tr><td><b>CRF→SDTM 4</b><br><code style="font-size:10.5px">crf_sdtm_mapping_4</code></td><td class="num"><span class="badge b-warn">0.621</span></td><td class="num"><span class="badge b-warn">0.589</span> <span class="delta down-t">-0.03</span></td><td class="num"><span class="badge b-warn">0.584</span> <span class="delta down-t">-0.04</span></td><td style="font-size:11px;color:var(--muted)">fixval13</td></tr>
+<tr><td><b>NSCLC 序贯SAP</b><br><code style="font-size:10.5px">healthcare_sap_group_sequential_nsclc</code></td><td class="num"><span class="badge b-bad">0.273</span></td><td class="num"><span class="badge b-bad">0.250</span> <span class="delta down-t">-0.02</span></td><td class="num"><span class="badge b-bad">0.279</span></td><td style="font-size:11px;color:var(--muted)">fixval13</td></tr>
+<tr><td><b>CRF→SDTM 1</b><br><code style="font-size:10.5px">crf_sdtm_mapping_1</code></td><td class="num"><span class="badge b-bad">0.000</span></td><td class="num"><span class="badge b-bad">0.000</span></td><td class="num"><span class="badge b-bad">0.000</span></td><td style="font-size:11px;color:var(--muted)">fixval13</td></tr>
+<tr><td><b>CT 几何校准</b><br><code style="font-size:10.5px">ct_geometry_calibration_catphan</code></td><td class="num"><span class="badge b-bad">0.000</span></td><td class="num"><span class="badge b-bad">0.000</span></td><td class="num"><span class="badge b-bad">0.000</span></td><td style="font-size:11px;color:var(--muted)">fixval13</td></tr>
+<tr><td><b>医疗偏差审计</b><br><code style="font-size:10.5px">healthcare_bias_audit_27a_public_replication_v1</code></td><td class="num"><span class="badge b-bad">0.000</span></td><td class="num"><span class="badge b-bad">0.000</span></td><td class="num"><span class="badge b-bad">0.000</span></td><td style="font-size:11px;color:var(--muted)">fixval13</td></tr>
+<tr><td colspan="5" style="background:var(--codebg);font-weight:600;font-size:12px">法律</td></tr>
+<tr><td><b>律所费用审查</b><br><code style="font-size:10.5px">legal_dr_fees_01</code></td><td class="num"><span class="badge b-good">1.000</span></td><td class="num"><span class="badge b-good">1.000</span></td><td class="num"><span class="badge b-good">1.000</span></td><td style="font-size:11px;color:var(--muted)">稳定</td></tr>
+<tr><td><b>AGORA 三维分类</b><br><code style="font-size:10.5px">agora_governance_classify_instance_1</code></td><td class="num"><span class="badge b-warn">0.525</span></td><td class="num"><span class="badge b-warn">0.358</span> <span class="delta down-t">-0.17</span></td><td class="num"><span class="badge b-warn">0.645</span> <span class="delta up-t">+0.12</span></td><td style="font-size:11px;color:var(--muted)">clean3</td></tr>
+</table></div>
+<p class="sub"><b>均值(n=26):base 0.621 · prep 0.610 · verifier 0.632。</b>prep 净值略低于 base、verifier 略高(+0.01),都在噪声内。原始分:<a href="master26_latest.csv">master26_latest.csv</a>(最新)· <a href="master26_scores.csv">master26_scores.csv</a>(消费轮)。</p>
+</section>
+
+<section><h2>4 · 找价值案例:一个诚实的负面结果</h2>
+<p>本想挑几道题证明 prep/verifier 的价值。<b>结果是:消费轮里看着像"价值"的题,换一次抽样(最新代码 clean3)基本都塌了。</b>这本身是最有说服力的发现。</p>
+<div class="callout bad"><b>消费轮的"价值"没能复现(都是 n=1):</b>
+<table style="margin-top:8px"><tr><th>题</th><th class="num">base</th><th class="num">消费轮</th><th class="num">最新一抽(clean3)</th></tr>
+<tr><td>AGORA(曾当作 prep 价值样本)</td><td class="num">0.525</td><td class="num">prep 0.621</td><td class="num"><span class="down-t">prep 0.359</span>(跌破 base)</td></tr>
+<tr><td>TCGA(曾当作 verifier +0.16)</td><td class="num">0.840</td><td class="num">verif 1.000</td><td class="num">verif 0.840(=base)</td></tr>
+<tr><td>SEC 10-K(曾当作 verifier +0.06)</td><td class="num">0.686</td><td class="num">verif 0.745</td><td class="num">verif 0.682(≈base)</td></tr>
+</table></div>
+<p><b>诚实的结论:</b></p>
+<ul>
+<li><b>prep:没有可复现的、高于 base 的价值。</b> 唯一看着像的 AGORA(消费轮 0.62),复现抽样掉到 0.36(base 带 0.48–0.69,抖动本就极大)。prep 在 variant/flusight/pe 上的"正"其实是<b>修复把锚定倒扣去掉、拉回 base</b>,不是超过 base。<b>——所以不硬说 prep 有价值:这套题上测不出。</b></li>
+<li><b>verifier:有一点、但很小、且未坐实。</b> 净 +0.01;<b>AGORA 是唯一两抽都高于 base 的题</b>(0.71 / 0.65 vs base 0.53)——可能是真效应(机械层抓契约/证据一致性),但幅度小、n=1 无法确认。</li>
+<li><b>唯一稳的价值是"别帮倒忙":</b> verifier 修复后不再把 sse 答对的 q3 改错(0.333→0.667,轨迹确认);prep 修复后不再用锚定 note 把 variant 带进坑(0.794→0.999)。<b>这类"去掉倒扣"是确定的;"加分"不是。</b></li>
+</ul>
+<div class="callout"><b>为什么会这样(§6 详):</b>台阶式分数 + n=1 + 巨大 base 抖动,让单题效应基本是"落在哪一档"的抽样。得分又由逐字抄录 + label + 二值门槛决定,恰是 prep/verifier 够不着的面。<b>所以净≈base 不是"刚好抵消",而是"这套评测分辨不出 prep/verifier 的真实效应"。</b></div>
+</section>
+
+<section><h2>5 · 关键发现</h2>
+<ul>
+<li><b>两个倒扣 bug 都真实且机制清楚。</b> verifier 在 sse 把答对的 q3(No)因 unverifiable 信号改成 Unknown → 0.667 掉到 0.333;prep 在 variant 把没解决的断点标成"头号难题"锚定 writer → 0.930 掉到 0.794。</li>
+<li><b>修复生效(fixval13)。</b> 先前<b>所有</b>负向题回到 base 或以上;两个 headline 在轨迹里确认(verifier 出现中性 NOT TESTABLE 段、不再改 q3;prep 无锚定 note 送达)。</li>
+<li><b>但只到"去掉害"。</b> 修复后 prep/verifier 净分 ≈ base。prep 唯一稳定加分的存在证明是 agora(findings 恰好命中评分维度),靠碰巧不是机制。</li>
+<li><b>已收回的旧 insight。</b> 早期"verifier 总分 +0.099 增益"是测试集校准出来的,三轮独立复现把它压回噪声(约 +0.009);"prep 效应"一度其实只是"报告有没有送达"的二值 bug,已修。</li>
+</ul>
+</section>
+
+<section><h2>6 · 为什么"有没有用"测不出来——评测层的问题</h2>
+<p>不是协议不行,是这套题的<b>信噪比太低</b>,且得分面与 prep/verifier 的作用面几乎不重叠:</p>
+<ol>
+<li><b>逐字原文抄录打分</b>:证据题要求一字不差粘上带指定 anchor 短语的中文原文,每题分数变成"这次抄没抄全"的硬币,压过推理质量。(sse 的 prep 0.333 就是抄漏一句 anchor,与修复无关。)</li>
+<li><b>label 与题面/键错配</b>:sse q2 金标准 Unknown、题面像是非问句、模型恒答 No → 永久失分,base 十次全错。这是任务缺陷,不是模型能力。</li>
+<li><b>二值全或无门槛</b>:5 道零分题都是差一点就归零(缺一项检查 / SSIM 0.61&lt;0.95 / R 版本 RNG 差一行)。几乎无部分分,消费层增强跨不过。</li>
+<li><b>n=1</b>:一次 0.333↔0.667 就是一次伯努利抽样;台阶式分数让单题 delta 是"落在哪档"而非"改进多少"。</li>
+<li><b>干预面 ≠ 测量面</b>:prep/verifier 作用于运行时/断点/反馈,分数由 label+逐字抄录+格式决定,两个面几乎不重叠——所以实验主要能测出<b>有没有害</b>,测不出<b>有没有用</b>。</li>
+</ol>
+<p><b>要往下走先修评测</b>:证据打分改 anchor/语义命中而非逐字全文、二值题给部分分、修 q2 类 label 错配、关键题上 k 重复。</p>
+</section>
+
+<section><h2>7 · 深入查阅</h2>
+<ul>
+<li><b>逐题深挖</b>:<a href="verifier/index.html">verifier/</a>(含 sse 修复前后对照)· <a href="prep/index.html">prep/</a>(含 variant 修复前后对照)</li>
+<li><b>base 失分归因</b>:<a href="../task_analysis/index.html">task_analysis/</a>(每题的题面、打分脚本、逐维度失分)</li>
+<li><b>轨迹走查(带分析,推荐先看)</b> —— 真实文件 + 因果分析,看 prep 的 MD / verifier 的反馈如何改变 writer 后续行为:
+<ul>
+<li><a href="prep/walkthrough_agora/ANALYSIS.md">prep/walkthrough_agora/</a> —— prep 写的 <code>task_prep.md</code>、注入 writer 的摘要、writer 打开报告并按 findings 作答的轨迹。</li>
+<li><a href="verifier/walkthrough_sse/ANALYSIS.md">verifier/walkthrough_sse/</a> —— verifier 反馈原文(<code>verifier_feedback_shown_to_writer.txt</code>)、writer 因此把对的 q3 改错的那一步(step 13)。</li>
+</ul></li>
+<li><b>更多原始轨迹</b>(本包 <code>trajectories/</code>):两个 bug 的修复前/后配对(<code>sse_verifier_*</code>、<code>variant_prep_*</code>)、错别字实验(<code>legal_ma_typohint_*</code>)。完整 26 题在 pgl <code>~/ale/agents-last-exam/.logs/ale/{consumption_full26,fixval13,typohint26h,clean3}/</code>,每单元 <code>output/</code>、<code>trajectory.json</code>、<code>eval_result.json</code>。</li>
+<li><b>数据文件</b>:<a href="master26_scores.csv">master26_scores.csv</a>(26 题 base/prep/verifier)· <a href="fixval13_scoreboard.csv">fixval13_scoreboard.csv</a>(修复验证)</li>
+<li><b>修复代码</b>:<code>ale_run/agents/ale_claw/verifier.py</code> · <code>task_prep.py</code>;错别字实验的 prompt 改动在 <code>harness/prompt.py</code>(Identity 段)。</li>
+</ul>
+</section>
+<div id="typo-slot">
+<section><h2>8 · 附加实验(简记)</h2>
+<h3>错别字提示 —— 净负,已撤回</h3>
+<p>给 writer prompt 加"注意源文档错别字",想让 <code>legal_ma</code>(输在没发现"控股股东→空股股东"印刷错)得分。<b>两版提示 × 两臂全部 0.0,未翻盘</b>:agent 在推理里确实注意到了错印,但交付报告里始终把它归一化掉、不列成一条 finding(评分器要逐字"空股股东"+页1定位)。且加提示的全量轮里<b>两道满分题崩到 0</b>(ab_test prep、internal_employee verifier)。<b>结论:既没翻盘又疑似弄崩稳定题,已从 prompt.py 撤回。</b>轨迹见 <code>trajectories/legal_ma_typohint_*</code>。</p>
+<h3>端点与 thinking summary(基建)</h3>
+<ul>
+<li><b>boyue 带 thinking 跑不了这个 agent</b>:其 gpt-5.6-sol 在 <code>/v1/chat/completions</code> 上不支持"工具+思考"(要 <code>/v1/responses</code>),而 harness 主循环走 chat completions。要用 boyue 带 thinking,需把主循环接到 Responses API(CUA 已有 <code>loops/openai.py</code>,中等改动)。</li>
+<li><b>顺手修好一个隐藏 bug</b>:主循环原发 Responses 风格 <code>reasoning={...}</code> 却跑在 chat 上,<b>haoxiang 因此一直不回 <code>reasoning_content</code>、thinking summary 被静默丢弃</b>。改成 <code>reasoning_effort</code>(<code>thinking.py</code>)后 summary 被正常捕获并跨轮重放(已验证)。<b>净改进,已保留。</b></li>
+</ul>
+</section>
+</div>
+<footer>此包由 harness_analysis + task_analysis + 抽样轨迹打包;数据来源 pgl 运行记录,题目定义与隐藏参考在 batchcom <code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/</code>。分数按预注册只存档不做过度解读——单轮 n=1,读方向而非精确幅度。</footer>
+</div></body></html>

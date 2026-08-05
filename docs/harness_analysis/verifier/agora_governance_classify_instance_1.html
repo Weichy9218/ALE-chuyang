@@ -1,0 +1,150 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AGORA 分类：提分的不是被指出的问题｜ALE</title><style>
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}
+.wrap{max-width:980px;margin:0 auto;padding:32px 22px 90px}
+h1{font-size:25px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:34px 0 10px}
+h3{font-size:15px;margin:18px 0 6px}
+.sub{color:var(--muted);font-size:14.5px;margin:0 0 4px}
+.tid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted)}
+p{margin:10px 0}
+a{color:var(--accent)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--codebg);padding:1px 5px;border-radius:4px;word-break:break-word}
+pre{background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+pre code{background:none;padding:0}
+section{border-top:1px solid var(--line);padding-top:8px;margin-top:26px}
+.spec{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:2px 18px;margin:16px 0;display:grid;grid-template-columns:auto 1fr;gap:0 18px}
+.spec dt{font-weight:600;font-size:12.5px;padding:8px 0;color:var(--muted);border-top:1px solid var(--line)}
+.spec dd{margin:0;font-size:13.5px;padding:8px 0;border-top:1px solid var(--line)}
+.spec dt:first-of-type,.spec dd:first-of-type{border-top:none}
+.tblwrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--card);font-weight:600;white-space:nowrap}
+.badge{display:inline-block;font-weight:700;font-size:12px;padding:1px 8px;border-radius:5px}
+.b-good{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+.b-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+.b-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.callout{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 16px;margin:14px 0;background:var(--card);font-size:14px}
+.callout.warn{border-left-color:var(--warn)}
+.callout.bad{border-left-color:var(--bad)}
+ul,ol{margin:10px 0;padding-left:22px}li{margin:5px 0}
+.back{font-size:13px;margin-bottom:10px;display:inline-block}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+/* 流程图组件：纵向步骤流，纯 CSS，无外部依赖 */
+.flow{margin:16px 0}
+.fstep{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px 14px;position:relative}
+.fstep+.fstep{margin-top:26px}
+.fstep+.fstep::before{content:"↓";position:absolute;top:-23px;left:22px;color:var(--muted);font-size:15px}
+.fstep .ft{font-weight:600;font-size:14px;margin:0 0 4px}
+.fstep .fb{font-size:13.5px;color:var(--fg);margin:0}
+.fstep .fn{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);margin-right:8px}
+.fstep.ok{border-left:3px solid var(--good)}
+.fstep.miss{border-left:3px solid var(--bad)}
+.fstep.risk{border-left:3px solid var(--warn)}
+/* 图：题目自带素材、agent 产出图、自画的对照图，一律 data URI 内嵌 */
+.fig{margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px}
+.fig img{width:100%;height:auto;display:block;border-radius:6px;background:#fff}
+.fig figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.figrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0}
+.figrow .fig{margin:0}
+.scorebar{display:flex;align-items:center;gap:10px;margin:10px 0}
+.scorebar .bar{flex:1;height:10px;background:var(--codebg);border-radius:6px;overflow:hidden}
+.scorebar .fill{height:100%;background:var(--accent)}
+.scorebar .num{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:nowrap}
+/* 对比专用：三臂并列 */
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:16px 0}
+.cmpcol{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:12px 14px}
+.cmpcol h4{margin:0 0 8px;font-size:13.5px;display:flex;align-items:baseline;gap:8px}
+.cmpcol h4 .sc{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;font-weight:700}
+.cmpcol.base{border-left:3px solid var(--muted)}
+.cmpcol.up{border-left:3px solid var(--good)}
+.cmpcol.down{border-left:3px solid var(--bad)}
+.cmpcol p{margin:6px 0;font-size:13px}
+.cmpcol ul{margin:6px 0;padding-left:18px;font-size:13px}
+.q{border-left:2px solid var(--line);padding:2px 0 2px 12px;margin:8px 0;color:var(--muted);font-size:13px}
+.delta{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+.up-t{color:var(--good)}.down-t{color:var(--bad)}.flat-t{color:var(--muted)}
+.kv{font-size:13px;margin:4px 0}.kv b{font-weight:600}
+.lead{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;background:var(--card);padding:12px 16px;margin:16px 0}
+.lead p{margin:8px 0;font-size:14.5px}
+.lead b{font-weight:600}
+.lead .k{display:inline-block;min-width:3.4em;color:var(--muted);font-size:12.5px;font-weight:600;margin-right:6px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+td.num,th.num{text-align:right;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:nowrap}
+</style></head><body><div class="wrap">
+<a class="back" href="index.html">← 返回 Verifier 对比列表</a>
+<h1>AGORA 治理文件三维分类</h1>
+<div class="tid">taskId：legal/agora_governance_classify_instance_1 ｜ 同期 base 0.4830 ｜ verifier 三轮 0.6847 / 0.6800 / 0.7059</div>
+<p class="sub">verifier 三轮都把分数抬高约 0.2，但拆开看，提分动作大多发生在检查全部通过之后，第三轮甚至一条检查都没跑成。</p>
+<dl class="spec">
+  <dt>交付物</dt><dd>单个 <code>output/agent_output.json</code></dd>
+  <dt>评分方式</dt><dd>对照两名人类评审的共识标签算 F1，程序化打分</dd>
+  <dt>结构杠杆</dt><dd>矩阵形状不合格总分封顶 0.69；单文档引文命中率不足 0.8 则该文档三项得分减半</dd>
+  <dt>同期 base</dt><dd>0.4830（四次 base 为 0.5053 / 0.4830 / 0.4806 / 0.5007）</dd>
+  <dt>verifier 三轮</dt><dd>0.6847（v18）／0.6800（v19）／0.7059（v20）</dd>
+  <dt>轨迹路径</dt><dd><code>v23_v20_attribution/…/legal__agora_governance_classify_instance_1/</code> 等三批，base 取 <code>harness_compare_base</code></dd>
+</dl>
+<div class="callout"><b>三轮里效应最大也最稳定的一题，base 0.4830 到 verifier 0.68 以上。</b>但拆开看，提分的动作有两次，一次由失败检查触发，另一次发生在全部检查通过之后，而且后者的价值是前者的十倍。第三轮更极端：六条检查全部执行失败、报文明写「无需处理」，agent 照样改了产物并拿到最高分。</div>
+<section><h2>一、这道题怎么评分</h2>
+<p>读三份 AI 治理文件的缓存全文，按立法性质、技术范围、生命周期三套分类法打标，每个判 TRUE 的标签要配一句能在原文里逐字找到的引文，再产出一个跨文档矩阵和一段 150 到 300 词的缺口分析。交付物是单个 <code>output/agent_output.json</code>。</p>
+<p>评分对照两名人类评审的共识标签算 F1。有两个结构性的杠杆：</p>
+<div class="tblwrap"><table>
+<tr><th>机制</th><th>规则</th><th>后果</th></tr>
+<tr><td>矩阵封顶</td><td>隐藏评分器要求 <code>cross_document_matrix.legislative_status</code> 的形状是 <code>{"Hard Law": {文档号: 布尔}}</code>，不合格则 <code>matrix_valid=false</code></td><td>总分被 <code>REQUIRED_ARTIFACT_CAP</code> 封在 0.69</td></tr>
+<tr><td>引文闸门</td><td>单个文档的引文逐字命中率达到 0.8 给 1.0，否则给 0.5，这个系数同时乘到该文档的立法性质、技术范围、生命周期三项上</td><td>一份文件的引文质量能撬动它的全部得分</td></tr>
+</table></div>
+<p>base 在这两处都失手：矩阵写成了 <code>{文档号: "Soft Law"}</code> 这样的字符串映射，两次 base 运行都是 <code>matrix_valid=false</code>；2047 号文件判成 Other（参考是 Hard Law），配的引文只有几个词，压在闸门下面。</p>
+</section>
+<section><h2>二、三轮的分数与机制状态</h2>
+<div class="tblwrap"><table>
+<tr><th>运行</th><th>协议</th><th class="num">分数</th><th class="num">相对同期 base</th><th>verifier 自身状态</th></tr>
+<tr><td>第一轮</td><td>v18</td><td class="num">0.6847</td><td class="num"><span class="delta up-t">+0.2017</span></td><td>6 条冻结，1 条报 fail（矩阵形状）</td></tr>
+<tr><td>第二轮</td><td>v19</td><td class="num">0.6800</td><td class="num"><span class="delta up-t">+0.1970</span></td><td>只有 3 条可执行，全部 pass，零 fail</td></tr>
+<tr><td>第三轮</td><td>v20</td><td class="num">0.7059</td><td class="num"><span class="delta up-t">+0.2229</span></td><td><b>6 条全部执行失败</b>，状态 ready_but_unexecutable</td></tr>
+</table></div>
+<p>第三轮的六条 checker 在冻结前的 fixture 预检就全挂了，原因是 checker 通过时输出的 <code>evidence</code> 是空数组，被预检判为无效输出。也就是说这一轮 verifier 没有向 agent 提供任何一条测量结果，只提供了六条执行错误。它拿到了三轮里的最高分。</p>
+</section>
+<section><h2>三、第一轮：一次失败检查，和一次没人要求的复核</h2>
+<p>这一轮唯一的 fail 是矩阵形状。verifier 的判读写得很具体：</p>
+<div class="q">Allow either row/column orientation and either display-name or snake_case category spelling by normalizing path keys. Require exactly one boolean leaf associated with every pair of required ID and taxonomy category.<br><span class="mono">— verifier_writer_check_1.json，contract.cross_document_matrix 的 interpretation</span></div>
+<div class="flow">
+<div class="fstep"><p class="ft"><span class="fn">步 20</span>写出初稿</p><p class="fb">矩阵是 <code>{文档号: 标签字符串}</code>，2047 判成 Other，和 base 的做法一样。</p></div>
+<div class="fstep"><p class="ft"><span class="fn">步 24</span>第一次 <code>verify</code></p><p class="fb">矩阵那条报 fail，observed 里列出九个缺失的布尔叶子。</p></div>
+<div class="fstep ok"><p class="ft"><span class="fn">步 26</span>按反馈重构矩阵</p><p class="fb">改成按标签分组的布尔行。这条修好了。</p></div>
+<div class="fstep"><p class="ft"><span class="fn">步 28</span>第二次 <code>verify</code>，全部通过</p><p class="fb">报文末尾写着「an all-pass result does not mean the task is complete」。</p></div>
+<div class="fstep ok"><p class="ft"><span class="fn">步 30</span><b>全部通过之后，又改了一次</b></p><p class="fb">把 2047 从 Other 改判 Hard Law，换上一段长得多的逐字引文，并对全部标签重跑了一遍逐字校验。没有任何一条检查要求这么做。</p></div>
+</div>
+<p>两次改动的价值差一个数量级。把第三十步那次改回去、其余不动，重跑评分器得 0.4995，回到 base 水平；也就是说这次没人要求的复核值 <span class="delta up-t">+0.185</span>。而按反馈重构矩阵那一次，在这一轮甚至没能解除封顶，因为 verifier 允许的 <code>hard_law</code> 蛇形键名不是评分器要的 <code>"Hard Law"</code>。</p>
+</section>
+<section><h2>四、第三轮：verifier 什么都没测出来，agent 照样改</h2>
+<p>第三轮的六条检查全部执行失败。agent 在第 36 步调用 <code>verify</code>，第 37 步收到的是六条执行错误加三条覆盖缺口，正文里明确写着：</p>
+<div class="q">EXECUTION ERRORS (the Verifier could not produce a verdict; not scored) … Execution errors and coverage gaps require no action.<br><span class="mono">— trajectory.json，步 37 的反馈正文</span></div>
+<p>第 38 步 agent 立刻把矩阵重写成按标签分组的布尔行，并且这次用的是精确显示名 <code>"Hard Law"</code>，正好是评分器要的形状；同时对所有引文做了一遍逐字断言。把这次改动还原回去重跑评分器，分数从 0.7059 掉到 0.69，正好落在封顶线上。这次改动值 <span class="delta up-t">+0.0159</span>。</p>
+<div class="callout warn">这是「零信息量的 verify 调用本身也改变行为」的直接证据。verifier 没有给出任何有效测量，只是让 agent 知道有人在测量，agent 就自己回去复核了产物形状。</div>
+</section>
+<section><h2>五、分数落在哪</h2>
+<p>下面的分项是用题目自带的评分脚本对两臂产物重跑得到的，运行记录里的 <code>eval_result.json</code> 只有总分。</p>
+<div class="tblwrap"><table>
+<tr><th>评分项</th><th class="num">base</th><th class="num">第一轮 v18</th><th class="num">第二轮 v19</th><th class="num">第三轮 v20</th></tr>
+<tr><td>总分</td><td class="num">0.4830</td><td class="num">0.6847</td><td class="num">0.6800</td><td class="num"><b>0.7059</b></td></tr>
+<tr><td>立法性质均值</td><td class="num">0.5000</td><td class="num">0.8333</td><td class="num">0.8333</td><td class="num">0.8333</td></tr>
+<tr><td>技术范围均值</td><td class="num">0.5426</td><td class="num">0.6653</td><td class="num">0.6907</td><td class="num">0.7185</td></tr>
+<tr><td>生命周期均值</td><td class="num">0.4148</td><td class="num">0.6296</td><td class="num">0.5926</td><td class="num">0.6296</td></tr>
+<tr><td>矩阵形状合格</td><td class="num"><b>否</b></td><td class="num">否</td><td class="num">是</td><td class="num">是</td></tr>
+</table></div>
+<p>差异集中在 2047 号文件。base 把它判成 Other 得 0 分，引文命中率 0.727 压在闸门下拿 0.5 系数；第三轮 verifier 臂判成 Hard Law 得满分，命中率 0.9 拿满系数，这个系数同时抬高了该文件的三项得分。</p>
+</section>
+<section><h2>六、这道题说明什么</h2>
+<p><b>提分的不是被指出的那个问题。</b>第一轮里，按 verifier 反馈修好的矩阵值 +0.016，而 agent 在全部通过之后自发做的标签复核值 +0.185。第三轮里 verifier 一条有效测量都没有，分数反而最高。三轮合起来看，起作用的是「有人会检查我的产物」这个预期，不是检查的具体内容。</p>
+<p><b>verifier 的判读和隐藏评分器只是部分重叠。</b>第一轮 verifier 明确允许蛇形键名，评分器要的是显示名，agent 照 verifier 的话做，矩阵仍然不合格。冻结检查建立在对公开材料的阅读上，而评分口径有一部分只存在于隐藏参考里，两者的重叠区就是 verifier 能帮上忙的全部范围。</p>
+<p><b>这题的效应大，是因为它有杠杆。</b>矩阵形状是封顶开关，引文闸门是乘数，两个都是全局性的。改对一处，分数动 0.2。多数题没有这种结构，所以不能把这题的幅度推广到 26 题平均。</p>
+</section><footer>数据来源：pgl 机器 <code>~/ale/agents-last-exam/.logs/ale/</code> 下的运行记录，路径见第一节表格。题目定义、打分脚本与隐藏参考在 batchcom 机器 <code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/</code>。本页的分数取自各次运行的 <code>eval_result.json</code>；题面背景与 base 失分的完整复盘见 <a href="../../task_analysis/agora_governance_classify_instance_1.html">题目逐题分析</a>。</footer>
+</div></body></html>

@@ -1,0 +1,118 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prep 修复后逐题效果 fixval13｜ALE</title><style>
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}
+.wrap{max-width:980px;margin:0 auto;padding:32px 22px 90px}
+h1{font-size:25px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:34px 0 10px}
+h3{font-size:15px;margin:18px 0 6px}
+.sub{color:var(--muted);font-size:14.5px;margin:0 0 4px}
+.tid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted)}
+p{margin:10px 0}
+a{color:var(--accent)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--codebg);padding:1px 5px;border-radius:4px;word-break:break-word}
+pre{background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+pre code{background:none;padding:0}
+section{border-top:1px solid var(--line);padding-top:8px;margin-top:26px}
+.spec{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:2px 18px;margin:16px 0;display:grid;grid-template-columns:auto 1fr;gap:0 18px}
+.spec dt{font-weight:600;font-size:12.5px;padding:8px 0;color:var(--muted);border-top:1px solid var(--line)}
+.spec dd{margin:0;font-size:13.5px;padding:8px 0;border-top:1px solid var(--line)}
+.spec dt:first-of-type,.spec dd:first-of-type{border-top:none}
+.tblwrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--card);font-weight:600;white-space:nowrap}
+.badge{display:inline-block;font-weight:700;font-size:12px;padding:1px 8px;border-radius:5px}
+.b-good{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+.b-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+.b-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.callout{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 16px;margin:14px 0;background:var(--card);font-size:14px}
+.callout.warn{border-left-color:var(--warn)}
+.callout.bad{border-left-color:var(--bad)}
+ul,ol{margin:10px 0;padding-left:22px}li{margin:5px 0}
+.back{font-size:13px;margin-bottom:10px;display:inline-block}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+/* 流程图组件：纵向步骤流，纯 CSS，无外部依赖 */
+.flow{margin:16px 0}
+.fstep{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px 14px;position:relative}
+.fstep+.fstep{margin-top:26px}
+.fstep+.fstep::before{content:"↓";position:absolute;top:-23px;left:22px;color:var(--muted);font-size:15px}
+.fstep .ft{font-weight:600;font-size:14px;margin:0 0 4px}
+.fstep .fb{font-size:13.5px;color:var(--fg);margin:0}
+.fstep .fn{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);margin-right:8px}
+.fstep.ok{border-left:3px solid var(--good)}
+.fstep.miss{border-left:3px solid var(--bad)}
+.fstep.risk{border-left:3px solid var(--warn)}
+/* 图：题目自带素材、agent 产出图、自画的对照图，一律 data URI 内嵌 */
+.fig{margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px}
+.fig img{width:100%;height:auto;display:block;border-radius:6px;background:#fff}
+.fig figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.figrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0}
+.figrow .fig{margin:0}
+.scorebar{display:flex;align-items:center;gap:10px;margin:10px 0}
+.scorebar .bar{flex:1;height:10px;background:var(--codebg);border-radius:6px;overflow:hidden}
+.scorebar .fill{height:100%;background:var(--accent)}
+.scorebar .num{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:nowrap}
+/* 对比专用：三臂并列 */
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:16px 0}
+.cmpcol{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:12px 14px}
+.cmpcol h4{margin:0 0 8px;font-size:13.5px;display:flex;align-items:baseline;gap:8px}
+.cmpcol h4 .sc{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;font-weight:700}
+.cmpcol.base{border-left:3px solid var(--muted)}
+.cmpcol.up{border-left:3px solid var(--good)}
+.cmpcol.down{border-left:3px solid var(--bad)}
+.cmpcol p{margin:6px 0;font-size:13px}
+.cmpcol ul{margin:6px 0;padding-left:18px;font-size:13px}
+.q{border-left:2px solid var(--line);padding:2px 0 2px 12px;margin:8px 0;color:var(--muted);font-size:13px}
+.delta{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+.up-t{color:var(--good)}.down-t{color:var(--bad)}.flat-t{color:var(--muted)}
+.kv{font-size:13px;margin:4px 0}.kv b{font-weight:600}
+.lead{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;background:var(--card);padding:12px 16px;margin:16px 0}
+.lead p{margin:8px 0;font-size:14.5px}
+.lead b{font-weight:600}
+.lead .k{display:inline-block;min-width:3.4em;color:var(--muted);font-size:12.5px;font-weight:600;margin-right:6px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+td.num,th.num{text-align:right;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:nowrap}
+</style></head><body><div class="wrap">
+<h1>Prep 修复后的逐题效果（fixval13）</h1>
+<div class="tid">2026-07-23 fix-validation 运行 ｜ 13 题 ｜ 模型 openai/gpt-5.6-sol ｜ 网关 haoxiang（boyue 当时 503 无渠道）</div>
+<p class="sub">修复了 prep 的「锚定/定框」缺陷后，在先前的零分题和负向题上重跑，看倒扣有没有被消除。</p>
+<div class="lead">
+<p><span class="k">修的是什么</span>旧版 prep 无净价值、略偏负——不是投送坏了（报告 26/26 都到），是<b>锚定</b>：
+自己没解决的断点被标成「头号难题」递给 writer，把建模框架当 finding 注入首轮，把 writer 的预算引进坑。
+修复：broke 不许排优先级、method-choice 不算 finding、<code>writer_action</code> 不进首轮、闭卷题直接 <code>not_needed</code> 不注入。
+详见 <a href="README.md">prep/README.md</a>。</p>
+<p><span class="k">结论</span>修复后<b>先前所有 prep 负向题都回到 base 或以上</b>：variant 0.794→0.999、flusight 0.616→0.750、
+bpmn_supply 0.787→0.864、pe 0.919→1.000。variant 轨迹确认：本轮无锚定 note 送达 writer。</p>
+<p><span class="k">别过度解读</span><b>n=1</b>，且 variant/audience_seg 两臂同分顶到 base 上界，部分走高是抽样偏好。
+prep 天花板受 charter 限制（禁止定 label/值/格式）：修复能做到「回到 ≈ base」，「高于 base」在判断密集的闭卷题上基本不可达。</p>
+</div>
+<div class="callout"><b>轨迹走查:</b><a href="walkthrough_agora/ANALYSIS.md">walkthrough_agora/</a> —— prep 的 task_prep.md 如何改变 writer 行为(真实文件+分析)。</div>
+
+<section><h2>逐题分数（fixval13）</h2>
+<p>base 为历史多次运行均值。prep 列是本轮 n=1。Δ 相对 base；括号内为相对<b>修复前 prep</b>的变化。</p>
+<div class="tblwrap"><table>
+<tr><th>题目</th><th class="num">base<br>历史均值</th><th class="num">prep<br>fixval13</th><th class="num">Δ vs base</th><th>说明（vs 修复前 prep）</th></tr>
+<tr><td><a href="healthcare_variant_annotation_pipeline.html">变异注释流水线</a><br><code>healthcare_variant_annotation_pipeline</code></td><td class="num">0.9304</td><td class="num">0.9990</td><td class="num"><span class="delta up-t">+0.0686</span></td><td><b>修复靶点。</b>修复前 0.794（−0.136，被「primary unresolved breakage」锚定）。本轮 <b>+0.205</b>，无锚定 note 送达 writer。</td></tr>
+<tr><td>flusight_offline_hosp_forecast_2024_12_14<br><code>flusight_offline_hosp_forecast_2024_12_14</code></td><td class="num">0.7127</td><td class="num">0.7504</td><td class="num"><span class="delta up-t">+0.0377</span></td><td>修复前 0.616（框架被当 finding 注入）。本轮 <b>+0.134</b>，回到 base 带内。</td></tr>
+<tr><td>bpmn_supply_disruption_l3<br><code>bpmn_supply_disruption_l3</code></td><td class="num">0.8485</td><td class="num">0.8638</td><td class="num"><span class="delta up-t">+0.0153</span></td><td>修复前 0.787。本轮 +0.077，回到 base 以上。</td></tr>
+<tr><td>pe_screening_memo_1<br><code>pe_screening_memo_1</code></td><td class="num">0.9587</td><td class="num">1.0000</td><td class="num"><span class="delta up-t">+0.0413</span></td><td>修复前 0.919。本轮满分。</td></tr>
+<tr><td><a href="digital_marketing_audience_segmentation_1.html">数字营销受众分群</a><br><code>digital_marketing_audience_segmentation_1</code></td><td class="num">0.8117</td><td class="num">0.9042</td><td class="num"><span class="delta up-t">+0.0925</span></td><td>两臂同分，顶到 base 上界（含抽样偏好）。</td></tr>
+<tr><td>crf_sdtm_mapping_4<br><code>crf_sdtm_mapping_4</code></td><td class="num">0.6210</td><td class="num">0.5885</td><td class="num"><span class="delta flat-t">−0.0325</span></td><td>带内；vs 修复前 +0.034。</td></tr>
+<tr><td>healthcare_sap_group_sequential_nsclc<br><code>healthcare_sap_group_sequential_nsclc</code></td><td class="num">0.2725</td><td class="num">0.2500</td><td class="num"><span class="delta flat-t">−0.0225</span></td><td>噪声内。</td></tr>
+<tr><td>sse_northbound_programmatic_trading_01<br><code>sse_northbound_programmatic_trading_01</code></td><td class="num">0.6667</td><td class="num">0.3333</td><td class="num"><span class="delta down-t">−0.3334</span></td><td><b>与本修复无关。</b>q1 结论对、引文对，但证据摘录漏了一句 anchor 短语 → q1 判 0。评分器逐字匹配的抽样方差，见 <a href="../README.md">总览 §3b</a>。</td></tr>
+<tr><td colspan="5"><b>五道零分题</b>（bpmn_category / legal_ma / crf_sdtm_1 / ct_geometry / bias_audit）：base=prep=<b>0</b>。二值门槛型失败，消费层增强跨不过，<b>未解锁属预期</b>。</td></tr>
+</table></div>
+</section>
+<section><h2>怎么读</h2>
+<p><b>修复消除了锚定倒扣</b>：8 道会动的题里，除 sse（评分器抄录方差）外，本轮 prep 全部 ≥ 修复前 prep，多数回到 base 或以上。</p>
+<p><b>但这只到「去掉害」为止。</b>prep 唯一稳定加分的存在证明是 agora（findings 恰好命中评分维度）；要系统化加分，需让 prep 命中评分面且产出可调用载体而非散文——受 charter 限制，天花板不高。</p>
+</section>
+<footer>数据：pgl <code>~/ale/agents-last-exam/.logs/ale/fixval13/fixval13_prep/</code>（每单元 <code>output/</code>、<code>trajectory.json</code>、<code>eval_result.json</code>）。修复代码 <code>ale_run/agents/ale_claw/task_prep.py</code>。设计见 <a href="../../harness/PREP.md">PREP.md</a>，逐题 base 背景见 <a href="../../task_analysis/index.html">题目逐题分析</a>，总览见 <a href="../README.md">harness_analysis/README.md</a>。</footer>
+</div></body></html>

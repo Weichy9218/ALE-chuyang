@@ -1,0 +1,63 @@
+{
+  "schema_version": 2,
+  "run_id": "argus_full4__gpt-5-6-sol__health_medicine__ct_geometry_calibration_catphan__v0__20260724_182349",
+  "timestamp_utc": "2026-07-24T21:17:08Z",
+  "agent": {
+    "id": "argus_full4",
+    "class": "argus",
+    "name": "argus",
+    "version": null,
+    "model": "gpt-5.6-sol",
+    "executor": "sandbox",
+    "config_repr": {
+      "provider": "openrouter",
+      "base_url": "https://apirx.boyuerichdata.com/v1",
+      "api_key": "***gsh3",
+      "model_catalog_path": "/home/ubuntu/argus/config/model_catalog_boyue.json",
+      "model_context_window": 128000,
+      "model_auto_compact_token_limit": 100000,
+      "manager_reasoning_effort": "xhigh",
+      "planner_reasoning_effort": "xhigh",
+      "engineer_reasoning_effort": "xhigh",
+      "engineer_initial_reasoning_effort": "high",
+      "reviewer_reasoning_effort": "high",
+      "manager_division": false,
+      "vertical": "ale_last_exam",
+      "max_missions": 1,
+      "max_rounds": 500,
+      "iterate": false,
+      "require_post_task_learning": false,
+      "cost_control": false,
+      "argus_package": "",
+      "model": "gpt-5.6-sol"
+    }
+  },
+  "task": {
+    "slug": "health_medicine__ct_geometry_calibration_catphan",
+    "path": "tasks/health_medicine/ct_geometry_calibration_catphan",
+    "variant_index": 0
+  },
+  "status": "completed",
+  "score": 1.0,
+  "score_valid": true,
+  "termination": {
+    "reason": "completed",
+    "phase": null,
+    "category": null,
+    "error": null
+  },
+  "timings": {
+    "duration_s": 2466.68
+  },
+  "usage": {
+    "total_steps": 355,
+    "total_input_tokens": 5683696,
+    "total_output_tokens": 90925,
+    "total_cache_read_tokens": 4929280,
+    "total_cache_creation_tokens": 0,
+    "total_cost_usd": 0.0,
+    "total_duration_ms": 2447843,
+    "reward": 1.0,
+    "status": "completed"
+  }
+}

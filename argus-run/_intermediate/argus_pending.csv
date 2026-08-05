@@ -1,0 +1,3 @@
+task,score,run_status,note,in_tok,out_tok,dur_s,trajectory
+life_sciences/protein_function_annotation_instance_1,0.0,completed,gateway_zero,54245,1641,250.1,/home/ubuntu/argus/runs/back/20260725_091000/argus/argus_full4/gpt-5-6-sol/life_sciences__protein_function_annotation_instance_1/v0/20260725_131003/trajectory.json
+life_sciences/tms_marrow_cell_type_annotation_instance_1,0.0,completed,gateway_zero,81937,1615,582.6,/home/ubuntu/argus/runs/back/20260725_091000/argus/argus_full4/gpt-5-6-sol/life_sciences__tms_marrow_cell_type_annotation_instance_1/v0/20260725_131003/trajectory.json

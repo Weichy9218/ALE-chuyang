@@ -48,3 +48,9 @@ docs/new_run/
 # === 原始轨迹:含 writer/prep 完整对话与题目内容,不进公开仓库 ===
 docs/harness/results/*/raw/
 docs/harness/archive/*/*/raw/
+
+# WS2 data/experiment exclusions (never ship experiment data to GitHub)
+docs/harness/results/
+docs/argus_analysis/**/trajectory.json
+*.tar.gz
+**/trajectory.json

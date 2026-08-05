@@ -1,0 +1,27 @@
+# Clean latest-code run (fixed prep/verifier, NO typo hint, reasoning_effort) for
+# the 3 positive-effect tasks not covered by fixval13.
+arms: [prep, verifier]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000
+  thinking_level: medium
+
+prep:
+  max_steps: 50
+  timeout_s: 1800
+
+verifier:
+  max_steps: 30
+  max_review_rounds: 1
+  writer_checks: 8
+
+run:
+  name: clean3
+  tasks: docs/harness/results/clean3_tasks.txt
+  concurrency: 3
+  cleanup_mode: delete
+  secret_file: secret/.env.haoxiang
+  api_endpoints: []
+  output_root: .logs/ale/clean3
+  wall_time_s: 86400

@@ -1,0 +1,30 @@
+# Full 26-task x 2-arm (prep, verifier) run on BOYUE via the Responses API.
+# gpt-5.6-sol accepts function tools + reasoning only over /v1/responses; the
+# main loop and the prep/verifier subagents both route there when
+# ALE_MODEL_TRANSPORT=responses (set in secret/.env.boyue). reasoning=high.
+# Base arm is not re-run: compare against historical base.
+arms: [verifier]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000
+  thinking_level: high
+
+prep:
+  max_steps: 50
+  timeout_s: 1800
+
+verifier:
+  max_steps: 30
+  max_review_rounds: 1
+  writer_checks: 8
+
+run:
+  name: full26_boyue
+  tasks: docs/harness/results/todo_verifier_tasks.txt
+  concurrency: 2
+  cleanup_mode: delete
+  secret_file: secret/.env.boyue
+  api_endpoints: []
+  output_root: .logs/ale/full26_boyue
+  wall_time_s: 86400

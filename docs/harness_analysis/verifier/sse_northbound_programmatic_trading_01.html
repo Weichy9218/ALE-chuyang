@@ -1,0 +1,143 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>沪股通问答：verifier 把对的改成错的｜ALE</title><style>
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}
+.wrap{max-width:980px;margin:0 auto;padding:32px 22px 90px}
+h1{font-size:25px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:34px 0 10px}
+h3{font-size:15px;margin:18px 0 6px}
+.sub{color:var(--muted);font-size:14.5px;margin:0 0 4px}
+.tid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted)}
+p{margin:10px 0}
+a{color:var(--accent)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--codebg);padding:1px 5px;border-radius:4px;word-break:break-word}
+pre{background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+pre code{background:none;padding:0}
+section{border-top:1px solid var(--line);padding-top:8px;margin-top:26px}
+.spec{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:2px 18px;margin:16px 0;display:grid;grid-template-columns:auto 1fr;gap:0 18px}
+.spec dt{font-weight:600;font-size:12.5px;padding:8px 0;color:var(--muted);border-top:1px solid var(--line)}
+.spec dd{margin:0;font-size:13.5px;padding:8px 0;border-top:1px solid var(--line)}
+.spec dt:first-of-type,.spec dd:first-of-type{border-top:none}
+.tblwrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--card);font-weight:600;white-space:nowrap}
+.badge{display:inline-block;font-weight:700;font-size:12px;padding:1px 8px;border-radius:5px}
+.b-good{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+.b-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+.b-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.callout{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 16px;margin:14px 0;background:var(--card);font-size:14px}
+.callout.warn{border-left-color:var(--warn)}
+.callout.bad{border-left-color:var(--bad)}
+ul,ol{margin:10px 0;padding-left:22px}li{margin:5px 0}
+.back{font-size:13px;margin-bottom:10px;display:inline-block}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+/* 流程图组件：纵向步骤流，纯 CSS，无外部依赖 */
+.flow{margin:16px 0}
+.fstep{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px 14px;position:relative}
+.fstep+.fstep{margin-top:26px}
+.fstep+.fstep::before{content:"↓";position:absolute;top:-23px;left:22px;color:var(--muted);font-size:15px}
+.fstep .ft{font-weight:600;font-size:14px;margin:0 0 4px}
+.fstep .fb{font-size:13.5px;color:var(--fg);margin:0}
+.fstep .fn{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);margin-right:8px}
+.fstep.ok{border-left:3px solid var(--good)}
+.fstep.miss{border-left:3px solid var(--bad)}
+.fstep.risk{border-left:3px solid var(--warn)}
+/* 图：题目自带素材、agent 产出图、自画的对照图，一律 data URI 内嵌 */
+.fig{margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px}
+.fig img{width:100%;height:auto;display:block;border-radius:6px;background:#fff}
+.fig figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.figrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0}
+.figrow .fig{margin:0}
+.scorebar{display:flex;align-items:center;gap:10px;margin:10px 0}
+.scorebar .bar{flex:1;height:10px;background:var(--codebg);border-radius:6px;overflow:hidden}
+.scorebar .fill{height:100%;background:var(--accent)}
+.scorebar .num{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:nowrap}
+/* 对比专用：三臂并列 */
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:16px 0}
+.cmpcol{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:12px 14px}
+.cmpcol h4{margin:0 0 8px;font-size:13.5px;display:flex;align-items:baseline;gap:8px}
+.cmpcol h4 .sc{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;font-weight:700}
+.cmpcol.base{border-left:3px solid var(--muted)}
+.cmpcol.up{border-left:3px solid var(--good)}
+.cmpcol.down{border-left:3px solid var(--bad)}
+.cmpcol p{margin:6px 0;font-size:13px}
+.cmpcol ul{margin:6px 0;padding-left:18px;font-size:13px}
+.q{border-left:2px solid var(--line);padding:2px 0 2px 12px;margin:8px 0;color:var(--muted);font-size:13px}
+.delta{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+.up-t{color:var(--good)}.down-t{color:var(--bad)}.flat-t{color:var(--muted)}
+.kv{font-size:13px;margin:4px 0}.kv b{font-weight:600}
+.lead{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;background:var(--card);padding:12px 16px;margin:16px 0}
+.lead p{margin:8px 0;font-size:14.5px}
+.lead b{font-weight:600}
+.lead .k{display:inline-block;min-width:3.4em;color:var(--muted);font-size:12.5px;font-weight:600;margin-right:6px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+td.num,th.num{text-align:right;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:nowrap}
+</style></head><body><div class="wrap">
+<a class="back" href="index.html">← 返回 Verifier 对比列表</a>
+<h1>沪股通程序化交易报告合规问答</h1>
+<div class="tid">taskId：business_finance/sse_northbound_programmatic_trading_01 ｜ 同期 base 0.3333（多数 base 运行 0.6667）｜ verifier 三轮 0.6667 / 0.6667 / 0.3333</div>
+<p class="sub">verifier 唯一一次报出内容级问题，判据句子选错了。agent 照着改，把评分器认可的证据段删掉，一道本来答对的题变成零分。</p>
+<div class="callout"><b>最新（fixval13，2026-07-23）：该缺陷已修复。</b>verifier 臂恢复到 <b>0.6667</b>——修复后 <code>unverifiable</code> 单列进中性 <code>NOT TESTABLE</code> 段、并明写「不是存疑信号」，本轮轨迹里 agent 不再改写 q3，q3 保持 No。本页下文是<b>修复前</b>的缺陷复盘，保留以记录问题本身；最新逐题结果见 <a href="index.html">verifier 修复后逐题效果</a> 与 <a href="README.md">verifier/README.md</a>。</div>
+<dl class="spec">
+  <dt>交付物</dt><dd><code>output/research_answers.json</code>，三题各四字段</dd>
+  <dt>评分方式</dt><dd>程序化打分，每题五级检查短路，三题等权平均</dd>
+  <dt>分值</dt><dd>只能取 0、0.3333、0.6667、1.0 四档</dd>
+  <dt>同期 base</dt><dd>0.3333（该次 q3 答错；另五次历史 base 为 0.6667）</dd>
+  <dt>verifier 三轮</dt><dd>0.6667（v18）／0.6667（v19）／0.3333（v20）</dd>
+  <dt>轨迹路径</dt><dd><code>v23_v20_attribution/v23_v20_attribution_verifier/ale_claw_verifier/openai-gpt-5-6-sol/business_finance__sse_northbound_programmatic_trading_01/</code></dd>
+</dl>
+<div class="callout bad"><b>这是唯一一道 verifier 明确报出问题、agent 照做、然后分数掉一半的题。</b>报出的问题本身是错的：冻结检查里写死的判据句子，不是评分器认可的那一段。agent 原本答对的那一题，因为这次修改变成零分。</div>
+<section><h2>一、这道题怎么评分</h2>
+<p>交付一个 <code>output/research_answers.json</code>，三个顶层键对应三道监管问答，每题四个字段：<code>conclusion</code>（只能是 Yes、No、Unknown 之一）、<code>citation_document</code>（引用的文档名）、<code>evidence_snippet</code>（从题目提供的中文原文里逐字抄录的片段）、<code>answer_text</code>（英文说明）。</p>
+<p>评分脚本对每题依次做五级检查，任何一级不过就在那一级短路返回 0 分，三题等权平均。第三级检查的是 <code>evidence_snippet</code> 里必须包含答案键指定的全部锚点文本。</p>
+<div class="tblwrap"><table>
+<tr><th>题</th><th>期望结论</th><th>锚点文本（必须出现在摘录里）</th></tr>
+<tr><td>q1 多券商报告</td><td>No</td><td>「选取一家联交所参与者并按机构维度」「不再重复填写上述信息」「已在其他联交所参与者报告」三条全含</td></tr>
+<tr><td>q2 高频收费金额</td><td>Unknown</td><td>「具体收费标准由本所另行规定」</td></tr>
+<tr><td>q3 软件命名</td><td>No</td><td>「程序化交易软件名称等，可以填写英文」</td></tr>
+</table></div>
+<p>三题里 q2 是长期失分项：题面被改写成是非问句，agent 一般答 No，而答案键要 Unknown。多数 base 运行是 q1 和 q3 对、q2 错，得 0.6667。</p>
+</section>
+<section><h2>二、三轮 verifier 的分数</h2>
+<div class="tblwrap"><table>
+<tr><th>运行</th><th>协议</th><th class="num">分数</th><th class="num">相对同期 base</th><th>q1 / q2 / q3</th></tr>
+<tr><td>第一轮</td><td>public-verifier-v18</td><td class="num">0.6667</td><td class="num"><span class="delta up-t">+0.3334</span></td><td>对 / 错 / 对</td></tr>
+<tr><td>第二轮</td><td>public-verifier-v19</td><td class="num">0.6667</td><td class="num"><span class="delta up-t">+0.3334</span></td><td>对 / 错 / 对</td></tr>
+<tr><td>第三轮</td><td>public-verifier-v20</td><td class="num">0.3333</td><td class="num"><span class="delta flat-t">+0.0000</span></td><td><b>错</b> / 错 / 对</td></tr>
+</table></div>
+<p>同期 base 那一次恰好也是 0.3333，但原因不同：那次 q1 对、q3 答成 Unknown。另外五次历史 base 都是 q1 与 q3 对，得 0.6667。所以第三轮的 0.3333 是从 0.6667 掉下来的，不是与 base 持平。</p>
+<p>前两轮 verifier 什么都没做。它们把三条内容级检查全部标成 unverifiable，只有五条结构性检查通过，agent 无事可改，原样提交。第三轮的协议 v20 把这三条内容检查变成了可执行脚本，问题就出在这里。</p>
+</section>
+<section><h2>三、v20 冻结了什么</h2>
+<p>第三轮冻结了四条可执行检查，另有两条在 lint 阶段因 id 重复被丢弃。其中 q1 那条检查的脚本里写死了一个判据句子：</p>
+<div class="q">needle = '选取一家联交所参与者集中填报资金信息'<br>checks = { … 'decisive_clause': isinstance(snippet, str) and needle in snippet, … }<br><span class="mono">— verifier_suite.json，contract.q1_multi_broker_reporting.conclusion 的 checker 脚本</span></div>
+<p>这句话确实出现在题目给的文档里，但位置不对。它在 <code>1-2_填报说明.txt</code> 第 1907 字符处的「证件号码填报要求」小节，是一句交叉引用；评分器认可的锚点在第 979 字符处的「报告单位」小节，两处相隔九百多字。builder 挑了交叉引用那句，并把它写进了自己的合法 fixture 当作标准答案。</p>
+<div class="callout warn">同一批检查里，q2 那条把 <code>conclusion == 'No'</code> 冻结为通过条件，而答案键要的是 <code>Unknown</code>。这条检查等于为错误答案背书。它没有造成额外失分，因为 agent 本来就答 No。</div>
+</section>
+<section><h2>四、agent 做了什么</h2>
+<div class="flow">
+<div class="fstep ok"><p class="ft"><span class="fn">步 12</span>写出初稿，q1 用的是评分器认可的那段原文</p><p class="fb">242 字，包含全部三条锚点。这一版按评分器算 q1 得满分。</p></div>
+<div class="fstep"><p class="ft"><span class="fn">步 14</span>调用 <code>verify</code></p><p class="fb">四条检查里三条通过，q1 报 <code>decisive_clause: false</code>，其余四项子检查（结论、引用文档、逐字原文、英文说明）全部为 true。</p></div>
+<div class="fstep risk"><p class="ft"><span class="fn">步 15</span>收到反馈</p><p class="fb">反馈同时列出了正确那段（Source 2）和交叉引用那句（Source 3），但 required_clause 指向后者。反馈末尾写着「Authority: advisory … you are not required to」。</p></div>
+<div class="fstep miss"><p class="ft"><span class="fn">步 16</span>唯一一次编辑：把 q1 的证据段整段替换</p><p class="fb">换成 verifier fixture 里那句 91 字的交叉引用。文件从 2597 字节变成 2126 字节，删掉的正是三条锚点所在的整段话。</p></div>
+<div class="fstep miss"><p class="ft"><span class="fn">步 18</span>再次 <code>verify</code>，四条全过，收工</p><p class="fb">机械检查全绿，而 q1 这时已经拿不到分。</p></div>
+</div>
+<p>q2 和 q3 全程没动。整个运行里 agent 只做了这一次内容修改。</p>
+</section>
+<section><h2>五、两版摘录的对比</h2>
+<div class="cmp"><div class="cmpcol base"><h4>初稿（步 12 写出）<span class="sc">q1 = 1.0</span></h4><ul><li>242 字，来自「报告单位」小节</li><li>包含三条锚点：「选取一家联交所参与者并按机构维度」「不再重复填写上述信息」「已在其他联交所参与者报告」</li><li>评分器五级检查全过</li></ul></div><div class="cmpcol down"><h4>改后（步 16 替换）<span class="sc">q1 = 0.0</span></h4><ul><li>91 字，来自「证件号码填报要求」小节的交叉引用</li><li>三条锚点一条都不含</li><li>评分器第三级短路，notes 记 <span class='mono'>evidence_snippet does not contain the required anchor text</span></li></ul></div></div>
+<p>最终三题得分：q1 = 0（缺锚点）、q2 = 0（结论应为 Unknown）、q3 = 1，总分 0.3333。如果保留初稿的那一段，总分是 0.6667。</p>
+</section>
+<section><h2>六、这道题说明什么</h2>
+<p><b>零权威的措辞挡不住服从。</b>协议规定每条结果都是参考测量，反馈里也逐字写了「你不是必须改」。agent 仍然照着改了，而且是把一段正确的原文换成一段错误的。在机械检查面前，通过检查是最省事的路径，措辞上的免责不改变这个激励。</p>
+<p><b>判据错了比没有判据更糟。</b>前两轮 verifier 把这三条内容检查标成不可验证，分数是 0.6667；第三轮把它们变成可执行脚本，分数变成 0.3333。冻结检查的判据来自 builder 对公开材料的一次阅读，builder 读错的时候，这个错误会以「可复现的机械测量」的形式呈现给 agent，比一句自然语言建议更有说服力。</p>
+<p><b>这类风险随检查的语义深度上升。</b>结构检查（文件在不在、字段拼写、行数）读错的空间很小；内容检查要求 builder 判断「哪一句话是决定性的」，而这正是评分器用隐藏答案键裁定的事情。v20 把 unverifiable 上限从 8 收到 3，促使 builder 把原本标为不可验证的条目改写成可执行检查，这道题是那次收紧的直接后果。</p>
+</section><footer>数据来源：pgl 机器 <code>~/ale/agents-last-exam/.logs/ale/</code> 下的运行记录，路径见第一节表格。题目定义、打分脚本与隐藏参考在 batchcom 机器 <code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/</code>。本页的分数取自各次运行的 <code>eval_result.json</code>；题面背景与 base 失分的完整复盘见 <a href="../../task_analysis/sse_northbound_programmatic_trading_01.html">题目逐题分析</a>。</footer>
+</div></body></html>

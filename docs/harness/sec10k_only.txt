@@ -1,0 +1,5 @@
+# Single-task list: sec_10k only — validates the repair-regression guard.
+# sec_10k is the one smoke task where an in-place repair round collapsed the
+# graded bundle (raw_extractions 76 MB verbatim -> 156 KB paraphrase, 0.685 ->
+# 0.163) in ~1/3 of reviewer runs. This run checks the guard rolls that back.
+business_finance/sec_10k_financial_parsing

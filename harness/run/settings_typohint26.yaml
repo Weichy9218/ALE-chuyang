@@ -1,0 +1,29 @@
+# Full-26 run on boyue with a typo-awareness line added to the writer prompt.
+# Question: can legal_ma (base=0, lost by not catching a 控股股东->空股股东 misprint)
+# flip once the writer is told to watch for typos? Latest prep/verifier code.
+
+arms: [prep, verifier]
+
+agent:
+  model: openai/gpt-5.6-sol
+  max_turns: 100000
+  thinking_level: medium
+
+prep:
+  max_steps: 50
+  timeout_s: 1800
+
+verifier:
+  max_steps: 30
+  max_review_rounds: 1
+  writer_checks: 8
+
+run:
+  name: typohint26
+  tasks: docs/harness/results/latest/tasks.txt   # the 26 headless-runnable tasks
+  concurrency: 6
+  cleanup_mode: delete
+  secret_file: secret/.env.boyue                 # ale_url=https://apirx.boyuerichdata.com/v1 (live again)
+  api_endpoints: []
+  output_root: .logs/ale/typohint26
+  wall_time_s: 86400

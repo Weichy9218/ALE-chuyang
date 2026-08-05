@@ -1,0 +1,134 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Moodle 结算：看似可复现的伤害其实是换行符｜ALE</title><style>
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif}
+:root{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}}
+:root[data-theme=light]{--bg:#fff;--fg:#1a1c1f;--muted:#5b6570;--line:#e3e7ec;--card:#f6f8fa;--accent:#2f6feb;--good:#1a9c6b;--warn:#c98a1a;--bad:#c8443a;--codebg:#f0f3f6}
+:root[data-theme=dark]{--bg:#0f1216;--fg:#e6e9ee;--muted:#9aa4b0;--line:#242a31;--card:#161b21;--accent:#6ea3ff;--good:#3ecb93;--warn:#e6b23c;--bad:#ff6b60;--codebg:#1b2129}
+.wrap{max-width:980px;margin:0 auto;padding:32px 22px 90px}
+h1{font-size:25px;margin:0 0 8px;line-height:1.3}
+h2{font-size:19px;margin:34px 0 10px}
+h3{font-size:15px;margin:18px 0 6px}
+.sub{color:var(--muted);font-size:14.5px;margin:0 0 4px}
+.tid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted)}
+p{margin:10px 0}
+a{color:var(--accent)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:var(--codebg);padding:1px 5px;border-radius:4px;word-break:break-word}
+pre{background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+pre code{background:none;padding:0}
+section{border-top:1px solid var(--line);padding-top:8px;margin-top:26px}
+.spec{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:2px 18px;margin:16px 0;display:grid;grid-template-columns:auto 1fr;gap:0 18px}
+.spec dt{font-weight:600;font-size:12.5px;padding:8px 0;color:var(--muted);border-top:1px solid var(--line)}
+.spec dd{margin:0;font-size:13.5px;padding:8px 0;border-top:1px solid var(--line)}
+.spec dt:first-of-type,.spec dd:first-of-type{border-top:none}
+.tblwrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--card);font-weight:600;white-space:nowrap}
+.badge{display:inline-block;font-weight:700;font-size:12px;padding:1px 8px;border-radius:5px}
+.b-good{color:var(--good);background:color-mix(in srgb,var(--good) 15%,transparent)}
+.b-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 15%,transparent)}
+.b-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.callout{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 16px;margin:14px 0;background:var(--card);font-size:14px}
+.callout.warn{border-left-color:var(--warn)}
+.callout.bad{border-left-color:var(--bad)}
+ul,ol{margin:10px 0;padding-left:22px}li{margin:5px 0}
+.back{font-size:13px;margin-bottom:10px;display:inline-block}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+/* 流程图组件：纵向步骤流，纯 CSS，无外部依赖 */
+.flow{margin:16px 0}
+.fstep{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px 14px;position:relative}
+.fstep+.fstep{margin-top:26px}
+.fstep+.fstep::before{content:"↓";position:absolute;top:-23px;left:22px;color:var(--muted);font-size:15px}
+.fstep .ft{font-weight:600;font-size:14px;margin:0 0 4px}
+.fstep .fb{font-size:13.5px;color:var(--fg);margin:0}
+.fstep .fn{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);margin-right:8px}
+.fstep.ok{border-left:3px solid var(--good)}
+.fstep.miss{border-left:3px solid var(--bad)}
+.fstep.risk{border-left:3px solid var(--warn)}
+/* 图：题目自带素材、agent 产出图、自画的对照图，一律 data URI 内嵌 */
+.fig{margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px}
+.fig img{width:100%;height:auto;display:block;border-radius:6px;background:#fff}
+.fig figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.figrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0}
+.figrow .fig{margin:0}
+.scorebar{display:flex;align-items:center;gap:10px;margin:10px 0}
+.scorebar .bar{flex:1;height:10px;background:var(--codebg);border-radius:6px;overflow:hidden}
+.scorebar .fill{height:100%;background:var(--accent)}
+.scorebar .num{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:nowrap}
+/* 对比专用：三臂并列 */
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:16px 0}
+.cmpcol{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:12px 14px}
+.cmpcol h4{margin:0 0 8px;font-size:13.5px;display:flex;align-items:baseline;gap:8px}
+.cmpcol h4 .sc{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;font-weight:700}
+.cmpcol.base{border-left:3px solid var(--muted)}
+.cmpcol.up{border-left:3px solid var(--good)}
+.cmpcol.down{border-left:3px solid var(--bad)}
+.cmpcol p{margin:6px 0;font-size:13px}
+.cmpcol ul{margin:6px 0;padding-left:18px;font-size:13px}
+.q{border-left:2px solid var(--line);padding:2px 0 2px 12px;margin:8px 0;color:var(--muted);font-size:13px}
+.delta{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+.up-t{color:var(--good)}.down-t{color:var(--bad)}.flat-t{color:var(--muted)}
+.kv{font-size:13px;margin:4px 0}.kv b{font-weight:600}
+.lead{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;background:var(--card);padding:12px 16px;margin:16px 0}
+.lead p{margin:8px 0;font-size:14.5px}
+.lead b{font-weight:600}
+.lead .k{display:inline-block;min-width:3.4em;color:var(--muted);font-size:12.5px;font-weight:600;margin-right:6px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+td.num,th.num{text-align:right;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:nowrap}
+</style></head><body><div class="wrap">
+<a class="back" href="index.html">← 返回 Prep 对比列表</a>
+<h1>Moodle 成绩册期末结算对账</h1>
+<div class="tid">taskId：education_info/moodle_gradebook_closeout_reconciliation ｜ 同期 base 0.8850 ｜ 历史 base 均值 0.9337 ｜ prep 三轮 0.8850 / 0.8850 / 0.9500</div>
+<p class="sub">两轮 prep 都是相对历史均值 −0.0487，看着像可复现的伤害。实际上两臂产物归一化换行后逐字节相同，分差来自 241 个回车符。</p>
+<dl class="spec">
+  <dt>交付物</dt><dd>13 个文件，其中两个在打包文件内部按字节比对</dd>
+  <dt>评分方式</dt><dd>六道 gate 加权，满分 100</dd>
+  <dt>同期 base</dt><dd>0.8850（历史四次为 0.95 / 0.885 / 0.95 / 0.95）</dd>
+  <dt>prep 三轮</dt><dd>0.8850／0.8850／0.9500</dd>
+  <dt>分差归属</dt><dd><code>csv.DictWriter</code> 是否指定 <code>lineterminator='\n'</code></dd>
+  <dt>轨迹路径</dt><dd><code>v23_v20_attribution/…/education_info__moodle_gradebook_closeout_reconciliation/</code></dd>
+</dl>
+<div class="callout"><b>这道题看上去有一个可复现的 prep 伤害：两轮都是 −0.0487。实际上 prep 什么也没做。</b>两臂的产物在语义上逐字节相同，分差全部来自 241 个回车符，而这个差异 base 自己也会时有时无。</div>
+<section><h2>一、先看结论：产物没有语义差异</h2>
+<p>这题要交 13 个文件，其中两个藏在打包文件内部，评分器对它们做的是<code>read_bytes()</code> 逐字节比较，不一致各扣 4 分和 2.5 分。</p>
+<div class="tblwrap"><table>
+<tr><th>文件</th><th>参考</th><th>base</th><th>prep 第一、二轮</th><th>prep 第三轮</th></tr>
+<tr><td><code>integration/id_map.csv</code></td><td>7972 字节，LF 换行</td><td>8213 字节，<b>CRLF</b></td><td>8213 字节，<b>CRLF</b></td><td>7972 字节，LF</td></tr>
+<tr><td><code>gradebook/final_grade_flags.csv</code></td><td>3183 字节，LF</td><td>3424 字节，<b>CRLF</b></td><td>3424 字节，<b>CRLF</b></td><td>3183 字节，LF</td></tr>
+</table></div>
+<p>把回车符归一化之后，四个臂与参考答案<b>全部逐字节相同</b>。也就是说所有臂的内容修复都是完全正确的，差别只有 241 个 <code>\r</code>。</p>
+<p>原因是 Python 的 <code>csv.DictWriter</code> 默认用 <code>\r\n</code> 结尾。拿到 0.95 的那些运行显式写了 <code>lineterminator='\n'</code>，拿到 0.885 的没写。这是一个与 prep 无关的写法习惯。</p>
+</section>
+<section><h2>二、那 −0.0487 是怎么来的</h2>
+<p>配对统计用的 base 是历史多次运行的均值 0.9337，而这道题的 base 只有两个可能取值：0.885 和 0.95。均值 0.9337 由 <span class='mono'>{0.95, 0.885, 0.95, 0.95}</span> 混出来，本身不对应任何一次真实运行。</p>
+<div class="tblwrap"><table>
+<tr><th>运行</th><th class="num">分数</th><th class="num">相对历史均值 0.9337</th><th>换行符</th></tr>
+<tr><td>同期 base</td><td class="num">0.8850</td><td class="num"><span class="delta down-t">-0.0487</span></td><td>CRLF</td></tr>
+<tr><td>prep 第一轮</td><td class="num">0.8850</td><td class="num"><span class="delta down-t">-0.0487</span></td><td>CRLF</td></tr>
+<tr><td>prep 第二轮</td><td class="num">0.8850</td><td class="num"><span class="delta down-t">-0.0487</span></td><td>CRLF</td></tr>
+<tr><td>prep 第三轮</td><td class="num">0.9500</td><td class="num"><span class="delta up-t">+0.0163</span></td><td>LF</td></tr>
+<tr><td>撤 self-check 臂</td><td class="num">0.9500</td><td class="num"><span class="delta up-t">+0.0163</span></td><td>LF</td></tr>
+</table></div>
+<p>所以「两轮完全相同的可复现伤害」这个读数是真的，可复现的东西也是真的，只不过可复现的是 <code>csv.DictWriter</code> 的默认行为，不是 prep 的作用。同期 base 与前两轮 prep 分数完全一样，配对差是零。</p>
+</section>
+<section><h2>三、第三轮拿最高分时，报告没送到</h2>
+<p>第三轮 prep 的分数是这道题所有臂里最高的 0.95。而这一轮注入给 writer 的提示块结尾写着：</p>
+<div class="q">The full report could not be staged as a file, so only the runtime state above is available.<br><span class="mono">— 第三轮 writer 的首轮提示</span></div>
+<p>整个运行的轨迹里，<code>PREP_REPORT</code> 出现 0 次，<code>task_prep</code> 出现 0 次。writer 只用到了 prep 建好的运行时环境，17 条清单和 self-check 一条都没收到。</p>
+<p>这不能证明清单有害，因为 0.95 的来源是那一行 <code>lineterminator</code>。它能说明的是：清单在这道题上的边际贡献不为正。</p>
+<div class="callout warn">报告送不到是一个 staging 缺陷：报告目录过去只在写 artifact 时才创建，没有 artifact 时目录不存在，写报告直接失败，而 prep 仍被记为成功完成。缺陷已修复并加了回归测试。</div>
+</section>
+<section><h2>四、prep 的清单点名了正确的文件，但没点到要害</h2>
+<p>三轮清单都点名了这两个文件。第一轮第 3 条写着「打包文件内部只有<code>policy.json</code>、<code>section_cutoffs.json</code>、<code>final_grade_flags.csv</code>、<code>id_map.csv</code> 可以不同」，第 7 条还给了一条断言命令用来核对映射内容。</p>
+<p><b>但三轮清单里没有任何一条提到行尾字符或字节级一致性。</b>清单说的是「哪些行、哪些值」，评分器比的是字节。这与 AGORA 那题是同一类盲区：清单覆盖了公开材料能推出的部分，而失分点在推不出来的那部分。</p>
+</section>
+<section><h2>五、这道题说明什么</h2>
+<p><b>用历史均值做基准会把台阶式的分数读成组件效应。</b>这题只有两档分数，均值落在两档之间，于是任何一次落在低档的运行都会显示成「相对 base 下降 0.0487」，无论那一臂做了什么。同期单次对照能立刻看出配对差是零。</p>
+<p><b>可复现不等于有因果。</b>两轮完全相同的负值很有说服力，但它复现的是一个与实验变量无关的默认行为。判断组件效应需要看产物差异，不能只看分数。</p>
+<p><b>这也是把这道题放进这组的理由。</b>它是一个反面样本：如果只看分数表，会得出「prep 在 Moodle 上稳定有害」的结论，而实际上 prep 在这道题上既没帮忙也没添乱。</p>
+</section><footer>数据来源：pgl 机器 <code>~/ale/agents-last-exam/.logs/ale/</code> 下的运行记录，路径见第一节表格。题目定义、打分脚本与隐藏参考在 batchcom 机器 <code>/home/dataset-local/zmh/ALE_TEST/agents-last-exam/</code>。本页的分数取自各次运行的 <code>eval_result.json</code>；题面背景与 base 失分的完整复盘见 <a href="../../task_analysis/moodle_gradebook_closeout_reconciliation.html">题目逐题分析</a>。</footer>
+</div></body></html>

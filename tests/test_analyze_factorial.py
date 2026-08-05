@@ -215,81 +215,6 @@ def test_verifier_repair_rows_report_resolved_and_new_failures(tmp_path) -> None
     assert rows[0]["blocking_authority_changes"] == "b:False->True"
 
 
-def test_prep_trajectory_audit_explains_legacy_filter_and_writer_read(tmp_path) -> None:
-    run = _run(tmp_path, "ale_claw_prep", "prep")
-    root = run.run_dir / "origin_log" / "ale-claw"
-    session = root / "openclaw_sessions" / "session-1"
-    report = (
-        "# Task-specific prior research\n\n"
-        "## 1. Kept observed fact\n"
-        "- Local source: `input/data.json#row-1`\n"
-    )
-    (root / "task_prep.md").write_text(report, encoding="utf-8")
-    response = {
-        "decision": "use",
-        "findings": [
-            {
-                "claim": "Kept observed fact",
-                "local_source": "input/data.json#row-1",
-                "evidence": "row 1 is discrete",
-                "solver_impact": "This changes the branch boundary.",
-                "confidence": "high",
-            },
-            {
-                "claim": "Dropped observed fact",
-                "local_source": "input/other.json#row-2",
-                "evidence": "row 2 has a special value",
-                "solver_impact": "The solver must check this branch.",
-                "confidence": "high",
-            },
-        ],
-    }
-    records = [
-        {"status": "pending"},
-        {"status": "complete", "result_text": json.dumps(response)},
-    ]
-    session.mkdir(parents=True, exist_ok=True)
-    (session / "task-prep-runs.jsonl").write_text(
-        "\n".join(json.dumps(record) for record in records) + "\n",
-        encoding="utf-8",
-    )
-    transcript = [
-        {
-            "message": {
-                "role": "assistant",
-                "content": [
-                    {
-                        "type": "function_call",
-                        "name": "read",
-                        "arguments": '{"path":"task_prep/PREP_REPORT.md"}',
-                    },
-                    {
-                        "type": "function_call",
-                        "name": "read",
-                        "arguments": '{"path":"input/data.json"}',
-                    },
-                ],
-            }
-        }
-    ]
-    (session / "transcript.jsonl").write_text(
-        "\n".join(json.dumps(record) for record in transcript) + "\n",
-        encoding="utf-8",
-    )
-
-    findings = analysis.prep_finding_rows({(run.arm, run.task): run})
-    writer = analysis.prep_writer_rows({(run.arm, run.task): run})
-
-    assert [row["retained"] for row in findings] == [True, False]
-    assert findings[1]["filter_reason"] == "prescriptive_impact"
-    assert findings[1]["prescriptive_impact_words"] == "must"
-    assert writer[0]["arm"] == "prep"
-    assert writer[0]["raw_findings"] == 2
-    assert writer[0]["retained_findings"] == 1
-    assert writer[0]["report_read_call"] == 1
-    assert writer[0]["report_inlined"] is False
-    assert writer[0]["report_exposed"] is True
-    assert writer[0]["sources_revisited"] == 1
 
 
 def test_prep_writer_analysis_detects_initial_prompt_inline_exposure(tmp_path) -> None:
@@ -318,9 +243,8 @@ def test_prep_writer_analysis_detects_initial_prompt_inline_exposure(tmp_path) -
             "messages": [{
                 "role": "user",
                 "content": (
-                    "--- BEGIN TASK PREP ---\n"
-                    f"{report.strip()}\n"
-                    "--- END TASK PREP ---"
+                    "## Task-specific prior research\n"
+                    f"{report.strip()}"
                 ),
             }],
         },
@@ -342,94 +266,50 @@ def test_v17_report_heading_retains_title_without_evidence_suffix() -> None:
     assert analysis._retained_prep_claims(report) == {"Runtime receipt"}
 
 
-def test_prep_trajectory_does_not_blame_removed_filter(tmp_path) -> None:
-    run = _run(tmp_path, "ale_claw_prep", "prep-v10")
+
+
+
+
+def test_prep_findings_are_parsed_in_the_shape_prep_actually_writes(tmp_path) -> None:
+    """The analyzer must track the live protocol, not a superseded one.
+
+    The version-gated parser this replaced kept compiling after version labels
+    were dropped, but every gate evaluated false, so real findings were read
+    with an obsolete branch and came out blank. A measurement channel that
+    fails this way reports "the component produced nothing".
+    """
+    run = _run(tmp_path, "ale_claw_prep", "prep")
     root = run.run_dir / "origin_log" / "ale-claw"
-    session = root / "openclaw_sessions" / "session-1"
-    _write_json(
-        root / "task_prep_meta.json",
-        {"protocol": "task-prep-v10", "status": "empty"},
+    (root / "task_prep.md").write_text(
+        "# Task-specific prep\n\n## Findings\n\n### 1. Official ordering\n"
+        "- Observation: the published order is A > B\n",
+        encoding="utf-8",
     )
-    (root / "task_prep.md").write_text("NO_TASK_SPECIFIC_PREP", encoding="utf-8")
+    _write_json(root / "task_prep_meta.json", {"protocol_digest": "prep-abc123"})
+    session = root / "openclaw_sessions" / "session-1"
+    session.mkdir(parents=True, exist_ok=True)
     response = {
-        "decision": "use",
+        "environment": {"status": "ready", "summary": "runtime works"},
+        "attempt": {"step": "run the pipeline", "outcome": "broke"},
         "findings": [{
-            "claim": "Observed runtime fact",
-            "local_source": "runtime:probe",
-            "evidence": "probe returned a discrete value",
-            "solver_impact": "The solver must check this branch.",
-            "confidence": "high",
+            "title": "Official ordering",
+            "observation": "the published order is A > B",
+            "writer_action": "encode this order",
+            "sources": ["https://example.org/spec#order"],
+            "do_not_infer": "does not authorize other orderings",
         }],
     }
-    session.mkdir(parents=True, exist_ok=True)
     (session / "task-prep-runs.jsonl").write_text(
         json.dumps({"status": "complete", "result_text": json.dumps(response)}) + "\n",
         encoding="utf-8",
     )
-
-    findings = analysis.prep_finding_rows({(run.arm, run.task): run})
-
-    assert findings[0]["retained"] is False
-    assert findings[0]["filter_reason"] == "report_rejected"
-    assert findings[0]["prescriptive_impact_words"] == "must"
-
-
-def test_prep_v11_analysis_tracks_entries_and_mutable_report(tmp_path) -> None:
-    run = _run(tmp_path, "ale_claw_prep", "prep-v11")
-    root = run.run_dir / "origin_log" / "ale-claw"
-    session = root / "openclaw_sessions" / "session-1"
-    report = (
-        "# Task-specific working prior\n\n"
-        "## Priority knowledge\n\n"
-        "### 1. Official mapping [external_prior]\n"
-        "- Evidence:\n"
-        "  - Source: `https://example.org/spec#mapping` - Section 4 maps it.\n"
-        "## Writer updates\n\n- None yet.\n"
-    )
-    (root / "task_prep.md").write_text(report, encoding="utf-8")
-    _write_json(
-        root / "task_prep_meta.json",
-        {
-            "protocol": "task-prep-v11",
-            "status": "completed",
-            "report_modified": True,
-            "initial_report_sha256": "a" * 64,
-            "final_report_sha256": "b" * 64,
-            "final_report_chars": 321,
-        },
-    )
-    response = {
-        "decision": "use",
-        "entries": [{
-            "title": "Official mapping",
-            "kind": "external_prior",
-            "input_gap": "The input names but does not define the mapping.",
-            "claim": "The official standard defines the mapping.",
-            "sources": [{
-                "source": "https://example.org/spec#mapping",
-                "evidence": "Section 4 maps it.",
-            }],
-            "solver_use": "Apply it where the task invokes the standard.",
-            "risk_if_ignored": "The category can be wrong.",
-            "verification": "Re-open section 4.",
-            "confidence": "high",
-        }],
-        "open_questions": [],
-    }
-    session.mkdir(parents=True, exist_ok=True)
-    (session / "task-prep-runs.jsonl").write_text(
-        json.dumps({"status": "complete", "result_text": json.dumps(response)}) + "\n",
-        encoding="utf-8",
-    )
-
-    entries = analysis.prep_finding_rows({(run.arm, run.task): run})
-    writer = analysis.prep_writer_rows({(run.arm, run.task): run})
-    metrics = analysis._prep_metrics(run)
-
-    assert entries[0]["retained"] is True
-    assert entries[0]["kind"] == "external_prior"
-    assert entries[0]["local_source"] == "https://example.org/spec#mapping"
-    assert writer[0]["raw_entries"] == 1
-    assert writer[0]["report_modified"] is True
-    assert metrics["prep_final_report_chars"] == 321
-    assert metrics["prep_report_modified"] is True
+    rows = analysis.prep_finding_rows({(run.task, run.arm): run})
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["title"] == "Official ordering"
+    assert row["claim"] == "the published order is A > B"
+    assert row["writer_action"] == "encode this order"
+    assert row["local_source"] == "https://example.org/spec#order"
+    # a finding whose title appears in the staged report counts as retained
+    assert row["retained"] is True
+    assert row["filter_reason"] == ""

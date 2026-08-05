@@ -1,0 +1,581 @@
+{
+  "version": 1,
+  "reason": "The suite covers the prose-level deliverable obligations not already frozen by the parser: exactly one JSON deliverable, all required question keys and fields, enumerated conclusions, citation/evidence consistency against the staged corpus, and the two conclusions whose Yes/No mappings are directly established by the public questions and rules. The q2 conclusion label and qualitative English-writing requirements are registered as unverifiable rather than imposing an unstated label mapping or language/length heuristic.",
+  "tests": [
+    {
+      "check": "contract.research_answers_json.exists",
+      "sources": [
+        {
+          "path": "input/output_contract.json",
+          "locator": "file",
+          "quote": "",
+          "sha256": "1c67db889dd2a433993bfba00894ad063729c9762f1d1e50aaa36cbe0de9f873",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        }
+      ],
+      "requirement": "research_answers.json must exist.",
+      "interpretation": "Read verbatim from the task's own machine-readable spec; no interpretation was applied.",
+      "command": [
+        "python3",
+        "contract.research_answers_json.exists.py"
+      ],
+      "expected": "{}",
+      "execution_mode": "public_recompute",
+      "execution_reason": "The obligation is stated in a machine-readable spec shipped with the task, so it is checked by reading the deliverable.",
+      "script_path": "checks/contract.research_answers_json.exists.py",
+      "script": "import csv, json, os, sys\nfrom pathlib import Path\n\nSPEC = {\"kind\": \"file_exists\", \"target\": \"research_answers.json\"}\n\n\ndef report(status, observed, evidence=\"\"):\n    print(json.dumps({\"status\": status, \"observed\": observed, \"evidence\": evidence}))\n    sys.exit(0)\n\n\ndef read_text(target):\n    # A deliverable the checker cannot decode is a measured failure of the\n    # deliverable, not a checker error.\n    try:\n        return target.read_text(encoding=\"utf-8\")\n    except UnicodeDecodeError as exc:\n        report(\"fail\", \"target is not valid UTF-8 text\", str(exc)[:200])\n\n\ndef main():\n    root = Path(os.environ.get(\"VERIFIER_OUTPUT\", \".\"))\n    target = root / SPEC[\"target\"] if SPEC[\"target\"] else root\n    kind = SPEC[\"kind\"]\n\n    if kind == \"file_exists\":\n        ok = target.exists()\n        report(\"pass\" if ok else \"fail\",\n               \"present\" if ok else \"missing\", SPEC[\"target\"])\n\n    if not target.is_file():\n        report(\"fail\", \"target file missing\", SPEC[\"target\"])\n\n    if kind == \"columns\":\n        delim = \"\\t\" if SPEC[\"target\"].lower().endswith(\".tsv\") else \",\"\n        header = next(csv.reader(read_text(target).splitlines(), delimiter=delim), [])\n        missing = [c for c in SPEC[\"columns\"] if c not in header]\n        report(\"pass\" if not missing else \"fail\",\n               \"header={}\".format(header),\n               \"missing={}\".format(missing) if missing else \"\")\n\n    if kind == \"row_count\":\n        lines = len(read_text(target).splitlines())\n        want = SPEC[\"count\"]\n        # The spec does not say whether its count includes the header, so both\n        # readings pass rather than manufacture a failure the task never stated.\n        report(\"pass\" if lines in (want, want + 1) else \"fail\",\n               \"lines={}\".format(lines), \"expected={}\".format(want))\n\n    if kind == \"json_keys\":\n        try:\n            data = json.loads(read_text(target))\n        except ValueError as exc:\n            report(\"fail\", \"target is not valid JSON\", str(exc)[:200])\n        present = set(data) if isinstance(data, dict) else set()\n        missing = [k for k in SPEC[\"keys\"] if k not in present]\n        report(\"pass\" if not missing else \"fail\",\n               \"keys={}\".format(sorted(present)[:20]),\n               \"missing={}\".format(missing) if missing else \"\")\n\n    if kind == \"enum\":\n        field = SPEC[\"field\"]\n        allowed = set(SPEC[\"allowed\"])\n        delim = \"\\t\" if SPEC[\"target\"].lower().endswith(\".tsv\") else \",\"\n        rows = list(csv.DictReader(read_text(target).splitlines(), delimiter=delim))\n        if not rows or field not in rows[0]:\n            report(\"unverifiable\", \"column {!r} not present\".format(field),\n                   \"allowed={}\".format(sorted(allowed)))\n        seen = sorted({str(r.get(field, \"\")).strip() for r in rows})\n        bad = [v for v in seen if v not in allowed]\n        report(\"pass\" if not bad else \"fail\",\n               \"distinct={}\".format(seen[:10]),\n               \"not_allowed={}\".format(bad[:10]) if bad else\n               \"allowed={}\".format(sorted(allowed)))\n\n    report(\"unverifiable\", \"unknown check kind {!r}\".format(kind))\n\n\nmain()\n",
+      "script_sha256": "700a1c7ba0065d1b0398fb0ae978536495dc7dfa32b42ba02ac9d97adef7f6bb",
+      "fixtures": {
+        "valid": [
+          {
+            "path": "research_answers.json",
+            "encoding": "utf8",
+            "content": "x\n"
+          }
+        ],
+        "invalid": [
+          {
+            "path": "__absent__.txt",
+            "encoding": "utf8",
+            "content": "x\n"
+          }
+        ]
+      },
+      "blocking": false,
+      "requested_blocking": false,
+      "validation": {
+        "sources_located": true,
+        "checker_reproducible": true,
+        "environment_healthy": true,
+        "environment": {
+          "healthy": true,
+          "evidence": "isolated Python probe passed"
+        },
+        "fixture_evidence": "environment: isolated Python probe passed; valid fixture: command: python3 contract.research_answers_json.exists.py; consecutive_runs: 2 identical; stderr: <empty>; research_answers.json; invalid fixture: command: python3 contract.research_answers_json.exists.py; consecutive_runs: 2 identical; stderr: <empty>; research_answers.json"
+      }
+    },
+    {
+      "check": "contract.output.exactly_one_json_file",
+      "sources": [
+        {
+          "path": "input/task_brief.md",
+          "locator": "lines:16-18",
+          "quote": "## Deliverable\n\nWrite exactly one JSON file to `output/research_answers.json`.",
+          "sha256": "c0d60c4a2d12c905edd06cfb03fee1ca8b1a9e3c4f1a44f56564db59b0ece91f",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        }
+      ],
+      "requirement": "Write exactly one JSON file to `output/research_answers.json`.",
+      "interpretation": "Among files under VERIFIER_OUTPUT whose names end in `.json`, the sole file must be `research_answers.json` at the output root.",
+      "command": [
+        "python3",
+        "contract.output.exactly_one_json_file.py"
+      ],
+      "expected": "The checker passes only when the sorted relative-path list of JSON files is exactly `[\"research_answers.json\"]`.",
+      "execution_mode": "public_recompute",
+      "execution_reason": "No task-native validator is staged; deterministic filesystem enumeration directly measures the stated file-count and path obligation.",
+      "script_path": "checks/contract.output.exactly_one_json_file.py",
+      "script": "import json, os\nfrom pathlib import Path\nroot = Path(os.environ['VERIFIER_OUTPUT'])\nfiles = sorted(p.relative_to(root).as_posix() for p in root.rglob('*') if p.is_file() and p.suffix.lower() == '.json')\nok = files == ['research_answers.json']\nprint(json.dumps({'status': 'pass' if ok else 'fail', 'observed': {'json_files': files}, 'evidence': {'expected_json_files': ['research_answers.json']}}, ensure_ascii=False))",
+      "script_sha256": "a1e302a7cd79532342c3c5d92b416020f80bceaf0a813193519b092e0f7f3ec6",
+      "fixtures": {
+        "valid": [
+          {
+            "path": "research_answers.json",
+            "encoding": "utf8",
+            "content": "{}"
+          }
+        ],
+        "invalid": [
+          {
+            "path": "extra.json",
+            "encoding": "utf8",
+            "content": "{}"
+          },
+          {
+            "path": "research_answers.json",
+            "encoding": "utf8",
+            "content": "{}"
+          }
+        ]
+      },
+      "blocking": false,
+      "requested_blocking": true,
+      "validation": {
+        "sources_located": true,
+        "checker_reproducible": true,
+        "environment_healthy": true,
+        "environment": {
+          "healthy": true,
+          "evidence": "isolated Python probe passed"
+        },
+        "fixture_evidence": "environment: isolated Python probe passed; valid fixture: command: python3 contract.output.exactly_one_json_file.py; consecutive_runs: 2 identical; stderr: <empty>; {\"expected_json_files\":[\"research_answers.json\"]}; invalid fixture: command: python3 contract.output.exactly_one_json_file.py; consecutive_runs: 2 identical; stderr: <empty>; {\"expected_json_files\":[\"research_answers.json\"]}"
+      }
+    },
+    {
+      "check": "contract.research_answers_json.required_top_level_keys",
+      "sources": [
+        {
+          "path": "input/output_contract.json",
+          "locator": "/required_top_level_keys",
+          "quote": "[\"q1_multi_broker_reporting\", \"q2_hft_cost_calculation\", \"q3_software_naming\"]",
+          "sha256": "1c67db889dd2a433993bfba00894ad063729c9762f1d1e50aaa36cbe0de9f873",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        }
+      ],
+      "requirement": "`research_answers.json` must contain the required top-level keys `q1_multi_broker_reporting`, `q2_hft_cost_calculation`, and `q3_software_naming`.",
+      "interpretation": "Parse the deliverable as a JSON object and exhaustively verify presence of all three required keys, without rejecting unstated additional keys.",
+      "command": [
+        "python3",
+        "contract.research_answers_json.required_top_level_keys.py"
+      ],
+      "expected": "The checker passes when the root is an object and none of the three required top-level keys is missing.",
+      "execution_mode": "public_recompute",
+      "execution_reason": "Deterministic JSON parsing and key comparison directly measure the public contract.",
+      "script_path": "checks/contract.research_answers_json.required_top_level_keys.py",
+      "script": "import json, os\nfrom pathlib import Path\np = Path(os.environ['VERIFIER_OUTPUT']) / 'research_answers.json'\nrequired = ['q1_multi_broker_reporting', 'q2_hft_cost_calculation', 'q3_software_naming']\ntry:\n    data = json.loads(p.read_text(encoding='utf-8'))\n    is_object = isinstance(data, dict)\n    missing = [k for k in required if not is_object or k not in data]\n    ok = is_object and not missing\n    observed = {'root_is_object': is_object, 'missing_keys': missing}\nexcept Exception as e:\n    ok = False\n    observed = {'parse_error': type(e).__name__}\nprint(json.dumps({'status': 'pass' if ok else 'fail', 'observed': observed, 'evidence': {'required_top_level_keys': required}}, ensure_ascii=False))",
+      "script_sha256": "5eb6ca0c4e4ba7ace70205a5944b2fd9fdb9dbd155e8990faca453f1cb095c5a",
+      "fixtures": {
+        "valid": [
+          {
+            "path": "research_answers.json",
+            "encoding": "utf8",
+            "content": "{\"q1_multi_broker_reporting\":{},\"q2_hft_cost_calculation\":{},\"q3_software_naming\":{}}"
+          }
+        ],
+        "invalid": [
+          {
+            "path": "research_answers.json",
+            "encoding": "utf8",
+            "content": "{\"q1_multi_broker_reporting\":{},\"q2_hft_cost_calculation\":{}}"
+          }
+        ]
+      },
+      "blocking": false,
+      "requested_blocking": true,
+      "validation": {
+        "sources_located": true,
+        "checker_reproducible": true,
+        "environment_healthy": true,
+        "environment": {
+          "healthy": true,
+          "evidence": "isolated Python probe passed"
+        },
+        "fixture_evidence": "environment: isolated Python probe passed; valid fixture: command: python3 contract.research_answers_json.required_top_level_keys.py; consecutive_runs: 2 identical; stderr: <empty>; {\"required_top_level_keys\":[\"q1_multi_broker_reporting\",\"q2_hft_cost_calculation\",\"q3_software_naming\"]}; invalid fixture: command: python3 contract.research_answers_json.required_top_level_keys.py; consecutive_runs: 2 identical; stderr: <empty>; {\"required_top_level_keys\":[\"q1_multi_broker_reporting\",\"q2_hft_cost_calculation\",\"q3_software_naming\"]}"
+      }
+    },
+    {
+      "check": "contract.research_answers_json.required_fields_per_question",
+      "sources": [
+        {
+          "path": "input/output_contract.json",
+          "locator": "/required_top_level_keys",
+          "quote": "[\"q1_multi_broker_reporting\", \"q2_hft_cost_calculation\", \"q3_software_naming\"]",
+          "sha256": "1c67db889dd2a433993bfba00894ad063729c9762f1d1e50aaa36cbe0de9f873",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/output_contract.json",
+          "locator": "/required_fields_per_question",
+          "quote": "[\"conclusion\", \"citation_document\", \"evidence_snippet\", \"answer_text\"]",
+          "sha256": "1c67db889dd2a433993bfba00894ad063729c9762f1d1e50aaa36cbe0de9f873",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        }
+      ],
+      "requirement": "Each required question must contain `conclusion`, `citation_document`, `evidence_snippet`, and `answer_text`.",
+      "interpretation": "Each of the three required question values must be a JSON object containing every required field. Additional fields are not rejected because the public contract does not prohibit them.",
+      "command": [
+        "python3",
+        "contract.research_answers_json.required_fields_per_question.py"
+      ],
+      "expected": "The checker passes only if all three question objects exist, are objects, and have no missing required field.",
+      "execution_mode": "public_recompute",
+      "execution_reason": "Deterministic object-shape and key-presence checks directly measure the contract.",
+      "script_path": "checks/contract.research_answers_json.required_fields_per_question.py",
+      "script": "import json, os\nfrom pathlib import Path\np = Path(os.environ['VERIFIER_OUTPUT']) / 'research_answers.json'\nquestions = ['q1_multi_broker_reporting', 'q2_hft_cost_calculation', 'q3_software_naming']\nfields = ['conclusion', 'citation_document', 'evidence_snippet', 'answer_text']\ntry:\n    data = json.loads(p.read_text(encoding='utf-8'))\n    details = {}\n    ok = isinstance(data, dict)\n    for q in questions:\n        value = data.get(q) if isinstance(data, dict) else None\n        missing = [f for f in fields if not isinstance(value, dict) or f not in value]\n        details[q] = {'is_object': isinstance(value, dict), 'missing_fields': missing}\n        ok = ok and isinstance(value, dict) and not missing\n    observed = details\nexcept Exception as e:\n    ok = False\n    observed = {'parse_error': type(e).__name__}\nprint(json.dumps({'status': 'pass' if ok else 'fail', 'observed': observed, 'evidence': {'required_fields_per_question': fields}}, ensure_ascii=False))",
+      "script_sha256": "3429fec3d500e81acdf6f9b6b4514364b1059a889407871c49abf8d400bc07dd",
+      "fixtures": {
+        "valid": [
+          {
+            "path": "research_answers.json",
+            "encoding": "utf8",
+            "content": "{\"q1_multi_broker_reporting\":{\"conclusion\":\"Yes\",\"citation_document\":\"\",\"evidence_snippet\":\"\",\"answer_text\":\"\"},\"q2_hft_cost_calculation\":{\"conclusion\":\"No\",\"citation_document\":\"\",\"evidence_snippet\":\"\",\"answer_text\":\"\"},\"q3_software_naming\":{\"conclusion\":\"Unknown\",\"citation_document\":\"\",\"evidence_snippet\":\"\",\"answer_text\":\"\"}}"
+          }
+        ],
+        "invalid": [
+          {
+            "path": "research_answers.json",
+            "encoding": "utf8",
+            "content": "{\"q1_multi_broker_reporting\":{\"conclusion\":\"Yes\",\"citation_document\":\"\",\"evidence_snippet\":\"\",\"answer_text\":\"\"},\"q2_hft_cost_calculation\":{\"conclusion\":\"No\",\"citation_document\":\"\",\"evidence_snippet\":\"\"},\"q3_software_naming\":{\"conclusion\":\"Unknown\",\"citation_document\":\"\",\"evidence_snippet\":\"\",\"answer_text\":\"\"}}"
+          }
+        ]
+      },
+      "blocking": false,
+      "requested_blocking": true,
+      "validation": {
+        "sources_located": true,
+        "checker_reproducible": true,
+        "environment_healthy": true,
+        "environment": {
+          "healthy": true,
+          "evidence": "isolated Python probe passed"
+        },
+        "fixture_evidence": "environment: isolated Python probe passed; valid fixture: command: python3 contract.research_answers_json.required_fields_per_question.py; consecutive_runs: 2 identical; stderr: <empty>; {\"required_fields_per_question\":[\"conclusion\",\"citation_document\",\"evidence_snippet\",\"answer_text\"]}; invalid fixture: command: python3 contract.research_answers_json.required_fields_per_question.py; consecutive_runs: 2 identical; stderr: <empty>; {\"required_fields_per_question\":[\"conclusion\",\"citation_document\",\"evidence_snippet\",\"answer_text\"]}"
+      }
+    },
+    {
+      "check": "contract.research_answers_json.allowed_conclusions",
+      "sources": [
+        {
+          "path": "input/output_contract.json",
+          "locator": "/required_top_level_keys",
+          "quote": "[\"q1_multi_broker_reporting\", \"q2_hft_cost_calculation\", \"q3_software_naming\"]",
+          "sha256": "1c67db889dd2a433993bfba00894ad063729c9762f1d1e50aaa36cbe0de9f873",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/output_contract.json",
+          "locator": "/allowed_conclusions",
+          "quote": "[\"Yes\", \"No\", \"Unknown\"]",
+          "sha256": "1c67db889dd2a433993bfba00894ad063729c9762f1d1e50aaa36cbe0de9f873",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        }
+      ],
+      "requirement": "For every required question, `conclusion` must be exactly `Yes`, `No`, or `Unknown`.",
+      "interpretation": "Perform a case-sensitive exact membership check for the `conclusion` value in each of the three question objects.",
+      "command": [
+        "python3",
+        "contract.research_answers_json.allowed_conclusions.py"
+      ],
+      "expected": "The checker passes only when every required question's observed conclusion is one of the three allowed strings.",
+      "execution_mode": "public_recompute",
+      "execution_reason": "Exact string membership is a deterministic recomputation of the enumerated contract.",
+      "script_path": "checks/contract.research_answers_json.allowed_conclusions.py",
+      "script": "import json, os\nfrom pathlib import Path\np = Path(os.environ['VERIFIER_OUTPUT']) / 'research_answers.json'\nquestions = ['q1_multi_broker_reporting', 'q2_hft_cost_calculation', 'q3_software_naming']\nallowed = ['Yes', 'No', 'Unknown']\ntry:\n    data = json.loads(p.read_text(encoding='utf-8'))\n    values = {q: data.get(q, {}).get('conclusion') if isinstance(data.get(q), dict) else None for q in questions} if isinstance(data, dict) else {q: None for q in questions}\n    invalid = {q: v for q, v in values.items() if v not in allowed}\n    ok = not invalid\n    observed = {'conclusions': values, 'invalid': invalid}\nexcept Exception as e:\n    ok = False\n    observed = {'parse_error': type(e).__name__}\nprint(json.dumps({'status': 'pass' if ok else 'fail', 'observed': observed, 'evidence': {'allowed_conclusions': allowed}}, ensure_ascii=False))",
+      "script_sha256": "2081d650b2348d65d128052bbe7ec15d12bf6051f61c45c527f289d0f21e7ef3",
+      "fixtures": {
+        "valid": [
+          {
+            "path": "research_answers.json",
+            "encoding": "utf8",
+            "content": "{\"q1_multi_broker_reporting\":{\"conclusion\":\"Yes\"},\"q2_hft_cost_calculation\":{\"conclusion\":\"No\"},\"q3_software_naming\":{\"conclusion\":\"Unknown\"}}"
+          }
+        ],
+        "invalid": [
+          {
+            "path": "research_answers.json",
+            "encoding": "utf8",
+            "content": "{\"q1_multi_broker_reporting\":{\"conclusion\":\"Yes\"},\"q2_hft_cost_calculation\":{\"conclusion\":\"Maybe\"},\"q3_software_naming\":{\"conclusion\":\"Unknown\"}}"
+          }
+        ]
+      },
+      "blocking": false,
+      "requested_blocking": true,
+      "validation": {
+        "sources_located": true,
+        "checker_reproducible": true,
+        "environment_healthy": true,
+        "environment": {
+          "healthy": true,
+          "evidence": "isolated Python probe passed"
+        },
+        "fixture_evidence": "environment: isolated Python probe passed; valid fixture: command: python3 contract.research_answers_json.allowed_conclusions.py; consecutive_runs: 2 identical; stderr: <empty>; {\"allowed_conclusions\":[\"Yes\",\"No\",\"Unknown\"]}; invalid fixture: command: python3 contract.research_answers_json.allowed_conclusions.py; consecutive_runs: 2 identical; stderr: <empty>; {\"allowed_conclusions\":[\"Yes\",\"No\",\"Unknown\"]}"
+      }
+    },
+    {
+      "check": "contract.citation_document_and_evidence_snippet.staged_source_consistency",
+      "sources": [
+        {
+          "path": "input/task_brief.md",
+          "locator": "lines:20-25",
+          "quote": "For each question, provide:\n\n- `conclusion`: exactly `Yes`, `No`, or `Unknown`\n- `citation_document`: exact Simplified Chinese document name\n- `evidence_snippet`: exact Simplified Chinese excerpt copied from the staged materials\n- `answer_text`: short English explanation",
+          "sha256": "c0d60c4a2d12c905edd06cfb03fee1ca8b1a9e3c4f1a44f56564db59b0ece91f",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/document_manifest.json",
+          "locator": "/0",
+          "quote": "{\"doc_id\":\"doc_01\",\"original_filename\":\"1-1\uff1a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u4fe1\u606f\u62a5\u544a\u8868.xlsx\",\"staged_source_path\":\"source_documents/1-1\uff1a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u4fe1\u606f\u62a5\u544a\u8868.xlsx\",\"staged_extract_path\":\"extracted_text/1-1_\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u4fe1\u606f\u62a5\u544a\u8868.txt\",\"sha256\":\"68a7ff72bc9c04c59ea4b064977820f2890f304cea6e0bfb327d84a44c19829d\",\"citation_aliases\":[\"\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u4fe1\u606f\u62a5\u544a\u8868\",\"1-1\uff1a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u4fe1\u606f\u62a5\u544a\u8868\"]}",
+          "sha256": "6adc29244619a761e13670595e130100b7a9bae8d3e9328e97027c9fa89e3e81",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/document_manifest.json",
+          "locator": "/1",
+          "quote": "{\"doc_id\":\"doc_02\",\"original_filename\":\"1-2\uff1a\u300a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u4fe1\u606f\u62a5\u544a\u8868\u300b\u586b\u62a5\u8bf4\u660e.docx\",\"staged_source_path\":\"source_documents/1-2\uff1a\u300a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u4fe1\u606f\u62a5\u544a\u8868\u300b\u586b\u62a5\u8bf4\u660e.docx\",\"staged_extract_path\":\"extracted_text/1-2_\u586b\u62a5\u8bf4\u660e.txt\",\"sha256\":\"fd739a4d4dc430b8cec633bde35901d766c053c5279452295df899d2263a7a66\",\"citation_aliases\":[\"\u300a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u4fe1\u606f\u62a5\u544a\u8868\u300b\u586b\u62a5\u8bf4\u660e\",\"1-2\uff1a\u300a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u4fe1\u606f\u62a5\u544a\u8868\u300b\u586b\u62a5\u8bf4\u660e\"]}",
+          "sha256": "6adc29244619a761e13670595e130100b7a9bae8d3e9328e97027c9fa89e3e81",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/document_manifest.json",
+          "locator": "/2",
+          "quote": "{\"doc_id\":\"doc_03\",\"original_filename\":\"1-3\uff1a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u62a5\u544a\u4fe1\u606f\u586b\u62a5\u6ce8\u610f\u4e8b\u9879.docx\",\"staged_source_path\":\"source_documents/1-3\uff1a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u62a5\u544a\u4fe1\u606f\u586b\u62a5\u6ce8\u610f\u4e8b\u9879.docx\",\"staged_extract_path\":\"extracted_text/1-3_\u586b\u62a5\u6ce8\u610f\u4e8b\u9879.txt\",\"sha256\":\"47a32cdfaac250d3d829192b8e570839b2b0b0dba1c13c845f5d12bff6f28cb1\",\"citation_aliases\":[\"\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u62a5\u544a\u4fe1\u606f\u586b\u62a5\u6ce8\u610f\u4e8b\u9879\",\"1-3\uff1a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u62a5\u544a\u4fe1\u606f\u586b\u62a5\u6ce8\u610f\u4e8b\u9879\"]}",
+          "sha256": "6adc29244619a761e13670595e130100b7a9bae8d3e9328e97027c9fa89e3e81",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/document_manifest.json",
+          "locator": "/3",
+          "quote": "{\"doc_id\":\"doc_04\",\"original_filename\":\"\u300a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u4ea4\u6613\u89c4\u5219\uff082023\u5e74\u4fee\u8ba2\uff09\u300b\u6682\u7f13\u5b9e\u65bd\u6761\u6587.docx\",\"staged_source_path\":\"source_documents/\u300a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u4ea4\u6613\u89c4\u5219\uff082023\u5e74\u4fee\u8ba2\uff09\u300b\u6682\u7f13\u5b9e\u65bd\u6761\u6587.docx\",\"staged_extract_path\":\"extracted_text/\u4ea4\u6613\u89c4\u52192023_\u6682\u7f13\u5b9e\u65bd\u6761\u6587.txt\",\"sha256\":\"13cd6f14fdc5b8ecb5fad1876c6ecb05bf6c163d5217a2f2d687029ffa5bf4e2\",\"citation_aliases\":[\"\u300a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u4ea4\u6613\u89c4\u5219\uff082023\u5e74\u4fee\u8ba2\uff09\u300b\u6682\u7f13\u5b9e\u65bd\u6761\u6587\"]}",
+          "sha256": "6adc29244619a761e13670595e130100b7a9bae8d3e9328e97027c9fa89e3e81",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/document_manifest.json",
+          "locator": "/4",
+          "quote": "{\"doc_id\":\"doc_05\",\"original_filename\":\"\u300a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u4ea4\u6613\u89c4\u5219\uff082023\u5e74\u4fee\u8ba2\uff09\u300b\u8d77\u8349\u8bf4\u660e.docx\",\"staged_source_path\":\"source_documents/\u300a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u4ea4\u6613\u89c4\u5219\uff082023\u5e74\u4fee\u8ba2\uff09\u300b\u8d77\u8349\u8bf4\u660e.docx\",\"staged_extract_path\":\"extracted_text/\u4ea4\u6613\u89c4\u52192023_\u8d77\u8349\u8bf4\u660e.txt\",\"sha256\":\"b0f4242c7daa7a7a282ec9f09db5d672f1922c64fd98175bc06b78dab238f42a\",\"citation_aliases\":[\"\u300a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u4ea4\u6613\u89c4\u5219\uff082023\u5e74\u4fee\u8ba2\uff09\u300b\u8d77\u8349\u8bf4\u660e\"]}",
+          "sha256": "6adc29244619a761e13670595e130100b7a9bae8d3e9328e97027c9fa89e3e81",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/document_manifest.json",
+          "locator": "/5",
+          "quote": "{\"doc_id\":\"doc_06\",\"original_filename\":\"\u300a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u8bc1\u5238\u4ea4\u6613\u89c4\u5219\u9002\u7528\u6307\u5f15\u7b2c2\u53f7\u2014\u2014\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u62a5\u544a\u300b\u8d77\u8349\u8bf4\u660e.docx\",\"staged_source_path\":\"source_documents/\u300a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u8bc1\u5238\u4ea4\u6613\u89c4\u5219\u9002\u7528\u6307\u5f15\u7b2c2\u53f7\u2014\u2014\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u62a5\u544a\u300b\u8d77\u8349\u8bf4\u660e.docx\",\"staged_extract_path\":\"extracted_text/\u62a5\u544a\u6307\u5f15\u7b2c2\u53f7_\u8d77\u8349\u8bf4\u660e.txt\",\"sha256\":\"e4395472f0761681a748a9eb5e3587783498254c736213447bacbf82fee9360d\",\"citation_aliases\":[\"\u300a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u8bc1\u5238\u4ea4\u6613\u89c4\u5219\u9002\u7528\u6307\u5f15\u7b2c2\u53f7\u2014\u2014\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u62a5\u544a\u300b\u8d77\u8349\u8bf4\u660e\"]}",
+          "sha256": "6adc29244619a761e13670595e130100b7a9bae8d3e9328e97027c9fa89e3e81",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/document_manifest.json",
+          "locator": "/6",
+          "quote": "{\"doc_id\":\"doc_07\",\"original_filename\":\"\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u4ea4\u6613\u89c4\u5219\uff082023\u5e74\u4fee\u8ba2\uff09.docx\",\"staged_source_path\":\"source_documents/\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u4ea4\u6613\u89c4\u5219\uff082023\u5e74\u4fee\u8ba2\uff09.docx\",\"staged_extract_path\":\"extracted_text/\u4ea4\u6613\u89c4\u52192023.txt\",\"sha256\":\"7aa2319f6dcf597be1e86b3b69d7c2ad0e6acb2a5d0cc6be48a01af602fded40\",\"citation_aliases\":[\"\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u4ea4\u6613\u89c4\u5219\uff082023\u5e74\u4fee\u8ba2\uff09\"]}",
+          "sha256": "6adc29244619a761e13670595e130100b7a9bae8d3e9328e97027c9fa89e3e81",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/document_manifest.json",
+          "locator": "/7",
+          "quote": "{\"doc_id\":\"doc_08\",\"original_filename\":\"\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u7a0b\u5e8f\u5316\u4ea4\u6613\u7ba1\u7406\u5b9e\u65bd\u7ec6\u5219.docx\",\"staged_source_path\":\"source_documents/\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u7a0b\u5e8f\u5316\u4ea4\u6613\u7ba1\u7406\u5b9e\u65bd\u7ec6\u5219.docx\",\"staged_extract_path\":\"extracted_text/\u7a0b\u5e8f\u5316\u4ea4\u6613\u7ba1\u7406\u5b9e\u65bd\u7ec6\u5219.txt\",\"sha256\":\"d87ac99cd6ded935e19e19a4fc73bca4a3531d3efa506e8ab537377214f908f9\",\"citation_aliases\":[\"\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u7a0b\u5e8f\u5316\u4ea4\u6613\u7ba1\u7406\u5b9e\u65bd\u7ec6\u5219\"]}",
+          "sha256": "6adc29244619a761e13670595e130100b7a9bae8d3e9328e97027c9fa89e3e81",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/document_manifest.json",
+          "locator": "/8",
+          "quote": "{\"doc_id\":\"doc_09\",\"original_filename\":\"\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u8bc1\u5238\u4ea4\u6613\u89c4\u5219\u9002\u7528\u6307\u5f15\u7b2c2\u53f7\u2014\u2014\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u62a5\u544a.docx\",\"staged_source_path\":\"source_documents/\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u8bc1\u5238\u4ea4\u6613\u89c4\u5219\u9002\u7528\u6307\u5f15\u7b2c2\u53f7\u2014\u2014\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u62a5\u544a.docx\",\"staged_extract_path\":\"extracted_text/\u62a5\u544a\u6307\u5f15\u7b2c2\u53f7.txt\",\"sha256\":\"2972f8b439245c09d3d5e010097b6cc5cec5fb3c21565790626fd664afe34e47\",\"citation_aliases\":[\"\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u8bc1\u5238\u4ea4\u6613\u89c4\u5219\u9002\u7528\u6307\u5f15\u7b2c2\u53f7\u2014\u2014\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u62a5\u544a\"]}",
+          "sha256": "6adc29244619a761e13670595e130100b7a9bae8d3e9328e97027c9fa89e3e81",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/document_manifest.json",
+          "locator": "/9",
+          "quote": "{\"doc_id\":\"doc_10\",\"original_filename\":\"\u540c\u6b65\u5e9f\u6b62\u7684\u4e1a\u52a1\u89c4\u5219\u6e05\u5355.docx\",\"staged_source_path\":\"source_documents/\u540c\u6b65\u5e9f\u6b62\u7684\u4e1a\u52a1\u89c4\u5219\u6e05\u5355.docx\",\"staged_extract_path\":\"extracted_text/\u540c\u6b65\u5e9f\u6b62\u7684\u4e1a\u52a1\u89c4\u5219\u6e05\u5355.txt\",\"sha256\":\"7f89cfdc37f7fafdf48037bbbc5f3d608b35ae39d658484755550718f1d902a6\",\"citation_aliases\":[\"\u540c\u6b65\u5e9f\u6b62\u7684\u4e1a\u52a1\u89c4\u5219\u6e05\u5355\"]}",
+          "sha256": "6adc29244619a761e13670595e130100b7a9bae8d3e9328e97027c9fa89e3e81",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        }
+      ],
+      "requirement": "For each question, `citation_document` must be an exact Simplified Chinese source document name and `evidence_snippet` must be an exact Simplified Chinese excerpt copied from the staged source relied upon.",
+      "interpretation": "For all three questions, resolve `citation_document` by exact case-sensitive equality against `citation_aliases` in the manifest, then require a non-empty snippet containing a CJK ideograph to occur verbatim in that manifest entry's UTF-8 text mirror.",
+      "command": [
+        "python3",
+        "contract.citation_document_and_evidence_snippet.staged_source_consistency.py"
+      ],
+      "expected": "The checker passes only when every citation resolves to one manifest document and every corresponding evidence snippet appears verbatim in that document's staged extract.",
+      "execution_mode": "public_recompute",
+      "execution_reason": "The public manifest supplies the authoritative citation aliases and extract pairing, allowing deterministic exhaustive validation without external knowledge.",
+      "script_path": "checks/contract.citation_document_and_evidence_snippet.staged_source_consistency.py",
+      "script": "import json, os, re\nfrom pathlib import Path\nout = Path(os.environ['VERIFIER_OUTPUT'])\ninp = Path(os.environ['VERIFIER_INPUT'])\nquestions = ['q1_multi_broker_reporting', 'q2_hft_cost_calculation', 'q3_software_naming']\ntry:\n    data = json.loads((out / 'research_answers.json').read_text(encoding='utf-8'))\n    manifest = json.loads((inp / 'document_manifest.json').read_text(encoding='utf-8'))\n    alias_map = {}\n    for entry in manifest:\n        for alias in entry.get('citation_aliases', []):\n            alias_map[alias] = entry\n    details = {}\n    ok = True\n    for q in questions:\n        item = data.get(q) if isinstance(data, dict) else None\n        citation = item.get('citation_document') if isinstance(item, dict) else None\n        snippet = item.get('evidence_snippet') if isinstance(item, dict) else None\n        entry = alias_map.get(citation) if isinstance(citation, str) else None\n        citation_ok = entry is not None\n        snippet_is_text = isinstance(snippet, str) and bool(snippet)\n        has_cjk = snippet_is_text and re.search(r'[\\u4e00-\\u9fff]', snippet) is not None\n        copied = False\n        extract = None\n        if entry is not None and snippet_is_text:\n            extract = entry['staged_extract_path']\n            text = (inp / extract).read_text(encoding='utf-8')\n            copied = snippet in text\n        qok = citation_ok and snippet_is_text and has_cjk and copied\n        ok = ok and qok\n        details[q] = {'citation_document': citation, 'resolved_doc_id': entry.get('doc_id') if entry else None, 'extract': extract, 'snippet_nonempty': snippet_is_text, 'snippet_has_cjk': bool(has_cjk), 'snippet_verbatim_in_cited_extract': copied}\n    observed = details\nexcept Exception as e:\n    ok = False\n    observed = {'error': type(e).__name__}\nprint(json.dumps({'status': 'pass' if ok else 'fail', 'observed': observed, 'evidence': {'questions_checked': questions}}, ensure_ascii=False))",
+      "script_sha256": "6a6bfb25526e697da7d4482efe34ffbc8defe781d6cefb1d9cfd24896d79f47c",
+      "fixtures": {
+        "valid": [
+          {
+            "path": "research_answers.json",
+            "encoding": "utf8",
+            "content": "{\"q1_multi_broker_reporting\":{\"citation_document\":\"\u300a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u4fe1\u606f\u62a5\u544a\u8868\u300b\u586b\u62a5\u8bf4\u660e\",\"evidence_snippet\":\"\u53ef\u4ee5\u9009\u53d6\u4e00\u5bb6\u8054\u4ea4\u6240\u53c2\u4e0e\u8005\u5e76\u6309\u673a\u6784\u7ef4\u5ea6\uff08\u540c\u4e00\u8bc1\u4ef6\u53f7\u7801\u4e0b\u5f00\u7acb\u7684\u8d26\u6237\u5408\u8ba1\uff09\u586b\u5199\u8d26\u6237\u8d44\u91d1\u4fe1\u606f\u76f8\u5173\u5b57\u6bb5\"},\"q2_hft_cost_calculation\":{\"citation_document\":\"\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u7a0b\u5e8f\u5316\u4ea4\u6613\u7ba1\u7406\u5b9e\u65bd\u7ec6\u5219\",\"evidence_snippet\":\"\u5177\u4f53\u6536\u8d39\u6807\u51c6\u7531\u672c\u6240\u53e6\u884c\u89c4\u5b9a\u3002\"},\"q3_software_naming\":{\"citation_document\":\"\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u62a5\u544a\u4fe1\u606f\u586b\u62a5\u6ce8\u610f\u4e8b\u9879\",\"evidence_snippet\":\"\u7a0b\u5e8f\u5316\u4ea4\u6613\u8f6f\u4ef6\u540d\u79f0\u7b49\uff0c\u53ef\u4ee5\u586b\u5199\u82f1\u6587\u3002\"}}"
+          }
+        ],
+        "invalid": [
+          {
+            "path": "research_answers.json",
+            "encoding": "utf8",
+            "content": "{\"q1_multi_broker_reporting\":{\"citation_document\":\"\u300a\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u4fe1\u606f\u62a5\u544a\u8868\u300b\u586b\u62a5\u8bf4\u660e\",\"evidence_snippet\":\"\u53ef\u4ee5\u9009\u53d6\u4e00\u5bb6\u8054\u4ea4\u6240\u53c2\u4e0e\u8005\u5e76\u6309\u673a\u6784\u7ef4\u5ea6\uff08\u540c\u4e00\u8bc1\u4ef6\u53f7\u7801\u4e0b\u5f00\u7acb\u7684\u8d26\u6237\u5408\u8ba1\uff09\u586b\u5199\u8d26\u6237\u8d44\u91d1\u4fe1\u606f\u76f8\u5173\u5b57\u6bb5\"},\"q2_hft_cost_calculation\":{\"citation_document\":\"\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u7a0b\u5e8f\u5316\u4ea4\u6613\u7ba1\u7406\u5b9e\u65bd\u7ec6\u5219\",\"evidence_snippet\":\"\u5177\u4f53\u6536\u8d39\u6807\u51c6\u7531\u672c\u6240\u53e6\u884c\u89c4\u5b9a\u3002\"},\"q3_software_naming\":{\"citation_document\":\"\u4e0a\u6d77\u8bc1\u5238\u4ea4\u6613\u6240\u6caa\u80a1\u901a\u6295\u8d44\u8005\u7a0b\u5e8f\u5316\u4ea4\u6613\u62a5\u544a\u4fe1\u606f\u586b\u62a5\u6ce8\u610f\u4e8b\u9879\",\"evidence_snippet\":\"\u7a0b\u5e8f\u5316\u4ea4\u6613\u8f6f\u4ef6\u540d\u79f0\u7b49\uff0c\u53ef\u4ee5\u586b\u5199\u82f1\u6587\u3002X\"}}"
+          }
+        ]
+      },
+      "blocking": false,
+      "requested_blocking": true,
+      "validation": {
+        "sources_located": true,
+        "checker_reproducible": true,
+        "environment_healthy": true,
+        "environment": {
+          "healthy": true,
+          "evidence": "isolated Python probe passed"
+        },
+        "fixture_evidence": "environment: isolated Python probe passed; valid fixture: command: python3 contract.citation_document_and_evidence_snippet.staged_source_consistency.py; consecutive_runs: 2 identical; stderr: <empty>; {\"questions_checked\":[\"q1_multi_broker_reporting\",\"q2_hft_cost_calculation\",\"q3_software_naming\"]}; invalid fixture: command: python3 contract.citation_document_and_evidence_snippet.staged_source_consistency.py; consecutive_runs: 2 identical; stderr: <empty>; {\"questions_checked\":[\"q1_multi_broker_reporting\",\"q2_hft_cost_calculation\",\"q3_software_naming\"]}"
+      }
+    },
+    {
+      "check": "contract.q1_multi_broker_reporting.conclusion",
+      "sources": [
+        {
+          "path": "input/question_set.json",
+          "locator": "/questions/0",
+          "quote": "{\"key\":\"q1_multi_broker_reporting\",\"question\":\"Does a Hong Kong investor with three Northbound accounts under one LEI need to report leverage scale separately through each broker?\",\"allowed_conclusions\":[\"Yes\",\"No\",\"Unknown\"]}",
+          "sha256": "95f0c98b68c9bca2a4a117992b5cc881e501f73e24fa672da48ccf71c1482476",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/extracted_text/1-2_\u586b\u62a5\u8bf4\u660e.txt",
+          "locator": "lines:16-16",
+          "quote": "\u5728\u591a\u5bb6\u8054\u4ea4\u6240\u53c2\u4e0e\u8005\u5f00\u7acb\u8d26\u6237\uff08\u542b\u673a\u6784\u7ba1\u7406\u4eba\u8d26\u6237\u3001\u7ba1\u7406\u4eba\u65d7\u4e0b\u7684\u4ea7\u54c1\u8d26\u6237\uff09\u7684\u673a\u6784\u6295\u8d44\u8005\uff0c\u5bf9\u4e8e\u4ee5\u540c\u4e00\u8bc1\u4ef6\u53f7\u7801\u5f00\u7acb\u7684\u8d26\u6237\uff0c\u53ef\u4ee5\u9009\u53d6\u4e00\u5bb6\u8054\u4ea4\u6240\u53c2\u4e0e\u8005\u5e76\u6309\u673a\u6784\u7ef4\u5ea6\uff08\u540c\u4e00\u8bc1\u4ef6\u53f7\u7801\u4e0b\u5f00\u7acb\u7684\u8d26\u6237\u5408\u8ba1\uff09\u586b\u5199\u8d26\u6237\u8d44\u91d1\u4fe1\u606f\u76f8\u5173\u5b57\u6bb5\uff08\u5305\u62ec\u8d26\u6237\u8d44\u91d1\u89c4\u6a21\u3001\u8d26\u6237\u8d44\u91d1\u6765\u6e90\u3001\u5176\u4ed6\u8d44\u91d1\u6765\u6e90\u63cf\u8ff0\u3001\u8d44\u91d1\u6765\u6e90\u5360\u6bd4\u3001\u6760\u6746\u8d44\u91d1\u89c4\u6a21\u3001\u6760\u6746\u8d44\u91d1\u6765\u6e90\u3001\u5176\u4ed6\u6760\u6746\u8d44\u91d1\u6765\u6e90\u63cf\u8ff0\u3001\u6760\u6746\u7387\uff09\u3002\u5176\u4ee5\u540c\u4e00\u8bc1\u4ef6\u53f7\u7801\u5728\u5176\u4ed6\u8054\u4ea4\u6240\u53c2\u4e0e\u8005\u5f00\u7acb\u7684\u8d26\u6237\uff0c\u4e0d\u518d\u91cd\u590d\u586b\u5199\u4e0a\u8ff0\u4fe1\u606f\uff0c\u5e76\u5728\u76f8\u5e94\u5b57\u6bb5\u586b\u5199\u201c\u5df2\u5728\u5176\u4ed6\u8054\u4ea4\u6240\u53c2\u4e0e\u8005\u62a5\u544a\u201d\uff0c\u4e0a\u8ff0\u5b57\u6bb5\u4ee5\u5916\u7684\u5176\u4ed6\u5b57\u6bb5\u4ecd\u987b\u6309\u7167\u8981\u6c42\u586b\u5199\u3002",
+          "sha256": "66b4ac87a58daaf0469b82dc9d61c2b29c47981e3accc89953f1125aef020d46",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/extracted_text/1-2_\u586b\u62a5\u8bf4\u660e.txt",
+          "locator": "lines:29-29",
+          "quote": "\u586b\u5199\u6295\u8d44\u8005\u767b\u8bb0\u5238\u5546\u5ba2\u6237\u7f16\u7801\u65f6\u7684\u8bc1\u4ef6\u53f7\u7801\uff0c\u4f8b\u5982\u673a\u6784\u6295\u8d44\u8005\u586b\u5199LEI\u7801\u3002\u8be5\u5b57\u6bb5\u586b\u5199\u76f8\u540c\u8bc1\u4ef6\u53f7\u7801\u7684\u673a\u6784\u8d26\u6237\uff0c\u53ef\u4ee5\u9002\u7528\u586b\u62a5\u8bf4\u660e\u7b2c\u4e8c\u6761\u7b2c\u4e8c\u6b3e\u89c4\u5b9a\uff0c\u9009\u53d6\u4e00\u5bb6\u8054\u4ea4\u6240\u53c2\u4e0e\u8005\u96c6\u4e2d\u586b\u62a5\u8d44\u91d1\u4fe1\u606f\u3002",
+          "sha256": "66b4ac87a58daaf0469b82dc9d61c2b29c47981e3accc89953f1125aef020d46",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        }
+      ],
+      "requirement": "Answer whether same-LEI Northbound accounts must report `\u6760\u6746\u8d44\u91d1\u89c4\u6a21` separately through each broker.",
+      "interpretation": "The direct Yes/No question maps to `No`: LEI is the institutional identifier, and same-identifier accounts may select one participant to report the listed funding fields, expressly including `\u6760\u6746\u8d44\u91d1\u89c4\u6a21`, while other participants do not repeat them.",
+      "command": [
+        "python3",
+        "contract.q1_multi_broker_reporting.conclusion.py"
+      ],
+      "expected": "`q1_multi_broker_reporting.conclusion` is exactly `No`.",
+      "execution_mode": "public_recompute",
+      "execution_reason": "The staged instructions directly answer the public Yes/No proposition and expressly include the named leverage-scale field.",
+      "script_path": "checks/contract.q1_multi_broker_reporting.conclusion.py",
+      "script": "import json, os\nfrom pathlib import Path\np = Path(os.environ['VERIFIER_OUTPUT']) / 'research_answers.json'\ntry:\n    data = json.loads(p.read_text(encoding='utf-8'))\n    observed_value = data.get('q1_multi_broker_reporting', {}).get('conclusion') if isinstance(data, dict) and isinstance(data.get('q1_multi_broker_reporting'), dict) else None\n    ok = observed_value == 'No'\n    observed = {'q1_multi_broker_reporting.conclusion': observed_value}\nexcept Exception as e:\n    ok = False\n    observed = {'parse_error': type(e).__name__}\nprint(json.dumps({'status': 'pass' if ok else 'fail', 'observed': observed, 'evidence': {'expected_conclusion': 'No'}}, ensure_ascii=False))",
+      "script_sha256": "a1d829e3b0dbf77b00bff5580390b146ca3d942a593e089b97a7064dd2f12c29",
+      "fixtures": {
+        "valid": [
+          {
+            "path": "research_answers.json",
+            "encoding": "utf8",
+            "content": "{\"q1_multi_broker_reporting\":{\"conclusion\":\"No\"}}"
+          }
+        ],
+        "invalid": [
+          {
+            "path": "research_answers.json",
+            "encoding": "utf8",
+            "content": "{\"q1_multi_broker_reporting\":{\"conclusion\":\"Yes\"}}"
+          }
+        ]
+      },
+      "blocking": false,
+      "requested_blocking": true,
+      "validation": {
+        "sources_located": true,
+        "checker_reproducible": true,
+        "environment_healthy": true,
+        "environment": {
+          "healthy": true,
+          "evidence": "isolated Python probe passed"
+        },
+        "fixture_evidence": "environment: isolated Python probe passed; valid fixture: command: python3 contract.q1_multi_broker_reporting.conclusion.py; consecutive_runs: 2 identical; stderr: <empty>; {\"expected_conclusion\":\"No\"}; invalid fixture: command: python3 contract.q1_multi_broker_reporting.conclusion.py; consecutive_runs: 2 identical; stderr: <empty>; {\"expected_conclusion\":\"No\"}"
+      }
+    }
+  ],
+  "unverifiable": [
+    {
+      "check": "contract.q2_hft_cost_calculation.conclusion",
+      "sources": [
+        {
+          "path": "input/question_set.json",
+          "locator": "/questions/1",
+          "quote": "{\"key\":\"q2_hft_cost_calculation\",\"question\":\"For a high-frequency trading team with more than 20,000 daily orders, what are the specific numerical amounts of the flow fee and cancellation fee in the provided rules?\",\"allowed_conclusions\":[\"Yes\",\"No\",\"Unknown\"]}",
+          "sha256": "95f0c98b68c9bca2a4a117992b5cc881e501f73e24fa672da48ccf71c1482476",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/extracted_text/\u7a0b\u5e8f\u5316\u4ea4\u6613\u7ba1\u7406\u5b9e\u65bd\u7ec6\u5219.txt",
+          "locator": "lines:103-103",
+          "quote": "\uff08\u4e8c\uff09\u5355\u4e2a\u8d26\u6237\u5355\u65e5\u7533\u62a5\u3001\u64a4\u5355\u7684\u6700\u9ad8\u7b14\u6570\u8fbe\u523020000\u7b14\u4ee5\u4e0a\uff1b",
+          "sha256": "46d3b5beaf2eb6334ded0cfd02be87fc3c8b165076faee785fc2d3c019bf332c",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/extracted_text/\u7a0b\u5e8f\u5316\u4ea4\u6613\u7ba1\u7406\u5b9e\u65bd\u7ec6\u5219.txt",
+          "locator": "lines:115-115",
+          "quote": "\u7b2c\u4e09\u5341\u4e03\u6761 \u672c\u6240\u53ef\u4ee5\u5bf9\u9ad8\u9891\u4ea4\u6613\u5b9e\u65bd\u5dee\u5f02\u5316\u6536\u8d39\uff0c\u6839\u636e\u7533\u62a5\u3001\u64a4\u5355\u7684\u7b14\u6570\u548c\u9891\u7387\u7b49\u6307\u6807\u8bbe\u7f6e\u6536\u8d39\u6807\u51c6\uff0c\u52a0\u6536\u6d41\u91cf\u8d39\u548c\u64a4\u5355\u8d39\u7b49\u8d39\u7528\u3002\u5177\u4f53\u6536\u8d39\u6807\u51c6\u7531\u672c\u6240\u53e6\u884c\u89c4\u5b9a\u3002",
+          "sha256": "46d3b5beaf2eb6334ded0cfd02be87fc3c8b165076faee785fc2d3c019bf332c",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        }
+      ],
+      "expected": "The answer should accurately state that the staged rule does not supply the requested numerical fee amounts and says the specific charging standards will be prescribed separately.",
+      "reason": "The public materials establish the substantive response but do not define whether that response maps to `No` or `Unknown`. A frozen conclusion-label check would impose an unstated mapping, which the test-builder rules prohibit."
+    },
+    {
+      "check": "contract.q3_software_naming.conclusion",
+      "sources": [
+        {
+          "path": "input/question_set.json",
+          "locator": "/questions/2",
+          "quote": "{\"key\":\"q3_software_naming\",\"question\":\"If a French company uses home-grown software with no Chinese name, can it report using only the original foreign-language name?\",\"allowed_conclusions\":[\"Yes\",\"No\",\"Unknown\"]}",
+          "sha256": "95f0c98b68c9bca2a4a117992b5cc881e501f73e24fa672da48ccf71c1482476",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        },
+        {
+          "path": "input/extracted_text/1-3_\u586b\u62a5\u6ce8\u610f\u4e8b\u9879.txt",
+          "locator": "lines:37-37",
+          "quote": "\u5bf9\u4e8e\u63cf\u8ff0\u7c7b\u5b57\u6bb5\uff08\u5176\u4ed6\u8d44\u91d1\u6765\u6e90\u63cf\u8ff0\u3001\u5176\u4ed6\u6760\u6746\u8d44\u91d1\u6765\u6e90\u63cf\u8ff0\u3001\u4e3b\u7b56\u7565\u6982\u8ff0\u3001\u8f85\u7b56\u7565\u6982\u8ff0\u3001\u6307\u4ee4\u6267\u884c\u65b9\u5f0f\u6982\u8ff0\u7b49\uff09\u4ee5\u53ca\u9ad8\u9891\u4ea4\u6613\u7cfb\u7edf\u6d4b\u8bd5\u62a5\u544a\u53ca\u6545\u969c\u5e94\u6025\u65b9\u6848\uff0c\u586b\u62a5\u8bed\u8a00\u539f\u5219\u4e0a\u4e3a\u7b80\u4f53\u4e2d\u6587\u3002\u5bf9\u4e8e\u4e2a\u522b\u96be\u4ee5\u786e\u5b9a\u7edf\u4e00\u4e2d\u6587\u8868\u8ff0\u7684\u5b57\u6bb5\uff0c\u4f8b\u5982\u8054\u4ea4\u6240\u53c2\u4e0e\u8005\u540d\u79f0\u3001\u8d26\u6237\u540d\u79f0\u3001\u7a0b\u5e8f\u5316\u4ea4\u6613\u8f6f\u4ef6\u540d\u79f0\u7b49\uff0c\u53ef\u4ee5\u586b\u5199\u82f1\u6587\u3002",
+          "sha256": "7a3ff27687a5ea18bdd171e2b5bc23d76888deb5af8ce3910c0eac82e8e405b5",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        }
+      ],
+      "expected": "The response should distinguish the rule's express permission to use English for a software name lacking a uniform Chinese expression from the broader phrase `original foreign-language name`.",
+      "reason": "The staged rule expressly permits English, while the question says a French firm's original foreign-language name without stating that the name is English. Treating every possible foreign language as permitted would exceed the source, so a single exact Yes/No conclusion cannot be proven for the proposition as worded."
+    },
+    {
+      "check": "contract.answer_text.short_english_explanation",
+      "sources": [
+        {
+          "path": "input/task_brief.md",
+          "locator": "lines:20-25",
+          "quote": "For each question, provide:\n\n- `conclusion`: exactly `Yes`, `No`, or `Unknown`\n- `citation_document`: exact Simplified Chinese document name\n- `evidence_snippet`: exact Simplified Chinese excerpt copied from the staged materials\n- `answer_text`: short English explanation",
+          "sha256": "c0d60c4a2d12c905edd06cfb03fee1ca8b1a9e3c4f1a44f56564db59b0ece91f",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        }
+      ],
+      "expected": "Every `answer_text` should be a short English explanation responsive to its question and consistent with its conclusion and evidence.",
+      "reason": "The materials define neither a numerical maximum for \u201cshort\u201d nor a mechanical language or explanatory-sufficiency criterion. A length cutoff, ASCII proxy, or keyword test would add an unstated threshold and would not prove the full requirement."
+    },
+    {
+      "check": "contract.closed_book.provenance",
+      "sources": [
+        {
+          "path": "input/task_brief.md",
+          "locator": "lines:3-8",
+          "quote": "You are acting as a regulatory consultant. Use only the staged Shanghai Stock Exchange documents.\n\n## Closed-Book Rule\n\n- Use only the files staged under `input/`.\n- Do not use external web search or outside regulatory knowledge.",
+          "sha256": "c0d60c4a2d12c905edd06cfb03fee1ca8b1a9e3c4f1a44f56564db59b0ece91f",
+          "located": true,
+          "locate_evidence": "quote and locator found"
+        }
+      ],
+      "expected": "The research process uses only files staged under `input/` and no external web search or outside regulatory knowledge.",
+      "reason": "The final JSON artifact does not reveal all information consulted during drafting, so process provenance cannot be proven by a deterministic post-submission checker."
+    }
+  ],
+  "suite_sha256": "c665edda02d99e8c76c8389d35d3125af1b45680e8e5b04eff46a66779cb599b"
+}

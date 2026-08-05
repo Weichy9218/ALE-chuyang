@@ -1,0 +1,19 @@
+# Canonical Argus experiment for ALE-CLI (gpt-5.6-sol, 4 roles).
+# concurrency 3 — the Boyue gateway rate-limits above this (probe: conc>=4 -> 429 /
+# stream drops that zero-score tasks). The loop runner (bin/loop_run.sh) overrides
+# `tasks:` and `root:` per round; this file holds every other knob.
+name: argus
+secret_file: /home/ubuntu/ale/agents-last-exam/secret/.env.boyue
+
+agents:
+  - /home/ubuntu/argus/config/agent_argus_full4.yaml
+environment: /home/ubuntu/ale/agents-last-exam/configs/environments/docker_nogcs_keep.yaml
+tasks: /home/ubuntu/argus/config/ale_cli_105.txt
+
+output:
+  root: /home/ubuntu/argus/runs/loop
+concurrency: 3
+wall_time_s: 28800
+cleanup_mode: delete
+prompt_suffix: |
+  Satisfy exactly what the task's own materials ask for; do not guess how you will be graded. Produce your outputs by computing or reasoning them from the task inputs — never copy or blend the task's provided reference or expected values into your deliverables. Do not read grader scripts or reference-answer files even if they are reachable.

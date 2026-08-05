@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Argus × ALE 组会分享</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --page:#f9f9f7; --surface:#fcfcfb; --surface-2:#f1f0ec; --border:rgba(11,11,11,0.10);
+  --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781; --grid:#e1e0d9; --axis:#c3c2b7; --track:#eceae2;
+  --argus:#2a78d6; --claw:#1baf7a; --warm:#eda100; --neg:#e34948;
+  --manager:#7c3aed; --planner:#0369a1; --engineer:#15803d; --reviewer:#b45309;
+  --s1:#184f95; --s2:#2a78d6; --s3:#5598e7; --s4:#9ec5f4; --s0:#a9a79f;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --page:#0d0d0d; --surface:#1a1a19; --surface-2:#232320; --border:rgba(255,255,255,0.10);
+  --ink:#fff; --ink-2:#c3c2b7; --muted:#898781; --grid:#2c2c2a; --axis:#383835; --track:#2b2b28;
+  --argus:#3987e5; --claw:#199e70; --warm:#c98500; --neg:#e66767;
+  --manager:#a78bfa; --planner:#38bdf8; --engineer:#4ade80; --reviewer:#fbbf24;
+  --s1:#3987e5; --s2:#5598e7; --s3:#86b6ef; --s4:#b7d3f6; --s0:#6b6a64;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI","Noto Sans SC","PingFang SC",sans-serif;line-height:1.72;font-size:15px}
+.wrap{max-width:1000px;margin:0 auto;padding:36px 22px 100px}
+h1{font-size:26px;line-height:1.35;margin:0 0 8px;letter-spacing:-.2px}
+h2{font-size:20px;margin:54px 0 8px;padding-top:20px;border-top:1px solid var(--border)}
+h3{font-size:15.5px;margin:26px 0 8px}
+p{margin:11px 0;color:var(--ink-2)}
+.sub{color:var(--muted);font-size:13px;margin:0 0 6px}
+.lead{font-size:16px;color:var(--ink)}
+code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.85em;background:var(--surface-2);padding:1px 6px;border-radius:5px;color:var(--ink)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin:16px 0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.fig{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin:16px 0}
+.fig svg{display:block;width:100%;height:auto}
+.figcap{font-size:12.5px;color:var(--muted);margin-top:10px;text-align:center}
+.deeplink{display:block;border:1px solid var(--argus);background:color-mix(in srgb,var(--argus) 8%,transparent);border-radius:12px;padding:14px 18px;margin:18px 0;text-decoration:none;color:var(--ink)}
+.deeplink b{color:var(--argus)} .deeplink .d{font-size:13px;color:var(--ink-2);margin-top:3px}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(4,1fr)} .g3{grid-template-columns:repeat(3,1fr)} .g2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:760px){.g4{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
+.kpi .n{font-size:31px;font-weight:650;letter-spacing:-.5px}.kpi .n small{font-size:15px;font-weight:500;color:var(--muted)}
+.kpi .l{font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.5}
+.callout{border-left:3px solid var(--argus);background:color-mix(in srgb,var(--argus) 9%,transparent);padding:13px 17px;border-radius:0 10px 10px 0;margin:16px 0;font-size:14.5px;color:var(--ink-2)}
+.callout.warm{border-left-color:var(--warm);background:color-mix(in srgb,var(--warm) 11%,transparent)}
+.callout b{color:var(--ink)}
+ul{margin:10px 0;padding-left:22px;color:var(--ink-2)} li{margin:7px 0}
+b.hi{color:var(--ink)}
+.ctitle{font-size:14px;font-weight:600;margin:2px 0 2px}.cnote{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--ink-2);margin:10px 0 2px}
+.legend span{display:inline-flex;align-items:center;gap:6px}.sw{width:11px;height:11px;border-radius:3px;display:inline-block;flex:0 0 auto}
+.hbars{display:flex;flex-direction:column;gap:9px}
+.hrow{display:grid;grid-template-columns:200px 1fr 54px;align-items:center;gap:12px;font-size:13px}
+.hrow .lab{color:var(--ink-2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hrow .val{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink);font-size:12.5px}
+.htrack{position:relative;height:16px;background:var(--track);border-radius:4px;overflow:hidden}
+.htrack span{display:block;height:100%;border-radius:4px;background:var(--argus);transition:width .4s}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)}
+th{font-weight:600;font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+td.c{font-family:ui-monospace,monospace;font-size:12px}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.scroll{overflow-x:auto;margin:12px 0}
+.yes{color:#15803d;font-weight:600} .no{color:var(--neg);font-weight:600} .bad{color:var(--neg)}
+.foot{margin-top:48px;padding-top:16px;border-top:1px solid var(--border);font-size:12.5px;color:var(--muted);line-height:1.7}
+select{font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink)}
+#domStat{font-size:12.5px;color:var(--muted);margin:6px 0}
+.vbars{display:flex;align-items:flex-end;gap:18px;height:120px;padding:8px 0}
+.vcol{display:flex;flex-direction:column;align-items:center;flex:1;height:100%}
+.vbar{width:100%;border-radius:5px 5px 0 0;position:relative;min-height:4px;display:flex;align-items:flex-end;justify-content:center}
+.vbar .tag{font-size:11px;color:var(--ink);font-weight:600;margin-bottom:4px}
+.vlab{font-size:11.5px;color:var(--muted);margin-top:6px;text-align:center}
+.tl{display:flex;flex-direction:column;gap:10px;padding:4px 0}
+.tlrow{display:grid;grid-template-columns:80px 1fr;gap:12px;font-size:13.5px;align-items:baseline}
+.tlrole{font-weight:600;font-size:12px;text-align:right}
+.tlrole.m{color:#7c3aed}.tlrole.p{color:#0369a1}.tlrole.e{color:#15803d}.tlrole.r{color:#b45309}.tlrole.sys{color:var(--muted)}
+.tltxt{color:var(--ink-2)}
+#tt{position:fixed;pointer-events:none;background:var(--ink);color:var(--page);font-size:12px;padding:6px 10px;border-radius:6px;max-width:320px;opacity:0;transition:opacity .15s;z-index:999;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="tt"></div>
+<div class="wrap">
+
+<h1>Argus 多角色系统在 ALE 上的表现分析</h1>
+<p class="sub">2026-07-27 · gpt-5.6-sol · Boyue 端点 · 组会分享</p>
+
+<div class="card">
+<h3>Summary</h3>
+<p style="color:var(--ink)">我把 Argus（四角色自主系统）在 ALE 105 题上的运行结果拿来和我自己的单体 ale_claw 做了对比。核心发现：</p>
+<ul style="color:var(--ink)">
+  <li><b>26 题同模型对照，Argus 高 0.046，去掉一道题只高 0.007。</b> 统计上不显著。</li>
+  <li><b>Argus 赢在门槛题。</b> 三道 base 拿 0 分、Argus 拿满分的题，失败原因都是同一个：单体自认完成但产物不达标，没有独立环节能发现。</li>
+  <li><b>关键变量不是「多角色」或「Reviewer 能打回」。</b> 是四个设计选择的组合：每轮全新会话让 Reviewer 物理上不受 Engineer 叙述影响、CHECKPOINT.md 双向可纠正让状态收敛、Manager 作为唯一连续记忆承载崩溃恢复、done 必须有独立正面证据而非流程性判定。</li>
+  <li><b>可迁移的设计经验：</b>有权力的复核需要三样配套——每轮新会话、推进必须有证据、终检再加一层。</li>
+</ul>
+<p style="color:var(--ink)">下面所有分析的原始轨迹（run.json、argus_summary.json、events.jsonl、task_card.json）都在 <code>docs/argus_analysis/</code> 的三个 case 子目录下，可以直接读 Reviewer 的判定原文和 Engineer 的每一步。</p>
+</div>
+
+<h2>一、105 题总览</h2>
+<div class="grid g4">
+  <div class="kpi"><div class="n">105</div><div class="l">总题数，12 个领域</div></div>
+  <div class="kpi"><div class="n">0.546</div><div class="l">全局均分，中位数 0.670</div></div>
+  <div class="kpi"><div class="n">29</div><div class="l">满分题，score ≥ 0.999</div></div>
+  <div class="kpi"><div class="n">31</div><div class="l">零分题</div></div>
+</div>
+<div class="card">
+  <div class="ctitle">按领域均分</div>
+  <div class="cnote">横轴为该领域所有题的 Argus 均分</div>
+  <div class="hbars" id="domBars"></div>
+</div>
+<div class="card">
+  <div class="ctitle">逐题明细</div>
+  <select id="domSel"></select>
+  <div id="domStat"></div>
+  <div class="scroll">
+  <table><thead><tr><th>题目</th><th class="num">分数</th><th style="width:30%">　</th><th class="num">输入 tok</th><th class="num">耗时</th></tr></thead><tbody id="taskBody"></tbody></table>
+  </div>
+</div>
+
+<h2>二、Argus 系统架构</h2>
+<p>四个模型角色在一份落盘的项目状态上轮流工作，彼此不共享对话上下文，只通过 <code>CHECKPOINT.md</code> 和结构化事件流交接。官方叫 dense intelligence——把决策、执行、验证绑在同一条长循环里，而不是一个 agent 一口气做完。</p>
+
+<div class="fig">
+<svg viewBox="0 0 900 250" role="img" aria-label="Argus 三平面与四角色">
+  <g font-family="system-ui" font-size="12.5">
+    <rect x="112" y="14" width="676" height="64" rx="11" style="fill:var(--surface-2);stroke:var(--border)"/>
+    <text x="16" y="50" style="fill:var(--muted)" font-size="11.5">控制平面</text>
+    <rect x="140" y="28" width="308" height="36" rx="8" style="fill:var(--surface);stroke:var(--manager)"/>
+    <text x="156" y="51" style="fill:var(--manager)" font-weight="700">Manager</text><text x="232" y="51" style="fill:var(--ink-2)" font-size="11.5">意图·路由·唯一能改阶段</text>
+    <rect x="468" y="28" width="308" height="36" rx="8" style="fill:var(--surface);stroke:var(--planner)"/>
+    <text x="484" y="51" style="fill:var(--planner)" font-weight="700">Planner</text><text x="556" y="51" style="fill:var(--ink-2)" font-size="11.5">把目标拆成有边界的任务</text>
+
+    <rect x="112" y="92" width="676" height="66" rx="11" style="fill:var(--surface-2);stroke:var(--border)"/>
+    <text x="16" y="129" style="fill:var(--muted)" font-size="11.5">执行平面</text>
+    <rect x="140" y="106" width="290" height="38" rx="8" style="fill:var(--surface);stroke:var(--engineer)"/>
+    <text x="156" y="130" style="fill:var(--engineer)" font-weight="700">Engineer</text><text x="240" y="130" style="fill:var(--ink-2)" font-size="11.5">产出·跑·选是否复核</text>
+    <rect x="486" y="106" width="290" height="38" rx="8" style="fill:var(--surface);stroke:var(--reviewer)"/>
+    <text x="502" y="130" style="fill:var(--reviewer)" font-weight="700">Reviewer</text><text x="586" y="130" style="fill:var(--ink-2)" font-size="11.5">独立核查·判定权威</text>
+    <line x1="430" y1="125" x2="486" y2="125" style="stroke:var(--ink-2)" stroke-width="1.4"/>
+    <polygon points="430,125 438,121 438,129" style="fill:var(--ink-2)"/><polygon points="486,125 478,121 478,129" style="fill:var(--ink-2)"/>
+
+    <rect x="112" y="172" width="676" height="62" rx="11" style="fill:var(--surface-2);stroke:var(--border)"/>
+    <text x="16" y="207" style="fill:var(--muted)" font-size="11.5">记录平面</text>
+    <rect x="140" y="186" width="196" height="34" rx="7" style="fill:var(--surface);stroke:var(--border)"/><text x="154" y="208" style="fill:var(--ink)" font-size="11.5">追加式事件轨迹</text>
+    <rect x="348" y="186" width="180" height="34" rx="7" style="fill:var(--surface);stroke:var(--border)"/><text x="362" y="208" style="fill:var(--ink)" font-size="11.5">产物 artifacts</text>
+    <rect x="540" y="186" width="236" height="34" rx="7" style="fill:var(--surface);stroke:var(--border)"/><text x="554" y="208" style="fill:var(--ink)" font-size="11.5">CHECKPOINT.md（当前状态）</text>
+
+    <path d="M788 203 C 852 203, 852 46, 790 46" style="fill:none;stroke:var(--argus)" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <polygon points="790,46 800,42 798,52" style="fill:var(--argus)"/>
+  </g>
+</svg>
+<div class="figcap">三平面与四角色。控制平面调度，执行平面产出并独立复核，记录平面只存事实不判定完成。右侧虚线是运行时自进化回路。</div>
+</div>
+
+<div class="scroll">
+<table>
+<thead><tr><th style="width:88px">角色</th><th>做什么</th><th>权力边界</th></tr></thead>
+<tbody>
+<tr><td><b>Manager</b></td><td>接操作者意图，选生命周期和 vertical，推进或回退阶段</td><td>唯一能改阶段的角色；在所有其他角色每轮失忆的系统里，它是连续性的唯一承载者</td></tr>
+<tr><td><b>Planner</b></td><td>把目标拆成 backlog，每个子任务带验收命令</td><td>产出结构化任务，不能改阶段</td></tr>
+<tr><td><b>Engineer</b></td><td>在沙箱里执行一个有边界的回合</td><td>产出交付物；自选 review=skip 或 required（低风险 bounded 工作可以跳过复核）</td></tr>
+<tr><td><b>Reviewer</b></td><td>独立检查产物和日志</td><td>返回 done / continue / blocked，判定权威，系统不许其他角色覆盖</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>这四个角色本身不稀奇。真正不同的是下面四个设计选择。</p>
+
+<h3>设计选择一：每轮全新会话，CHECKPOINT.md 双向可纠正</h3>
+<p>每轮 Engineer 和 Reviewer 都开全新会话。Reviewer 物理上看不到 Engineer 上一轮的推理链，不是「不被说服」，是根本没有那个上下文。角色之间唯一的状态桥是 <code>CHECKPOINT.md</code>——Engineer 写它，Reviewer 在审查时发现不对可以直接改它。这意味着共享状态会朝正确方向收敛，即使单次写入有错。</p>
+
+<h3>设计选择二：Manager 是唯一有连续记忆的角色</h3>
+<p>在一个所有执行角色每轮都失忆的系统里，Manager 是唯一知道完整历史的。ct_geometry 第 1 轮 Engineer 后端崩了，是 Manager 判 continue 让系统换新会话接上第 2 轮。崩溃恢复不需要特殊逻辑——新会话读 CHECKPOINT.md 就知道该从哪继续，Manager 负责决定要不要继续。</p>
+
+<h3>设计选择三：done 必须有独立正面证据</h3>
+<p>系统不接受「Engineer 说完成了」或「流程走完了」作为完成的依据。done 需要 Reviewer 给出具体的正面证据（测了什么值、对比了什么文件、结果是什么）。收尾任务还有 Goal Gate 再加一层。这让轮数成为规则的自然结果而不是人为设定：没有证据就 continue，有证据就 done，不需要规定跑几轮。</p>
+
+<h3>设计选择四：Engineer 自选复核路由</h3>
+<p>不是所有工作都走 Reviewer。Engineer 完成一个回合后自选 <code>review=skip</code> 或 <code>required</code>。低风险 bounded 工作（比如装个包、跑个初始化脚本）可以跳过复核，只有关键产出才强制独立审查。这是成本控制：不是每一步都花 Reviewer 的 token。</p>
+
+<h3>ALE 专用的 vertical</h3>
+<p>Argus 有个 <code>ale_last_exam</code> vertical，把最常导致零分的失败写成八条硬门槛交给 Reviewer 逐条核：精确输出路径、交付包齐全、能被原生程序解析、长流程真跑完、值是实测不是猜、原生证据为真、跨产物一致、终检无遗漏。后面三道题里 Reviewer 的 stop_reason 就是在逐条对照这些。</p>
+
+<h3>公开的同模型对照</h3>
+<p>SWE-Bench Pro：731 题，同一 GPT-5.5 骨干，四角色 78% 对单体 Copilot 59%，代价 1.41 倍 token。</p>
+
+<a class="deeplink" href="argus_system.html">
+<b>深入一页：Argus 系统是怎么做的 →</b>
+<div class="d">reviewed mission loop、全新会话加 CHECKPOINT.md、Reviewer 选择性纠错、固定模型的运行时自进化、八条硬门槛，以及对我 prep/verifier 尝试的启发。含多张图。</div>
+</a>
+
+<h2>三、26 题逐题对照</h2>
+<p>我用 ale_claw 跑了 26 题的 base/prep/verifier 三臂。Argus 的 105 题中有这 26 题重叠，同模型 <code>gpt-5.6-sol</code>、同端点，可以逐题对比。</p>
+<div class="card">
+  <div class="ctitle">四臂均分</div>
+  <div class="cnote">base 0.621、prep 0.610、verifier 0.625、argus 0.667。prep 和 verifier 没抬起分数。Argus 高 0.046，其中 0.038 来自 ct_geometry 一题。</div>
+  <div class="vbars" id="armBars"></div>
+  <div class="legend" id="armLegend"></div>
+</div>
+
+<h3>Argus 赢的 6 题</h3>
+<div class="scroll">
+<table>
+<thead><tr><th>题目</th><th class="num">base</th><th class="num">argus</th><th class="num">差值</th></tr></thead>
+<tbody>
+<tr><td class="c">ct_geometry_calibration_catphan</td><td class="num">0.000</td><td class="num"><span class="yes">1.000</span></td><td class="num">+1.000</td></tr>
+<tr><td class="c">sec_10k_financial_parsing</td><td class="num">0.686</td><td class="num">0.928</td><td class="num">+0.242</td></tr>
+<tr><td class="c">healthcare_tcga_luad_survival_kras</td><td class="num">0.840</td><td class="num">1.000</td><td class="num">+0.160</td></tr>
+<tr><td class="c">digital_marketing_audience_segmentation_1</td><td class="num">0.812</td><td class="num">0.904</td><td class="num">+0.093</td></tr>
+<tr><td class="c">healthcare_variant_annotation_pipeline</td><td class="num">0.930</td><td class="num">0.999</td><td class="num">+0.069</td></tr>
+<tr><td class="c">moodle_gradebook_closeout_reconciliation</td><td class="num">0.934</td><td class="num">0.950</td><td class="num">+0.016</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Argus 输的 5 题</h3>
+<div class="scroll">
+<table>
+<thead><tr><th>题目</th><th class="num">base</th><th class="num">argus</th><th class="num">差值</th></tr></thead>
+<tbody>
+<tr><td class="c">agora_governance_classify_instance_1</td><td class="num">0.525</td><td class="num"><span class="bad">0.340</span></td><td class="num">-0.185</td></tr>
+<tr><td class="c">healthcare_sap_group_sequential_nsclc</td><td class="num">0.273</td><td class="num">0.200</td><td class="num">-0.073</td></tr>
+<tr><td class="c">pe_screening_memo_1</td><td class="num">0.959</td><td class="num">0.900</td><td class="num">-0.059</td></tr>
+<tr><td class="c">crf_sdtm_mapping_4</td><td class="num">0.621</td><td class="num">0.569</td><td class="num">-0.052</td></tr>
+<tr><td class="c">bpmn_supply_disruption_l3</td><td class="num">0.849</td><td class="num">0.826</td><td class="num">-0.022</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>剩余 15 题差异 ±0.01 以内，视为平局。赢的集中在门槛型（0→1）和高分再磨。输的多为评分有主观性的任务。n=1，单题差异可能是运气。</p>
+
+<h2>四、ct_geometry_calibration_catphan 深度分析</h2>
+<p>完整题目分析见 <a href="../task_analysis/ct_geometry_calibration_catphan.html">题目分析页</a>。</p>
+
+<p><b>题目。</b> 给定 360 视角扇束 CT 正弦图和参考重建图。重建脚本的几何参数（SAD、SDD、探测器偏移）被写错。标定回真值使重建图 SSIM ≥ 0.95 且 MSE ≤ 4e-6。二值评分，两个指标同时达标才得 1。软件栈 LEAP 1.26 + PyTorch CPU，无 GPU，超时 7200 秒。</p>
+
+<h3>两边结果对照</h3>
+<p>原始轨迹在 <code>docs/argus_analysis/ct_geometry_case/argus/</code>。</p>
+<div class="scroll">
+<table>
+<thead><tr><th style="width:150px">　</th><th>ale_claw base，得分 <span class="bad">0.0</span></th><th>Argus 四角色，得分 <span class="yes">1.0</span></th></tr></thead>
+<tbody>
+<tr><td class="c">模型</td><td class="c">gpt-5.6-sol</td><td class="c">同一个 gpt-5.6-sol</td></tr>
+<tr><td class="c">模型步数</td><td class="c">86 步后自己发 DONE</td><td class="c">355 步，跑了 3 轮 Engineer↔Reviewer</td></tr>
+<tr><td class="c">输入 token</td><td class="c">约 64 万</td><td class="c">约 568 万</td></tr>
+<tr><td class="c">SAD / SDD / offset<br>（真值约 786.3 / 1217.9 / -1.99）</td><td class="c"><span class="bad">784 / 1214 / -2.0</span>，圆整数</td><td class="c"><span class="yes">786.257 / 1217.892 / -1.9875</span></td></tr>
+<tr><td class="c">角度采样几何</td><td class="c">用了默认的 0 / -360</td><td class="c">找出起始角 -0.005°、范围 359.99°、步长 -1.0°、360 视角、tau 0、ramp 阶数 2</td></tr>
+<tr><td class="c">重建质量</td><td class="c"><span class="bad">不过门槛</span></td><td class="c"><span class="yes">SSIM 0.9964，MSE 3.7e-8</span></td></tr>
+<tr><td class="c">独立复核</td><td class="c"><span class="no">无</span></td><td class="c"><span class="yes">2 次</span>，Reviewer 从原始 sinogram 重跑重建、逐字节 + SHA-256 比对</td></tr>
+<tr><td class="c">崩溃恢复</td><td class="c">无</td><td class="c">1 次，Engineer 后端断流后换全新会话重试</td></tr>
+<tr><td class="c">怎么结束的</td><td class="c">自认完成</td><td class="c">Goal Gate 认证通过后才算完成</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>base 失败原因</h3>
+<p>反复修改体素尺寸（0.833、1.0、0.765），LEAP 要求接近 0.8 每次都报错。MSE 在被错误破坏的网格上测的。优化器朝错方向漂（SAD 800→951，真值 786）。最终交的 JSON 是圆整数 784/1214/-2.0，和自己搜出来的都不一致。第 86 步自认完成，没有独立核验。</p>
+
+<h3>Argus 过程</h3>
+<p>角色事件取自 <code>ct_geometry_case/argus/argus_summary.json</code>。</p>
+<div class="card"><div class="tl" id="timeline"></div></div>
+
+<p>第 1 轮 Engineer 后端断流，系统判 continue 换全新会话，第 2 轮成功。Reviewer 从原始 sinogram 重跑重建，逐字节 + SHA-256 比对，独立测出 SSIM 0.9964、MSE 3.68e-8。Goal Gate 拦下 Planner 的收尾，强制再开一轮认证，再核一次才完成。</p>
+
+<div class="callout">同一个模型，base 86 步自认完成交了不达标结果。Argus 355 步，从崩溃中恢复，Reviewer 从原始数据独立核实两遍。差别是有没有一个能打回、要证据的验收环节。</div>
+
+<h2>五、wsi_tumor_localization_1（病理影像）</h2>
+<p><b>题目。</b> CAMELYON16 全切片病理图，level-0 分辨率 97792×221184 像素。给定 <code>wsi_tools.py</code> 提供 slide metadata、缩略图、region read 和 tissue mask。任务是定位肿瘤转移灶中心坐标，输出 <code>{"x": float, "y": float}</code> 到 <code>center_point/output/prediction.json</code>。评分看坐标是否落在隐藏的肿瘤标注区域内。</p>
+<p>这道题不在 ale_claw 跑的 26 题内，没有同模型单体对照。单体基线取 ALE 的 Qwen3.5-397B 参考运行（模型不同），所以只做定性对比，不用于计算分数差。轨迹在 <code>docs/argus_analysis/wsi_tumor_case/</code>。</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th style="width:150px">　</th><th>Qwen3.5-397B 单体基线，<span class="bad">0.0</span></th><th>Argus 四角色（gpt-5.6-sol），<span class="yes">1.0</span></th></tr></thead>
+<tbody>
+<tr><td class="c">步数 / 输入 token / 时长</td><td class="c">52 步，30 万，56 分钟</td><td class="c">357 步，604 万，80 分钟</td></tr>
+<tr><td class="c">成本</td><td class="c">无记录</td><td class="c">$18.86，含 Goal Gate</td></tr>
+<tr><td class="c">结果</td><td class="c">completed 但坐标不在肿瘤区</td><td class="c">满分，最终坐标 (72000, 125000)</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Argus Reviewer 的认证记录</h3>
+<p>数据来自 <code>wsi_tumor_case/argus/argus_summary.json</code>，mission 1 stop_reason：</p>
+<div class="card" style="font-size:13.5px">
+<p>Independent audit passed every observable hard gate. The exact required output directory contains only the non-empty regular file prediction.json; it parses to exactly {"x": 72800.0, "y": 125500.0} with finite float values and no extra keys. Native OpenSlide reports level-0 dimensions 97792×221184, so the coordinate is in bounds, and fresh level-3 through level-0 region reads reopened successfully. Visual inspection confirms the point lies centrally within cohesive atypical epithelial tumor in desmoplastic stroma, not normal lymphoid tissue or a tumor boundary.</p>
+</div>
+
+<p>Goal Gate 再开一轮独立认证（mission 2）。Reviewer 判了 continue，Engineer 把坐标从 (72800, 125500) 微调到 (72000, 125000)，Reviewer 再核一遍 level-3 到 level-0 读取与交付证据图吻合，才判 done。这是复核直接触发返工的实例。</p>
+
+<p><b>单体为什么失败。</b> 52 步跑完、标记 completed，坐标落在肿瘤区域外。没有独立环节用 OpenSlide 重读对应区域做组织学确认。</p>
+
+<h2>六、abm_hangzhou_metro（交通仿真）</h2>
+<p><b>题目。</b> 给定杭州地铁 AFC 刷卡数据 1,264,325 条、线路 GeoJSON、站点序列、运营参数。搭建 Agent-Based 模型仿真客流，输出 <code>passenger_records.csv</code>（逐乘客模拟结果，9 列）和 <code>validation_report.txt</code>。评分比对模拟时长和真实 AFC 的偏差。</p>
+<p>同样不在 26 题内，单体基线取 Qwen3.5-397B 参考运行（模型不同）。轨迹在 <code>docs/argus_analysis/abm_hangzhou_case/</code>。</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th style="width:150px">　</th><th>Qwen3.5-397B 单体基线，<span class="bad">0.0</span></th><th>Argus 四角色（gpt-5.6-sol），<span class="yes">1.0</span></th></tr></thead>
+<tbody>
+<tr><td class="c">步数 / 输入 token / 时长</td><td class="c">18 步，38 万，超时（7248 秒）</td><td class="c">229 步，276 万，27 分钟</td></tr>
+<tr><td class="c">成本</td><td class="c">无记录</td><td class="c">$10.12，含 Goal Gate</td></tr>
+<tr><td class="c">结果</td><td class="c">timeout，未产出合格交付</td><td class="c">满分，R² = 0.785</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Argus Reviewer 的认证记录</h3>
+<p>数据来自 <code>abm_hangzhou_case/argus/argus_summary.json</code>，mission 1 stop_reason：</p>
+<div class="card" style="font-size:13.5px">
+<p>All observable hard gates pass. Both required files exist at the exact output-root paths and parse successfully. Independent full-row validation confirmed the exact nine-column schema, integer fields, 1,264,325/1,264,325 AFC identity coverage, observed-value alignment, duration arithmetic, valid stations, and internally consistent report metrics. The strongest measured result is R² 0.781964 with RMSE 7.172751 minutes and mean residual −1.763835 minutes. Source inspection confirms simulation-owned values are generated through network routing and train-event simulation rather than copied AFC labels. A fresh reviewer replay completed with zero unserved trips and reproduced both deliverables byte-for-byte.</p>
+</div>
+
+<p>Goal Gate 又开一轮独立认证，Reviewer 重新算出 R² 0.785409、RMSE 7.12 分钟，并核对 1,264,325 条 AFC 全部对齐，全部 hard gate 通过。</p>
+
+<p><b>单体为什么失败。</b> ABM 仿真需要先配站点拓扑、发车间隔、路由逻辑，再模拟 126 万条记录。单体 18 步在环境配置上耗尽时间超时。Argus 靠 Planner 拆成环境准备、仿真执行、结果验证三步，27 分钟完成。</p>
+
+<h2>七、经验总结</h2>
+
+<div class="card">
+<h3>1. 独立验收的权力是必要条件，不是充分条件</h3>
+<p>我的 verifier 没有打回权力，也够不到真正的评分面。但光给 Reviewer 权力不够——它还必须物理上无法被 Engineer 的推理链带偏（全新会话），并且它的判定标准必须是具体的正面证据（测了什么值、对比了什么文件），而不是「看起来做完了」。</p>
+
+<h3>2. 有权力的复核需要三样配套</h3>
+<p>我之前给验证加过硬权力，当时判定为死路。Argus 撑住这个权力靠的是：每轮新会话防共识偏见、CHECKPOINT.md 双向可纠正让状态收敛、Goal Gate 在终检上再加一层防 Reviewer 自己判松。我缺的不是判断，是这套配套。</p>
+
+<h3>3. Manager 作为唯一连续记忆比想象中重要</h3>
+<p>在所有执行角色每轮失忆的系统里，得有一个角色知道完整历史、决定要不要重试。ct_geometry 崩溃后能接上，不是靠特殊的恢复逻辑，是 Manager 判 continue + 新会话读 CHECKPOINT.md 自然恢复。</p>
+
+<h3>4. 规划拆解对工具链任务有价值</h3>
+<p>abm_hangzhou 单体 18 步超时，Argus 27 分钟完成。Planner 不只是"拆成步骤"，而是每个子任务带验收命令——Engineer 知道什么算做完这一步。对需要多步配置才能跑起来的题，这比加 token 有用。</p>
+
+<h3>5. 多角色在 26 题上统计不显著</h3>
+<p>去掉 ct_geometry，Argus 只比 base 高 0.007。还输了 5 题。更硬的证据在 SWE-Bench Pro（731 题，78% vs 59%）。ALE 26 题的价值是把机制讲清楚，不是证明分数优势。</p>
+
+<h3>6. 代价真实</h3>
+<p>三道题分别 $16、$19、$10，输入 token 是单体数倍到二十倍。门槛题值得，高分再磨的题未必。</p>
+</div>
+
+<h3>怎么看原始轨迹</h3>
+<p>每个 case 子目录结构一致：</p>
+<ul>
+  <li><code>task_card.json</code> — ALE 的题目定义（prompt、评分规则、输入文件、VM 配置）</li>
+  <li><code>argus/run.json</code> — 整次运行的元数据（模型、步数、token、耗时、得分）</li>
+  <li><code>argus/argus_summary.json</code> — 每个 mission 的 Reviewer stop_reason 原文，这是最有信息量的文件</li>
+  <li><code>argus/events.jsonl</code> — ALE harness 级别的事件流（部署、执行、评分）</li>
+  <li><code>argus/eval_result.json</code> — 最终评分结果</li>
+</ul>
+<p>要看 Argus 具体怎么做一道题，读 <code>argus_summary.json</code> 的 <code>stop_reason</code> 字段。它是 Reviewer 写给系统的判定原文，包含它核了什么、测了什么值、怎么得出结论。</p>
+
+<div class="foot">
+数据来源：<code>argus-run/argus_final_scores.csv</code>（105 题）、<code>docs/harness_analysis/master26_scores.csv</code>（26 题四臂）、<code>docs/argus_analysis/{ct_geometry,wsi_tumor,abm_hangzhou}_case/</code>（三道题原始轨迹与逐题分析）、<code>docs/archive/qwen390b_analysis/</code>（wsi 与 abm 的 Qwen3.5-397B 单体基线）、Argus 技术报告 SWE-Bench Pro 数据。26 题对照为同模型 gpt-5.6-sol、同 Boyue 端点；wsi 与 abm 的单体基线是不同模型的 Qwen 参考运行。每题每边各一次运行（n=1），机制结论基于轨迹分析，分数差异需多次重复才作数。2026-07-27。
+</div>
+
+</div>
+
+<script>
+const TASKS=[["american_option_pricing_ls","business_finance",1.0,3210011,30.1],["digital_marketing_ab_test_analysis_1","business_finance",1.0,3212567,23.8],["financial_stmt_reconstruction_aapl_fy2024","business_finance",1.0,2340088,19.2],["internal_employee_agent_instance_1","business_finance",1.0,2244079,24.0],["sec_10k_financial_parsing","business_finance",0.9282,8018343,61.7],["digital_marketing_audience_segmentation_1","business_finance",0.9042,650032,7.1],["pe_screening_memo_1","business_finance",0.9,8501947,35.6],["bpmn_supply_disruption_l3","business_finance",0.8262,19014333,114.4],["sse_northbound_programmatic_trading_01","business_finance",0.6667,56316,6.1],["llm_ecosystem_privacy_audit_realdata_1","business_finance",0.5,2702408,28.6],["basel_operational_risk_bia_cn","business_finance",0.0,2533086,19.6],["bpmn_category_governance_restructuring_l3","business_finance",0.0,9577029,120.3],["ff5_public_reconstruction","business_finance",0.0,1189376,24.3],["legal_ma_consistency_audit_01","business_finance",0.0,2084712,13.9],["branch_bound_atsp","computing_math",1.0,1276596,17.1],["ising_post_measurement_1","computing_math",1.0,1961269,22.0],["k3_abelian_extensions","computing_math",1.0,1912844,18.1],["mp_checkpoint_consolidation_v2","computing_math",1.0,5426472,78.6],["os_log_permission_guard_v1","computing_math",1.0,1651481,13.2],["data_pipeline_etl_instance_1","computing_math",0.8333,3634678,27.6],["paper_reproduction_instance_1","computing_math",0.8,4543521,24.7],["k8s_payment_api_root_cause_analysis","computing_math",0.7227,56124,5.0],["cp_test_gen_1","computing_math",0.7,4830363,37.3],["cost_optimization_1","computing_math",0.6964,2791742,26.4],["cfr_game_theory_equilibrium","computing_math",0.67,748363,22.9],["k8s_migration_1","computing_math",0.65,4418095,27.0],["recsys_cold_start_instance_1","computing_math",0.5,489230,16.7],["synthetic_causal_structure_inference","computing_math",0.4048,16706148,92.5],["go_game_reconstruction_1","computing_math",0.125,18506509,122.7],["clustered_cyclic_code_circuit_level_simulation","computing_math",0.0,6835334,192.9],["dit_pipeline_cfg_alignment_fid_256_001","computing_math",0.0,3849255,32.2],["particle_filter_nonlinear_tracking","computing_math",0.0,8239856,183.0],["ranking_node_feature_parity_recovery_instance_1","computing_math",0.0,2945915,26.4],["moodle_gradebook_closeout_reconciliation","education_info",0.95,60948,5.8],["homework_grading_numerical_pdes_instance_02","education_info",0.6396,1728273,14.3],["marc_remediation_folio_overlay","education_info",0.2,4214344,25.8],["abb_irb6700_asset_to_urdf_instance_1","engineering",1.0,4536377,31.4],["humanoid_wbc_policy_evaluation","engineering",0.7125,20191451,115.6],["chisel_verilog_alignment_seq_1","engineering",0.2,3339796,16.4],["power_10kv_feeder_reliability_001","engineering",0.0293,5469221,40.9],["aerospace_low_thrust_trajectory","engineering",0.0,27545520,264.9],["mpc_control_building_v1","engineering",0.0,8830254,63.7],["openroad_sky130_ibex_pnr_signoff","engineering",0.0,1439084,176.7],["sumo_urban_am_peak_calibration","engineering",0.0,9773866,52.4],["Clinical_Variant_Annotation","health_medicine",1.0,3596405,32.6],["ct_geometry_calibration_catphan","health_medicine",1.0,5683696,41.1],["epidemiology_forecast","health_medicine",1.0,2282404,17.2],["healthcare_tcga_luad_survival_kras","health_medicine",1.0,3387564,36.3],["replicate_paper_1","health_medicine",1.0,3162004,27.5],["wsi_tumor_localization_1","health_medicine",1.0,6036884,80.6],["healthcare_variant_annotation_pipeline","health_medicine",0.999,4050023,25.6],["nhanes_confounder_sensitivity_analysis","health_medicine",0.975,855212,13.9],["causal_ihdp_ite_estimation_6a_v1","health_medicine",0.925,1686709,34.8],["obermeyer_bias_reproduction","health_medicine",0.7354,3971412,31.5],["flusight_offline_hosp_forecast_2024_12_14","health_medicine",0.7098,2745495,22.5],["crf_sdtm_mapping_4","health_medicine",0.5694,9762838,56.7],["public_health_mask_mandate_ratio","health_medicine",0.3333,2078067,67.0],["healthcare_sap_group_sequential_nsclc","health_medicine",0.2,3813211,28.3],["crf_sdtm_mapping_1","health_medicine",0.0,3095217,26.4],["healthcare_bias_audit_27a_public_replication_v1","health_medicine",0.0,1556077,18.7],["limited_angle_ct_dps_reconstruction","health_medicine",0.0,720931,35.6],["ltmle_targeted_bootstrap_simulation_study","health_medicine",0.0,23903019,122.9],["nsclc_radiomics_cox_signature_v1","health_medicine",0.0,8726809,68.5],["prostate_imrt_matrad_reproduction","health_medicine",0.0,1197064,32.8],["scene3_skullstrip_qc","health_medicine",0.0,6437791,47.3],["simglucose_safe_basal_control_instance_1","health_medicine",0.0,14450039,116.3],["legal_dr_fees_01","legal",1.0,865435,8.5],["agora_governance_classify_instance_1","legal",0.34,56123,16.1],["protein_function_annotation_instance_1","life_sciences",1.0,3790732,43.2],["pseudotime_de","life_sciences",1.0,10235441,202.1],["rgi_mcr1_colistin_v2","life_sciences",1.0,1131650,11.9],["tcga_brca_deg_analysis","life_sciences",1.0,3760077,32.3],["tp53_locus_variant_histone_browser_svg","life_sciences",1.0,7340127,49.4],["gene_expression_differential_analysis_functional_enrichment_analysis_1","life_sciences",0.9988,830686,13.8],["cell_tracking_instance_1","life_sciences",0.9235,99739,37.0],["spatial_transcriptomics_spatial_domain_identification","life_sciences",0.6545,5439454,57.6],["merfish_image_decoding_segmentation_1","life_sciences",0.6,6105614,48.9],["idp_ensemble_scoring","life_sciences",0.4,5418965,105.5],["genomic_interval_processing_1","life_sciences",0.25,273896,6.9],["WGS_Variant_Calling","life_sciences",0.2,375392,9.6],["amber_minimization_script_prep_instance_1","life_sciences",0.0,323964,10.1],["amber_three_stage_mmgbsa_workflow_instance_1","life_sciences",0.0,25030,6.7],["cell_translocation_analysis","life_sciences",0.0,642887,13.1],["hg002_chr22_germline_variant_pipeline","life_sciences",0.0,701221,10.9],["tms_marrow_cell_type_annotation_instance_1","life_sciences",0.0,81937,9.7],["yeast_colony_detection","life_sciences",0.0,5553809,46.5],["zdock_hiv_dimer_interface_scoring_v1","life_sciences",0.0,323341,13.8],["aerobics_wc2026_portugal_trio_difficulty_scoring","other",0.0,27941114,200.9],["adapt_vqe_molecular_energy","physical_sciences",1.0,871883,14.5],["computational_materials_science","physical_sciences",1.0,13458704,54.5],["exact_diag_heisenberg_j1j2","physical_sciences",1.0,42533,7.4],["glm_lake_calibration","physical_sciences",1.0,9930598,165.4],["gillespie_gene_regulatory_network","physical_sciences",0.89,1887226,62.1],["silicon_bse_absorption","physical_sciences",0.8848,10365263,68.4],["molecular_structure_plausibility","physical_sciences",0.8333,4357495,32.8],["climate_prediction","physical_sciences",0.7932,4489653,57.6],["mose2_bse_absorption_soc","physical_sciences",0.751,14662257,95.8],["hst_acs_wfc_visit_reduction","physical_sciences",0.0,7214447,48.8],["phonon_dispersion_thermodynamics","physical_sciences",0.0,2216666,19.6],["celegans_neuron_tracking","psychology_neuro",0.3712,15318772,127.1],["scene2_resample","psychology_neuro",0.0,19768485,89.7],["atwood_2022_measles_vaccine_reproduction","social_sciences",1.0,8488222,101.5],["abm_hangzhou_metro","transport_safety",1.0,2759231,27.7],["fds_single_compartment_detector_reconstruction","transport_safety",0.7952,4206475,36.7],["capacitated_vehicle_routing_problems","transport_safety",0.67,70382,8.0]];
+const DOMNAME={business_finance:"商业金融",computing_math:"计算数学",education_info:"教育信息",engineering:"工程",health_medicine:"医疗健康",legal:"法律",life_sciences:"生命科学",other:"其他",physical_sciences:"物理科学",psychology_neuro:"心理神经",social_sciences:"社会科学",transport_safety:"交通安全"};
+const DOM=[["社会科学",1,1.000],["交通安全",3,0.822],["物理科学",11,0.741],["法律",2,0.670],["商业金融",14,0.623],["教育信息",3,0.597],["计算数学",19,0.584],["医疗健康",22,0.520],["生命科学",19,0.475],["工程",8,0.243],["心理神经",2,0.186],["其他",1,0.000]];
+const ARM=[["base",0.621,"ale_claw 单体 writer","var(--claw)"],["prep",0.610,"加准备层","var(--claw)"],["verifier",0.625,"加验证层","var(--claw)"],["argus",0.667,"四角色","var(--argus)"]];
+const TL=[
+ ["sys","第 1 轮 Engineer 后端断流失败，判 <b>continue</b>，换全新会话重试"],
+ ["e","第 2 轮 Engineer 重跑，产出标定参数与重建图"],
+ ["r","Reviewer 判 <b>done</b>：从 sinogram 用交付几何独立重跑，逐字节一致，SSIM 0.9964、MSE 3.68e-8"],
+ ["p","Planner 想收尾，被 <b>Goal Gate 拦下</b>：final-stage 未经独立认证"],
+ ["sys","强制开一轮认证任务，标 <b>review:required</b>"],
+ ["r","Reviewer 再核一遍：全新重建复现，SHA-256 一致，SSIM/MSE 达标"],
+ ["m","Manager 记录 execute 检查全部由独立证据满足，任务完成"],
+];
+const RN={m:"Manager",p:"Planner",e:"Engineer",r:"Reviewer",sys:"系统"};
+
+const tt=document.getElementById("tt");
+function bindTip(el,html){el.addEventListener("mousemove",e=>{tt.innerHTML=html;tt.style.opacity=1;let x=e.clientX+14,y=e.clientY+14;if(x+tt.offsetWidth>innerWidth)x=e.clientX-tt.offsetWidth-14;tt.style.left=x+"px";tt.style.top=y+"px";});el.addEventListener("mouseleave",()=>tt.style.opacity=0);}
+
+function hbar(el,rows,max,fmt){el.innerHTML="";rows.forEach(([lab,val,tip])=>{const r=document.createElement("div");r.className="hrow";r.innerHTML='<div class="lab">'+lab+'</div><div class="htrack"><span style="width:'+(val/max*100)+'%"></span></div><div class="val">'+fmt(val)+'</div>';if(tip)bindTip(r.querySelector(".htrack"),tip);el.appendChild(r);});}
+hbar(document.getElementById("domBars"),DOM.map(([d,n,m])=>[d+"（"+n+"）",m,d+"：平均 "+m.toFixed(3)+"，"+n+" 题"]),1,v=>v.toFixed(3));
+
+const sel=document.getElementById("domSel");
+const doms=[...new Set(TASKS.map(t=>t[1]))];
+sel.innerHTML='<option value="__all">全部 105 题（按分数排序）</option>'+doms.map(d=>'<option value="'+d+'">'+DOMNAME[d]+'</option>').join("");
+function scoreColor(s){return s>=0.999?"var(--s1)":s>=0.7?"var(--s2)":s>=0.3?"var(--s3)":s>0?"var(--s4)":"var(--s0)";}
+function renderTasks(){
+  const v=sel.value; let rows=v==="__all"?TASKS.slice().sort((a,b)=>b[2]-a[2]):TASKS.filter(t=>t[1]===v);
+  const tb=document.getElementById("taskBody");tb.innerHTML="";
+  rows.forEach(([t,d,s,it,mn])=>{const tr=document.createElement("tr");
+    tr.innerHTML='<td class="c" style="font-family:ui-monospace,monospace;font-size:12px">'+t+'</td>'+
+      '<td class="num">'+s.toFixed(3)+'</td>'+
+      '<td><div class="htrack"><span style="width:'+(s*100)+'%;background:'+scoreColor(s)+'"></span></div></td>'+
+      '<td class="num" style="color:var(--muted)">'+(it/1e6).toFixed(2)+'M</td>'+
+      '<td class="num" style="color:var(--muted)">'+mn+'′</td>';
+    tb.appendChild(tr);});
+  const mean=rows.reduce((a,b)=>a+b[2],0)/rows.length;
+  const perf=rows.filter(r=>r[2]>=0.999).length, zero=rows.filter(r=>r[2]===0).length;
+  document.getElementById("domStat").textContent=rows.length+" 题 · 均分 "+mean.toFixed(3)+" · 满分 "+perf+" · 零分 "+zero;
+}
+sel.addEventListener("change",renderTasks);
+sel.value="health_medicine"; renderTasks();
+
+function vbars(el,rows,max,fmt){rows.forEach(([lab,val,desc,c])=>{const col=document.createElement("div");col.className="vcol";const bar=document.createElement("div");bar.className="vbar";bar.style.height=(val/max*100)+"%";bar.style.background=c;bar.innerHTML='<span class="tag">'+fmt(val)+'</span>';bindTip(bar,"<b>"+lab+"</b><br>"+desc+"<br>"+fmt(val));const l=document.createElement("div");l.className="vlab";l.innerHTML=lab;col.appendChild(bar);col.appendChild(l);el.appendChild(col);});}
+vbars(document.getElementById("armBars"),ARM,0.8,v=>v.toFixed(3));
+document.getElementById("armLegend").innerHTML='<span><i class="sw" style="background:var(--claw)"></i>ale_claw 系（单体 writer 加可选层）</span><span><i class="sw" style="background:var(--argus)"></i>Argus 四角色</span>';
+
+const tl=document.getElementById("timeline");
+TL.forEach(([role,txt])=>{const r=document.createElement("div");r.className="tlrow";
+  r.innerHTML='<div class="tlrole '+role+'">'+RN[role]+'</div><div class="tltxt">'+txt+'</div>';tl.appendChild(r);});
+</script>
+</body>
+</html>

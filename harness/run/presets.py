@@ -42,14 +42,11 @@ def ale_claw_agent_yaml(
     with_skills: bool,
     agent_id: str,
     task_specific_prep: bool = False,
-    prep_max_steps: int = 30,
+    prep_max_steps: int = 50,
     prep_timeout_s: int = 1800,
-    verifier: bool = False,
-    verifier_max_steps: int = 30,
-    verifier_max_review_rounds: int = 1,
-    verifier_writer_checks: int = 2,
-    prep_self_check: bool = True,
-    writer_self_review_hint: bool = False,
+    reviewer_audit: bool = False,
+    reviewer_audit_max_steps: int = 40,
+    reviewer_audit_max_rounds: int = 2,
     model: str = "openai/gpt-5.6-sol",
     max_turns: int = 100000,
     thinking_level: str = "medium",
@@ -73,15 +70,13 @@ def ale_claw_agent_yaml(
         f"  task_specific_prep: {'true' if task_specific_prep else 'false'}\n"
         f"  task_specific_prep_max_steps: {prep_max_steps}\n"
         f"  task_specific_prep_timeout_s: {prep_timeout_s}\n"
-        f"  verifier: {'true' if verifier else 'false'}\n"
-        f"  verifier_max_steps: {verifier_max_steps}\n"
-        f"  verifier_max_review_rounds: {verifier_max_review_rounds}\n"
-        f"  verifier_writer_checks: {verifier_writer_checks}\n"
-        f"  task_specific_prep_self_check: {'true' if prep_self_check else 'false'}\n"
-        f"  writer_self_review_hint: {'true' if writer_self_review_hint else 'false'}\n"
+        f"  reviewer_audit: {'true' if reviewer_audit else 'false'}\n"
+        f"  reviewer_audit_max_steps: {reviewer_audit_max_steps}\n"
+        f"  reviewer_audit_max_rounds: {reviewer_audit_max_rounds}\n"
     )
     if with_skills:
         head += "  skill_sources:\n"
         for name, text in skills.items():
             head += f"    {name}: {yaml_block_scalar(text, 6)}\n"
     return head
+

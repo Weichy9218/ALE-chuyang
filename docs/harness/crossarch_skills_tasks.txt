@@ -1,0 +1,17 @@
+# WS2 crossarch-skills A/B — the 6 task_classes each authored crossarch skill targets.
+# Each task is one where a DONOR arch (claude-code) solved and a TARGET arch
+# (argus / ale-claw-base) scored 0. All 6 skills are injected together into every
+# +skills arm; load-on-demand is model-gated via memory_get, so on any given task
+# only the matching method-<name>.md should actually be pulled. This isolates the
+# skills lever: base vs base_skills (and reviewer vs reviewer_skills) is a clean
+# per-task A/B for "does the domain-method skill move the score off 0".
+#
+# 5 of 6 are argus-target failures; ct_geometry_calibration_catphan is the one
+# ale-claw-base failure CC solved — the most direct ale_claw skills test.
+
+life_sciences/tms_marrow_cell_type_annotation_instance_1
+health_medicine/ct_geometry_calibration_catphan
+life_sciences/yeast_colony_detection
+computing_math/ranking_node_feature_parity_recovery_instance_1
+life_sciences/hg002_chr22_germline_variant_pipeline
+physical_sciences/hst_acs_wfc_visit_reduction

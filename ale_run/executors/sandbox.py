@@ -456,6 +456,18 @@ class SandboxExecutor(BaseExecutor):
             # json across the tree. See ensure_cua_mcp_server.
             "agents/_assets/cua_mcp_server/**/*.js",
             "agents/_assets/cua_mcp_server/**/*.json",
+            # Agent-vendored wheels (``agents/<agent>/_vendor/*.whl``). An agent
+            # whose Python dependency is not on any index the sandbox can reach
+            # has no other route: the sandbox cannot read the harness host, and
+            # only this subtree is shipped. Scoped to _vendor so it cannot sweep
+            # stray archives, and today only the argus agent has one.
+            "agents/*/_vendor/*.whl",
+            # WS2 skills-lever seed data (``agents/<agent>/seed_skills/**/*.md``).
+            # The ``.py``-only sweep above drops these markdown skill bodies, but
+            # ``_launcher._seed_skills`` reads them package-relative in-sandbox, so
+            # they must ship. Scoped to seed_skills (only argus has one) so it
+            # cannot sweep stray docs across the tree.
+            "agents/*/seed_skills/**/*.md",
         )
         for pattern in patterns:
             for src_path in sorted(host_root.rglob(pattern)):

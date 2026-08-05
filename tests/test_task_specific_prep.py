@@ -15,7 +15,7 @@ from ale_run.agents.ale_claw.deployer import (
 from ale_run.agents.ale_claw.verifier_runtime import stage_verifier_report
 from ale_run.agents.ale_claw.task_prep import (
     MAX_PREP_ARTIFACT_BYTES,
-    MAX_PREP_CONTRACT_ITEMS,
+    MAX_PREP_FINDINGS,
     MAX_PREP_REPORT_CHARS,
     PREP_TOOL_NAMES,
     TaskPrepResult,
@@ -23,9 +23,7 @@ from ale_run.agents.ale_claw.task_prep import (
     build_task_prep_system_prompt,
     collect_prep_artifacts,
     normalize_prep_bundle,
-    preflight_self_check,
-    prep_scratch_dir,
-    withhold_self_check,
+    prep_protocol_digest,
 )
 from ale_run.agents.ale_claw.harness.subagent.subagent_session import (
     _filter_tools,
@@ -134,14 +132,6 @@ def _payload(**overrides) -> str:
     return json.dumps(value)
 
 
-def test_prep_is_enabled_by_default() -> None:
-    config = AleClawConfig()
-
-    assert config.task_specific_prep is True
-    assert config.task_specific_prep_max_steps == 30
-    assert config.task_specific_prep_timeout_s == 1800
-    assert config.task_specific_prep_self_check is True
-    assert config.writer_self_review_hint is False
 
 
 def test_prep_budgets_must_be_positive() -> None:
@@ -151,10 +141,11 @@ def test_prep_budgets_must_be_positive() -> None:
         AleClawConfig(task_specific_prep_timeout_s=0)
 
 
-def test_prep_metadata_records_protocol() -> None:
+def test_prep_metadata_records_a_content_digest_not_a_version_label() -> None:
     metadata = TaskPrepResult(status="empty").metadata()
 
-    assert metadata["protocol"] == "task-prep-v23"
+    assert metadata["protocol_digest"] == prep_protocol_digest()
+    assert metadata["protocol_digest"].startswith("prep-")
     assert metadata["report_sha256"] is None
 
 
@@ -164,7 +155,6 @@ def test_prep_metadata_audits_report_without_embedding_it() -> None:
         report="# Task-specific prep\n",
         artifacts={"artifacts/rank.tsv": "term\trank\n"},
         environment_status="ready",
-        contract_items=7,
         finding_count=1,
         dropped=["finding:empty_observation"],
     )
@@ -174,55 +164,11 @@ def test_prep_metadata_audits_report_without_embedding_it() -> None:
     assert metadata["report_chars"] == len(result.report)
     assert metadata["artifact_manifest"][0]["path"] == "artifacts/rank.tsv"
     assert metadata["environment_status"] == "ready"
-    assert metadata["contract_items"] == 7
     assert metadata["dropped"] == ["finding:empty_observation"]
 
 
-def test_prep_protocol_prepares_runtime_contract_and_facts() -> None:
-    prompt = build_task_prep_system_prompt("/task/root")
-
-    assert "You run in the writer's sandbox before the writer starts" in prompt
-    assert "Make the runtime work" in prompt
-    assert "Compile the deliverable contract" in prompt
-    assert "not a grading rubric" in prompt
-    assert "Never read, write, lint, score, or check the writer's `output/`" in prompt
-    assert "A runnable self-check script" in prompt
-    assert "should reference the deliverable paths under `output/`" in prompt
-    assert prep_scratch_dir("/task/root") in prompt
 
 
-def test_report_carries_runtime_contract_findings_and_artifacts() -> None:
-    bundle = normalize_prep_bundle(_payload())
-
-    assert bundle.environment_status == "ready"
-    assert bundle.contract_items == 1
-    assert bundle.finding_count == 1
-    assert bundle.artifact_paths == ["rank.tsv"]
-    assert bundle.dropped == []
-    assert "## Runtime [ready]" in bundle.report
-    assert "`/usr/bin/python3.10 software/run.py --check`" in bundle.report
-    assert "## Deliverable contract checklist" in bundle.report
-    assert "1. Write output/report.json with a top-level rows array." in bundle.report
-    assert "- Source: `https://ensembl.org/info/consequences.html`" in bundle.report
-    assert "- `task_prep/artifacts/rank.tsv` - " in bundle.report
-
-
-def test_any_single_section_is_enough_for_a_report() -> None:
-    only_contract = normalize_prep_bundle(json.dumps({
-        "contract": [{"requirement": "Preserve the original process IDs."}],
-    }))
-
-    assert only_contract.report
-    assert only_contract.contract_items == 1
-    assert only_contract.environment_status == ""
-
-    only_environment = normalize_prep_bundle(json.dumps({
-        "environment": {"status": "blocked", "summary": "No Docker daemon.",
-                        "blocked_reason": "docker: cannot connect"},
-    }))
-
-    assert "## Runtime [blocked]" in only_environment.report
-    assert "Not working: docker: cannot connect" in only_environment.report
 
 
 def test_empty_response_produces_no_report() -> None:
@@ -234,178 +180,14 @@ def test_empty_response_produces_no_report() -> None:
     assert bundle.artifact_paths == []
 
 
-def test_one_bad_entry_does_not_discard_the_bundle() -> None:
-    bundle = normalize_prep_bundle(_payload(
-        contract=[
-            {"requirement": "", "locator": "task_prompt"},
-            {"requirement": "Keep gateway IDs unchanged.", "locator": "task_prompt"},
-        ],
-        findings=[
-            {"title": "no observation", "writer_action": "do something"},
-            {"title": "kept", "observation": "Rule 21 extends Rule 16."},
-        ],
-    ))
-
-    assert bundle.contract_items == 1
-    assert bundle.finding_count == 1
-    assert "Keep gateway IDs unchanged." in bundle.report
-    assert bundle.dropped == [
-        "contract:empty_requirement", "finding:empty_observation"
-    ]
 
 
-def test_writer_facing_checks_may_reference_the_deliverable() -> None:
-    """The prep boundary is who runs a check and when, not the string output/.
-
-    A contract check, a finding's writer action, and a verified command are all
-    instructions the writer executes against its own draft; they necessarily
-    name deliverable paths under output/, and v19 keeps them intact.
-    """
-    bundle = normalize_prep_bundle(_payload(
-        environment={
-            "status": "ready",
-            "summary": "ok",
-            "commands": ["python check.py output/report.json", "python -V"],
-        },
-        contract=[{
-            "requirement": "Emit one row per case.",
-            "locator": "task_prompt",
-            "check": "wc -l output/rows.csv",
-        }],
-        findings=[{
-            "title": "self-check available",
-            "observation": "The checker exists.",
-            "writer_action": "Run the checker on output/report.json.",
-        }],
-    ))
-
-    assert bundle.dropped == []
-    assert bundle.contract_items == 1
-    assert bundle.finding_count == 1
-    assert "- Check: wc -l output/rows.csv" in bundle.report
-    assert "Run the checker on output/report.json." in bundle.report
-    assert "`python check.py output/report.json`" in bundle.report
-    assert "`python -V`" in bundle.report
 
 
-def test_self_check_renders_as_a_first_class_section() -> None:
-    bundle = normalize_prep_bundle(_payload(
-        artifacts=[
-            {"path": "check_contract.py", "purpose": "contract linter"},
-            {"path": "rank.tsv", "purpose": "rank table"},
-        ],
-        self_check={
-            "command": "python3 task_prep/artifacts/check_contract.py output",
-            "artifact": "check_contract.py",
-            "covers": "checks the rows array and required fields; cannot judge values",
-        },
-    ))
-
-    assert bundle.self_check is not None
-    assert bundle.dropped == []
-    assert "## Self-check" in bundle.report
-    assert "`python3 task_prep/artifacts/check_contract.py output`" in bundle.report
-    assert "it has no authority" in bundle.report
-    assert bundle.report.index("## Self-check") < bundle.report.index(
-        "## Deliverable contract checklist"
-    )
-    assert bundle.contract[0]["requirement"].startswith("Write output/report.json")
 
 
-def test_self_check_must_name_a_declared_artifact() -> None:
-    undeclared = normalize_prep_bundle(_payload(self_check={
-        "command": "python3 task_prep/artifacts/ghost.py output",
-        "artifact": "ghost.py",
-        "covers": "everything",
-    }))
-    assert undeclared.self_check is None
-    assert "self_check:artifact_not_declared" in undeclared.dropped
-    assert "## Self-check" not in undeclared.report
-
-    empty_command = normalize_prep_bundle(_payload(self_check={
-        "command": "",
-        "artifact": "rank.tsv",
-        "covers": "",
-    }))
-    assert empty_command.self_check is None
-    assert "self_check:empty_command" in empty_command.dropped
 
 
-def test_delivery_switch_withholds_self_check_and_its_artifact() -> None:
-    """The A/B off arm removes every writer-facing trace of the self-check.
-
-    Prep still wrote and declared the script; only delivery changes, so a
-    paired run isolates the self-check channel from the rest of prep. The
-    script artifact goes too - a listed file is discoverable even when the
-    digest never names it.
-    """
-    bundle = normalize_prep_bundle(_payload(
-        artifacts=[
-            {"path": "check_contract.py", "purpose": "contract linter"},
-            {"path": "rank.tsv", "purpose": "rank table"},
-        ],
-        self_check={
-            "command": "python3 task_prep/artifacts/check_contract.py output",
-            "artifact": "check_contract.py",
-            "covers": "contract items",
-        },
-    ))
-    assert bundle.self_check is not None
-
-    withhold_self_check(bundle)
-
-    assert bundle.self_check is None
-    assert bundle.artifact_paths == ["rank.tsv"]
-    assert "self_check:withheld_by_config" in bundle.dropped
-    assert "## Self-check" not in bundle.report
-    assert "check_contract.py" not in bundle.report
-    assert "- `task_prep/artifacts/rank.tsv` - rank table" in bundle.report
-    assert "Self-check" not in build_prep_digest(bundle, "task_prep/PREP_REPORT.md")
-    # Idempotent: a second call must not double-record the drop.
-    withhold_self_check(bundle)
-    assert bundle.dropped.count("self_check:withheld_by_config") == 1
-
-
-def test_report_rerenders_without_an_unavailable_artifact() -> None:
-    from ale_run.agents.ale_claw.task_prep import render_prep_report
-
-    bundle = normalize_prep_bundle(_payload(
-        artifacts=[
-            {"path": "check_contract.py", "purpose": "contract linter"},
-            {"path": "rank.tsv", "purpose": "rank table"},
-        ],
-        self_check={
-            "command": "python3 task_prep/artifacts/check_contract.py output",
-            "artifact": "check_contract.py",
-            "covers": "contract items",
-        },
-    ))
-    assert "## Self-check" in bundle.report
-
-    report = render_prep_report(bundle, unavailable=frozenset({"check_contract.py"}))
-
-    assert "## Self-check" not in report
-    assert "- (unavailable) contract linter" in report
-    assert "- `task_prep/artifacts/rank.tsv` - rank table" in report
-    assert bundle.self_check is None
-    assert "self_check:artifact_unavailable" in bundle.dropped
-
-
-def test_section_sizes_are_bounded() -> None:
-    bundle = normalize_prep_bundle(json.dumps({
-        "contract": [
-            {"requirement": f"Requirement {index}", "locator": "task_prompt"}
-            for index in range(MAX_PREP_CONTRACT_ITEMS + 5)
-        ],
-        "findings": [
-            {"observation": "x" * 4000, "title": "long"}
-        ],
-    }))
-
-    assert bundle.contract_items == MAX_PREP_CONTRACT_ITEMS
-    assert "Requirement 0" in bundle.report
-    assert f"Requirement {MAX_PREP_CONTRACT_ITEMS}" not in bundle.report
-    assert len(bundle.report) <= MAX_PREP_REPORT_CHARS
 
 
 def test_unsafe_artifact_paths_are_dropped() -> None:
@@ -461,17 +243,6 @@ def test_oversized_or_missing_artifact_is_dropped_not_fatal() -> None:
     assert len(missing_drops) == 2
 
 
-def test_self_check_artifact_referencing_the_deliverable_is_collected() -> None:
-    artifacts, dropped = asyncio.run(collect_prep_artifacts(
-        interface=_ArtifactInterface("open('output/report.json')\n"),
-        scratch_dir="/tmp/prep",
-        artifact_paths=["checker.py"],
-        os_type="linux",
-    ))
-
-    assert artifacts == {"artifacts/checker.py": "open('output/report.json')\n"}
-    assert dropped == []
-
 
 def test_artifact_with_binary_content_is_rejected() -> None:
     artifacts, dropped = asyncio.run(collect_prep_artifacts(
@@ -510,6 +281,34 @@ def test_bundle_stages_artifacts_before_its_report() -> None:
     ]
 
 
+def test_report_is_staged_even_with_no_artifacts() -> None:
+    """A bundle with no artifact must still deliver its report.
+
+    The report directory used to be created inside the artifact loop, so an
+    empty artifact set skipped the mkdir and the report write then failed with
+    ENOENT. The failure was silent (one warning, prep reported as completed),
+    and it hit four of ten prep runs in the 26-task rounds - including every
+    run of the withheld-self-check arm, whose only artifact is the withheld
+    script. That arm therefore measured "prep delivered nothing" rather than
+    "prep delivered everything but the self-check".
+    """
+    interface = _StageInterface()
+
+    path = asyncio.run(_stage_prep_bundle(
+        interface,
+        task_root="/task/root",
+        os_type="linux",
+        content="prep report\n",
+        artifacts={},
+    ))
+
+    assert path == "/task/root/task_prep/PREP_REPORT.md"
+    assert interface.dirs == ["/task/root/task_prep"]
+    assert interface.writes == [
+        ("/task/root/task_prep/PREP_REPORT.md", "prep report\n", False)
+    ]
+
+
 def test_writer_digest_carries_findings_because_nothing_else_does() -> None:
     """Findings have no programmatic carrier; the unread report loses them.
 
@@ -538,40 +337,24 @@ def test_writer_digest_points_to_the_report_without_inlining_it() -> None:
             "commands": ["uv run main.py"],
             "blocked_reason": "",
         },
-        contract_items=12,
         finding_count=2,
     )
     path = "/task/root/task_prep/PREP_REPORT.md"
     digest = build_prep_digest(result, path)
 
     assert path in digest
-    assert "take precedence" in digest
+    # The full authority chain is injected at t=0, not just the top level.
+    assert "Authority order" in digest
+    assert "discard the prep output" in digest
+    assert "general knowledge" in digest
     assert "Runtime [ready]" in digest
     assert "`uv run main.py`" in digest
-    assert "12 contract item(s)" in digest
+    assert "2 finding(s)" in digest
     # The digest is a pointer, not a copy: the report body stays in the file.
     assert "long body" not in digest
     assert "Read it before you start planning" in digest
 
 
-def test_writer_digest_names_the_self_check_command() -> None:
-    """A staged script the digest never names is a script the writer never runs."""
-    result = TaskPrepResult(
-        status="completed",
-        report="# Task-specific prep\n",
-        self_check={
-            "command": "python3 task_prep/artifacts/check_contract.py output",
-            "artifact": "check_contract.py",
-            "covers": "required fields and row counts",
-        },
-    )
-    digest = build_prep_digest(result, "/task/root/task_prep/PREP_REPORT.md")
-
-    assert "`python3 task_prep/artifacts/check_contract.py output`" in digest
-    assert "structural coverage only" in digest
-    assert "no authority" in digest
-    assert "required fields and row counts" in digest
-    assert "not evidence the task is complete" in digest
 
 
 def test_writer_digest_degrades_to_runtime_state_when_staging_fails() -> None:
@@ -592,50 +375,8 @@ def test_writer_digest_degrades_to_runtime_state_when_staging_fails() -> None:
     assert "PREP_REPORT.md" not in digest
 
 
-def test_self_check_preflight_accepts_a_reporting_script() -> None:
-    interface = _CommandRecorder(stdout="FAIL: output/report.json missing\n")
-
-    reason = asyncio.run(preflight_self_check(
-        interface=interface,
-        scratch_dir="/tmp/prep",
-        self_check={
-            "command": "python3 task_prep/artifacts/check.py output",
-            "artifact": "check.py",
-            "covers": "",
-        },
-    ))
-
-    assert reason == ""
-    assert "/tmp/prep/check.py" in interface.commands[0]
-    assert "task_prep/artifacts" not in interface.commands[0]
-    assert "selfcheck-probe" in interface.commands[0]
 
 
-def test_self_check_preflight_rejects_crash_silence_and_stray_command() -> None:
-    crashed = asyncio.run(preflight_self_check(
-        interface=_CommandRecorder(
-            stdout="", stderr="Traceback (most recent call last):\n  KeyError\n"
-        ),
-        scratch_dir="/tmp/prep",
-        self_check={"command": "python3 task_prep/artifacts/check.py output",
-                    "artifact": "check.py", "covers": ""},
-    ))
-    assert "unhandled exception" in crashed
-
-    silent = asyncio.run(preflight_self_check(
-        interface=_CommandRecorder(stdout="   \n"),
-        scratch_dir="/tmp/prep",
-        self_check={"command": "python3 task_prep/artifacts/check.py output",
-                    "artifact": "check.py", "covers": ""},
-    ))
-    assert "printed nothing" in silent
-
-    stray = asyncio.run(preflight_self_check(
-        interface=_CommandRecorder(stdout="ok"),
-        scratch_dir="/tmp/prep",
-        self_check={"command": "echo done", "artifact": "check.py", "covers": ""},
-    ))
-    assert "does not invoke the declared artifact" in stray
 
 
 def test_complete_verifier_report_is_staged_for_writer() -> None:
@@ -751,3 +492,161 @@ def test_prep_session_executes_allowed_tool(tmp_path, monkeypatch) -> None:
     assert session.tool_call_counts == {"read": 1, "exec": 1}
     assert all(call["api_key"] == "solver-key" for call in calls)
     assert all(call["api_base"] == "https://solver.example/v1" for call in calls)
+
+
+def test_prep_is_enabled_by_default_with_a_budget_for_real_work() -> None:
+    config = AleClawConfig(model="m")
+    assert config.task_specific_prep is True
+    # Prep now runs the task's core step rather than only reading it, so the
+    # budget is sized for work, not for a skim.
+    assert config.task_specific_prep_max_steps == 50
+
+
+def test_attempt_is_parsed_with_its_verbatim_breakage() -> None:
+    bundle = normalize_prep_bundle(json.dumps({
+        "attempt": {
+            "step": "run the annotation pipeline over the sample records",
+            "outcome": "broke",
+            "command": "python3 software/run.py --in input/records.tsv",
+            "breakage": "KeyError: 'variant_allele' at run.py:212",
+            "writer_action": "index frequencies by the submitted allele",
+        }
+    }))
+    assert bundle.attempt["outcome"] == "broke"
+    assert "KeyError" in bundle.attempt["breakage"]
+    assert "## Core step attempt [broke]" in bundle.report
+    assert "KeyError: 'variant_allele'" in bundle.report
+
+
+def test_attempt_needs_a_step_and_a_known_outcome() -> None:
+    no_step = normalize_prep_bundle(json.dumps({
+        "environment": {"status": "ready", "summary": "fine"},
+        "attempt": {"outcome": "broke", "step": ""},
+    }))
+    assert no_step.attempt == {}
+    assert "attempt:empty_step" in no_step.dropped
+
+    bad_outcome = normalize_prep_bundle(json.dumps({
+        "environment": {"status": "ready", "summary": "fine"},
+        "attempt": {"step": "run it", "outcome": "exploded"},
+    }))
+    assert bad_outcome.attempt == {}
+    assert "attempt:unknown_outcome" in bad_outcome.dropped
+
+
+def test_any_single_section_is_enough_for_a_report() -> None:
+    only_env = normalize_prep_bundle(json.dumps(
+        {"environment": {"status": "ready", "summary": "python3.11 works"}}
+    ))
+    assert only_env.report
+    only_attempt = normalize_prep_bundle(json.dumps(
+        {"attempt": {"step": "build the table", "outcome": "completed"}}
+    ))
+    assert only_attempt.report
+    only_finding = normalize_prep_bundle(json.dumps(
+        {"findings": [{"title": "t", "observation": "an exact fact"}]}
+    ))
+    assert only_finding.report
+
+
+def test_one_bad_entry_does_not_discard_the_bundle() -> None:
+    bundle = normalize_prep_bundle(json.dumps({
+        "environment": {"status": "ready", "summary": "ok"},
+        "findings": [
+            {"title": "good", "observation": "a real fact"},
+            {"title": "bad", "observation": ""},
+        ],
+        "attempt": {"step": "x", "outcome": "nonsense"},
+    }))
+    assert bundle.finding_count == 1
+    assert "finding:empty_observation" in bundle.dropped
+    assert "attempt:unknown_outcome" in bundle.dropped
+    assert bundle.report
+
+
+def test_report_is_bounded_and_announces_its_own_truncation() -> None:
+    bundle = normalize_prep_bundle(json.dumps({
+        "environment": {"status": "ready", "summary": "x" * 5_000},
+        "findings": [
+            {"title": f"f{i}", "observation": "y" * 1_200} for i in range(6)
+        ],
+    }))
+    assert len(bundle.report) <= MAX_PREP_REPORT_CHARS
+
+
+def test_digest_carries_runtime_breakage_and_findings() -> None:
+    result = TaskPrepResult(
+        status="completed",
+        environment={"status": "ready", "summary": "python3.11", "commands": ["run.sh"],
+                     "blocked_reason": ""},
+        attempt={"step": "parse the records", "outcome": "broke", "command": "run.sh",
+                 "breakage": "SchemaError: column missing", "writer_action": "check the header"},
+        findings=[{"title": "ordering", "observation": "official order is A > B"}],
+        finding_count=1,
+    )
+    digest = build_prep_digest(result, "task_prep/PREP_REPORT.md")
+    assert "python3.11" in digest
+    assert "Core step [broke]" in digest
+    assert "SchemaError" in digest
+    assert "official order is A > B" in digest
+    assert "task_prep/PREP_REPORT.md" in digest
+    # Prep's prescription never travels at t=0, and an unresolved breakage is
+    # framed as one observation, not an agenda (the variant anchoring case).
+    assert "check the header" not in digest
+    assert "not a ranking of your priorities" in digest
+
+
+def test_prep_never_advertises_a_contract_or_a_self_check() -> None:
+    """Contract and schema conformance belong to the verifier now."""
+    prompt = build_task_prep_system_prompt("/task")
+    lowered = prompt.lower()
+    assert "self_check" not in lowered
+    assert "deliverable contract" not in lowered
+    assert "core mechanical step" in lowered
+
+
+def test_entries_beyond_the_caps_are_recorded_not_silently_sliced() -> None:
+    findings = [
+        {"title": f"fact {i}", "observation": f"value {i}"} for i in range(8)
+    ]
+    bundle = normalize_prep_bundle(json.dumps({"findings": findings}))
+    assert bundle.finding_count == MAX_PREP_FINDINGS
+    assert any(
+        f"beyond the {MAX_PREP_FINDINGS} cap" in note for note in bundle.dropped
+    )
+
+
+def test_empty_prep_yields_no_digest_at_all() -> None:
+    """Ready-with-nothing and not_needed inject nothing: announcing "a prep
+    agent worked here" without content only sets an agenda at turn zero."""
+    for status in ("not_needed", "ready", ""):
+        result = TaskPrepResult(
+            status="completed",
+            report="# Task-specific prep\n",
+            environment={"status": status, "summary": "nothing to do",
+                         "commands": [], "blocked_reason": ""},
+        )
+        assert build_prep_digest(result, "task_prep/PREP_REPORT.md") == ""
+    # Partial and blocked runtimes are real constraints and always travel.
+    for status, reason in (("partial", ""), ("blocked", "docker unavailable")):
+        result = TaskPrepResult(
+            status="completed",
+            report="# Task-specific prep\n",
+            environment={"status": status, "summary": "state", "commands": [],
+                         "blocked_reason": reason},
+        )
+        assert build_prep_digest(result, "task_prep/PREP_REPORT.md") != ""
+
+
+def test_prompt_permits_silence_and_forbids_framing() -> None:
+    """The three structural fixes live in the charter: an empty result is
+    legitimate, findings are facts not frames, and an unsolved breakage is
+    an observation, not an agenda."""
+    prompt = build_task_prep_system_prompt("/task")
+    assert "an empty result is\na successful prep" in prompt.replace("  ", " ") or \
+        "an empty result is" in prompt
+    assert "not_attempted` with a one-line reason" in prompt
+    assert "is not a finding" in prompt
+    assert "not an agenda for the\nwriter" in prompt or "not an agenda" in prompt
+    assert "repro script" in prompt
+    assert "Do not rank the writer's priorities" in prompt

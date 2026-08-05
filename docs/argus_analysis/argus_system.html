@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Argus 系统怎么做的 · 深入分析</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --page:#f9f9f7; --surface:#fcfcfb; --surface-2:#f1f0ec; --border:rgba(11,11,11,0.10);
+  --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781; --grid:#e1e0d9; --axis:#c3c2b7; --track:#eceae2;
+  --manager:#7c3aed; --planner:#0369a1; --engineer:#15803d; --reviewer:#b45309;
+  --argus:#2a78d6; --claw:#1baf7a; --warm:#eda100; --neg:#e34948;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --page:#0d0d0d; --surface:#1a1a19; --surface-2:#232320; --border:rgba(255,255,255,0.10);
+  --ink:#fff; --ink-2:#c3c2b7; --muted:#898781; --grid:#2c2c2a; --axis:#383835; --track:#2b2b28;
+  --manager:#a78bfa; --planner:#38bdf8; --engineer:#4ade80; --reviewer:#fbbf24;
+  --argus:#3987e5; --claw:#199e70; --warm:#c98500; --neg:#e66767;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI","Noto Sans SC","PingFang SC",sans-serif;line-height:1.72;font-size:15px}
+.wrap{max-width:1000px;margin:0 auto;padding:36px 22px 100px}
+h1{font-size:25px;line-height:1.35;margin:0 0 8px}
+h2{font-size:20px;margin:52px 0 10px;padding-top:20px;border-top:1px solid var(--border)}
+h3{font-size:15.5px;margin:24px 0 8px}
+p{margin:11px 0;color:var(--ink-2)}
+.sub{color:var(--muted);font-size:13px;margin:0 0 6px}
+.lead{font-size:16px;color:var(--ink)}
+a{color:var(--argus)}
+code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.85em;background:var(--surface-2);padding:1px 6px;border-radius:5px;color:var(--ink)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin:16px 0}
+.fig{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;margin:18px 0}
+.fig svg{display:block;width:100%;height:auto}
+.figcap{font-size:12.5px;color:var(--muted);margin-top:10px;text-align:center}
+ul{margin:10px 0;padding-left:22px;color:var(--ink-2)} li{margin:7px 0}
+b.hi{color:var(--ink)}
+.callout{border-left:3px solid var(--argus);background:color-mix(in srgb,var(--argus) 9%,transparent);padding:13px 17px;border-radius:0 10px 10px 0;margin:16px 0;font-size:14.5px;color:var(--ink-2)}
+.callout.warm{border-left-color:var(--warm);background:color-mix(in srgb,var(--warm) 11%,transparent)}
+.callout b{color:var(--ink)}
+.scroll{overflow-x:auto;margin:12px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:8px 11px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-weight:600;font-size:12px;color:var(--muted);background:var(--surface-2)}
+td.c{color:var(--ink-2)}
+.gates{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}
+@media(max-width:640px){.gates{grid-template-columns:1fr}}
+.gate{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px}
+.gate b{color:var(--ink)}
+.back{font-size:13px;margin-bottom:10px;display:inline-block}
+.foot{color:var(--muted);font-size:12.5px;margin-top:52px;border-top:1px solid var(--border);padding-top:18px}
+.tagm{color:var(--manager);font-weight:600}.tagp{color:var(--planner);font-weight:600}.tage{color:var(--engineer);font-weight:600}.tagr{color:var(--reviewer);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="back" href="index.html">← 回到结果分析主页</a>
+<p class="sub">配套页 · 数据与引用来自 argus-skill-main/technical_report · 2026-07-27</p>
+<h1>Argus 系统是怎么做的：细节、特色，以及它能在 ALE 上成功的关键</h1>
+<p class="lead">这页只讲一件事，Argus 作为一个 agent 系统在结构上做对了什么。它不是把一个模型调得更聪明，而是把决策、执行、验证拆成有明确权力边界的角色，跑在一份可持久、可审计的状态上。下面用几张图把这套结构讲清楚，最后对照我只做了 prep 和 verifier 两层的尝试，说明差在哪、能学什么。</p>
+
+<h2>一、三个平面加四个角色</h2>
+<p>Argus 官方把系统分成三个平面。控制平面管调度和意图，执行平面干活并做复核，记录平面只存事实、不判定工作算不算完成。四个模型角色分布在前两个平面上，各自有明确的权力边界。</p>
+
+<div class="fig">
+<svg viewBox="0 0 920 360" role="img" aria-label="Argus 三平面与四角色示意图">
+  <!-- plane rows -->
+  <g font-family="system-ui" font-size="13">
+    <!-- Control plane -->
+    <rect x="120" y="16" width="680" height="92" rx="12" style="fill:var(--surface-2);stroke:var(--border)"/>
+    <text x="18" y="60" style="fill:var(--muted)" font-size="12">控制平面</text>
+    <text x="18" y="78" style="fill:var(--muted)" font-size="12">Control</text>
+    <!-- Manager -->
+    <rect x="150" y="34" width="300" height="56" rx="9" style="fill:var(--surface);stroke:var(--manager)"/>
+    <text x="168" y="56" style="fill:var(--manager)" font-weight="700">Manager</text>
+    <text x="168" y="76" style="fill:var(--ink-2)" font-size="11.5">定意图、生命周期、路由，推进或回退阶段</text>
+    <!-- Planner -->
+    <rect x="470" y="34" width="312" height="56" rx="9" style="fill:var(--surface);stroke:var(--planner)"/>
+    <text x="488" y="56" style="fill:var(--planner)" font-weight="700">Planner</text>
+    <text x="488" y="76" style="fill:var(--ink-2)" font-size="11.5">把目标拆成有边界的任务与依赖</text>
+
+    <!-- Execution plane -->
+    <rect x="120" y="128" width="680" height="100" rx="12" style="fill:var(--surface-2);stroke:var(--border)"/>
+    <text x="18" y="172" style="fill:var(--muted)" font-size="12">执行平面</text>
+    <text x="18" y="190" style="fill:var(--muted)" font-size="12">Execution</text>
+    <!-- Engineer -->
+    <rect x="150" y="146" width="300" height="64" rx="9" style="fill:var(--surface);stroke:var(--engineer)"/>
+    <text x="168" y="170" style="fill:var(--engineer)" font-weight="700">Engineer</text>
+    <text x="168" y="190" style="fill:var(--ink-2)" font-size="11.5">用真实文件、工具、硬件执行一个回合，</text>
+    <text x="168" y="204" style="fill:var(--ink-2)" font-size="11.5">产出交付物，选 review=skip 或 required</text>
+    <!-- Reviewer -->
+    <rect x="482" y="146" width="300" height="64" rx="9" style="fill:var(--surface);stroke:var(--reviewer)"/>
+    <text x="500" y="170" style="fill:var(--reviewer)" font-weight="700">Reviewer</text>
+    <text x="500" y="190" style="fill:var(--ink-2)" font-size="11.5">开全新会话独立核查产物和日志，</text>
+    <text x="500" y="204" style="fill:var(--ink-2)" font-size="11.5">返回 done / continue / blocked</text>
+    <!-- double arrow between engineer and reviewer -->
+    <line x1="450" y1="178" x2="482" y2="178" style="stroke:var(--ink-2)" stroke-width="1.5"/>
+    <polygon points="450,178 458,174 458,182" style="fill:var(--ink-2)"/>
+    <polygon points="482,178 474,174 474,182" style="fill:var(--ink-2)"/>
+
+    <!-- Record plane -->
+    <rect x="120" y="248" width="680" height="86" rx="12" style="fill:var(--surface-2);stroke:var(--border)"/>
+    <text x="18" y="286" style="fill:var(--muted)" font-size="12">记录平面</text>
+    <text x="18" y="304" style="fill:var(--muted)" font-size="12">Record</text>
+    <rect x="150" y="266" width="196" height="50" rx="8" style="fill:var(--surface);stroke:var(--border)"/>
+    <text x="164" y="288" style="fill:var(--ink)" font-size="12.5" font-weight="600">追加式事件轨迹</text>
+    <text x="164" y="304" style="fill:var(--muted)" font-size="11">唯一权威时间线</text>
+    <rect x="358" y="266" width="196" height="50" rx="8" style="fill:var(--surface);stroke:var(--border)"/>
+    <text x="372" y="288" style="fill:var(--ink)" font-size="12.5" font-weight="600">产物 artifacts</text>
+    <text x="372" y="304" style="fill:var(--muted)" font-size="11">落盘的真实文件</text>
+    <rect x="566" y="266" width="216" height="50" rx="8" style="fill:var(--surface);stroke:var(--border)"/>
+    <text x="580" y="288" style="fill:var(--ink)" font-size="12.5" font-weight="600">CHECKPOINT.md</text>
+    <text x="580" y="304" style="fill:var(--muted)" font-size="11">跨会话的当前状态，不是日志</text>
+
+    <!-- self-evolution arrow on the right -->
+    <path d="M800 291 C 870 291, 870 62, 802 62" style="fill:none;stroke:var(--argus)" stroke-width="1.6" stroke-dasharray="4 3"/>
+    <polygon points="802,62 812,58 810,68" style="fill:var(--argus)"/>
+    <text x="828" y="180" style="fill:var(--argus)" font-size="11" transform="rotate(90 828 180)">审过的产物更新持久状态（自进化）</text>
+  </g>
+</svg>
+<div class="figcap">图 1　三个平面与四个角色。控制平面调度，执行平面产出并复核，记录平面只存事实。右侧虚线是自进化回路，审查通过的结果会沉淀成下一次任务能用的持久状态。</div>
+</div>
+
+<p>关键在最后一句。记录平面存下所有事实，但它不决定工作算不算完成。完成与否只由执行平面里那个明确选定的判定路径决定，要么 Engineer 自审（仅限低风险有边界的活），要么独立的 Reviewer。控制平面负责调度和推进，但推进阶段要有证据。三件事分开，谁也不能既当运动员又当裁判。</p>
+
+<h2>二、reviewed mission loop：任务怎么跑完一轮</h2>
+<p>Argus 的长命对象是 campaign，不是一段对话。campaign 被切成一个个 mission，调度器一次只发一个 mission，跑完记录结果，在干净的边界上才推进。每个 mission 内部是 Engineer 和 Reviewer 的反复循环，下图是官方 Algorithm 1 的流程。</p>
+
+<div class="fig">
+<svg viewBox="0 0 920 300" role="img" aria-label="reviewed mission loop 流程图">
+  <g font-family="system-ui" font-size="12.5">
+    <!-- nodes -->
+    <rect x="20" y="120" width="150" height="48" rx="9" style="fill:var(--surface-2);stroke:var(--manager)"/>
+    <text x="95" y="140" text-anchor="middle" style="fill:var(--manager)" font-weight="700">Manager 承诺</text>
+    <text x="95" y="157" text-anchor="middle" style="fill:var(--ink-2)" font-size="11">意图、路由、阶段</text>
+
+    <rect x="200" y="120" width="150" height="48" rx="9" style="fill:var(--surface-2);stroke:var(--planner)"/>
+    <text x="275" y="140" text-anchor="middle" style="fill:var(--planner)" font-weight="700">Planner 领任务</text>
+    <text x="275" y="157" text-anchor="middle" style="fill:var(--ink-2)" font-size="11">拆一个有边界的活</text>
+
+    <rect x="380" y="120" width="150" height="48" rx="9" style="fill:var(--surface-2);stroke:var(--engineer)"/>
+    <text x="455" y="140" text-anchor="middle" style="fill:var(--engineer)" font-weight="700">Engineer 执行</text>
+    <text x="455" y="157" text-anchor="middle" style="fill:var(--ink-2)" font-size="11">产出、跑、写 checkpoint</text>
+
+    <!-- decision diamond: skip? -->
+    <polygon points="560,144 600,120 640,144 600,168" style="fill:var(--surface-2);stroke:var(--border)"/>
+    <text x="600" y="140" text-anchor="middle" style="fill:var(--ink)" font-size="11">可 skip</text>
+    <text x="600" y="153" text-anchor="middle" style="fill:var(--ink)" font-size="11">且低风险</text>
+
+    <rect x="670" y="86" width="150" height="44" rx="9" style="fill:var(--surface);stroke:var(--engineer)"/>
+    <text x="745" y="104" text-anchor="middle" style="fill:var(--engineer)" font-size="11.5" font-weight="600">Engineer 自审</text>
+    <text x="745" y="120" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">记 review_source</text>
+
+    <rect x="670" y="158" width="150" height="44" rx="9" style="fill:var(--surface);stroke:var(--reviewer)"/>
+    <text x="745" y="176" text-anchor="middle" style="fill:var(--reviewer)" font-size="11.5" font-weight="600">独立 Reviewer</text>
+    <text x="745" y="192" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">收尾/强制时必走</text>
+
+    <!-- verdict -->
+    <rect x="380" y="232" width="440" height="44" rx="9" style="fill:var(--surface-2);stroke:var(--border)"/>
+    <text x="600" y="252" text-anchor="middle" style="fill:var(--ink)" font-size="12"><tspan style="fill:var(--reviewer)" font-weight="700">continue</tspan> 回到 Engineer 返工　·　<tspan font-weight="700">done / blocked</tspan> 收下结果、更新状态、进下一个 mission</text>
+
+    <!-- arrows -->
+    <g style="stroke:var(--ink-2)" stroke-width="1.4" fill="none">
+      <line x1="170" y1="144" x2="198" y2="144"/><line x1="350" y1="144" x2="378" y2="144"/>
+      <line x1="530" y1="144" x2="558" y2="144"/>
+      <line x1="640" y1="132" x2="668" y2="110"/><line x1="640" y1="156" x2="668" y2="180"/>
+    </g>
+    <g style="fill:var(--ink-2)">
+      <polygon points="198,144 190,140 190,148"/><polygon points="378,144 370,140 370,148"/>
+      <polygon points="558,144 550,140 550,148"/>
+      <polygon points="668,110 660,110 665,118"/><polygon points="668,180 660,180 665,172"/>
+    </g>
+    <!-- verdict feed down and continue loop back -->
+    <path d="M745 202 C 745 230, 700 232, 660 240" style="fill:none;stroke:var(--ink-2)" stroke-width="1.4"/>
+    <path d="M380 254 C 250 254, 455 190, 455 170" style="fill:none;stroke:var(--reviewer)" stroke-width="1.4" stroke-dasharray="4 3"/>
+    <polygon points="455,170 451,180 459,180" style="fill:var(--reviewer)"/>
+    <text x="300" y="210" style="fill:var(--reviewer)" font-size="10.5">continue 时循环</text>
+  </g>
+</svg>
+<div class="figcap">图 2　reviewed mission loop（官方 Algorithm 1）。Engineer 产出后，低风险有边界的活可以自审，否则走独立 Reviewer；收尾任务和 vertical 要求的复核不能跳过。continue 就返工，done 才收下。</div>
+</div>
+
+<p>这个循环里有三个容易被忽略但很关键的约定。</p>
+<ul>
+  <li>Engineer 和 Reviewer 的每一轮都用<b class="hi">全新的模型会话</b>。跨轮的连续性只靠 <code>CHECKPOINT.md</code> 这一份文件传递，里面是目标、当前状态、已验证完成、失败的死路、待解问题、下一步。这让 Reviewer 读到的是产物本身和这份状态，不是 Engineer 一路的叙述，不容易被带偏。</li>
+  <li>Engineer 写 checkpoint，独立复核被触发时 <b class="hi">Reviewer 是这一轮 checkpoint 的最终编辑者</b>，它会按产物纠正里面的话。</li>
+  <li>完成的来源被显式记下来。<b class="hi">完成永远不来自文件名、token 数量或措辞关键词</b>，只来自 Engineer 自审或独立 Reviewer 这两条明确路径之一，而且收尾和 vertical 要求的复核不能被豁免。</li>
+</ul>
+
+<h2>三、Reviewer 是一条选择性纠错通道</h2>
+<p>把 Reviewer 单独拎出来说，因为它是这套系统相对单体 agent 最大的增量。单体的毛病是执行的人同时宣布完成，于是自认做完就等于交付。Argus 让一个独立的、读真实文件的 Reviewer 来判，而且它的判定权威，系统不许用关键词或标签去覆盖它。下面是官方在 SWE-Bench Pro 731 题上公开的数据。</p>
+
+<div class="fig">
+<svg viewBox="0 0 920 260" role="img" aria-label="Reviewer 路由与挽救数据">
+  <g font-family="system-ui" font-size="12.5">
+    <!-- routing split -->
+    <text x="20" y="28" style="fill:var(--ink)" font-weight="600" font-size="13">复核路由（731 题）</text>
+    <rect x="20" y="40" width="420" height="26" rx="5" style="fill:var(--track)"/>
+    <rect x="20" y="40" width="267" height="26" rx="5" style="fill:var(--reviewer)"/>
+    <text x="30" y="58" style="fill:#fff" font-size="12" font-weight="600">独立 Reviewer 63.7%</text>
+    <text x="300" y="58" style="fill:var(--ink-2)" font-size="12">Engineer 自审 36.3%</text>
+
+    <!-- recovery funnel -->
+    <text x="20" y="112" style="fill:var(--ink)" font-weight="600" font-size="13">复核触发返工后的挽救（共 43 题被要求返工）</text>
+    <g>
+      <rect x="20" y="128" width="430" height="26" rx="5" style="fill:var(--argus)"/>
+      <text x="30" y="146" style="fill:#fff" font-size="12" font-weight="600">被要求返工　43 题</text>
+      <rect x="20" y="162" width="340" height="26" rx="5" style="fill:var(--argus)" opacity="0.8"/>
+      <text x="30" y="180" style="fill:#fff" font-size="12" font-weight="600">返工后过官方评测　34 题（79%）</text>
+      <rect x="20" y="196" width="220" height="26" rx="5" style="fill:var(--argus)" opacity="0.62"/>
+      <text x="30" y="214" style="fill:#fff" font-size="12" font-weight="600">走完完整挽救链　22 题（51%）</text>
+    </g>
+    <!-- right note -->
+    <text x="500" y="140" style="fill:var(--ink-2)" font-size="12.5">整体 78% 对直接调用单体</text>
+    <text x="500" y="160" style="fill:var(--ink-2)" font-size="12.5">Copilot 的 59%，同一模型骨干，</text>
+    <text x="500" y="180" style="fill:var(--ink-2)" font-size="12.5">代价约 1.41 倍 token。返工不是</text>
+    <text x="500" y="200" style="fill:var(--ink-2)" font-size="12.5">收尾点评，是真的把错的救回来。</text>
+  </g>
+</svg>
+<div class="figcap">图 3　Reviewer 的路由与挽救（SWE-Bench Pro 731 题，来自 Argus 技术报告）。复核集中在更难的那部分任务上，被要求返工的题里近八成最终通过。</div>
+</div>
+
+<p>值得学的一点是路由。Argus 不是每道题都上独立复核，而是把独立复核集中在高风险、收尾这类地方，低风险的活让 Engineer 自审。这样既保住了验收的把关，又不让每题都付双倍成本。</p>
+
+<h2>四、固定模型的运行时自进化</h2>
+<p>Argus 的模型参数是冻的，但每一次审过的 mission 都可能改变下次任务能用到的持久状态。它把这件事定义得很窄，只有走完「产出候选、按产物核查、授权方提交、后续任务复用」这四步、真被留下来复用的，才算数。没走完这条路的活动不计入。</p>
+
+<div class="fig">
+<svg viewBox="0 0 920 210" role="img" aria-label="固定模型运行时自进化四步循环">
+  <g font-family="system-ui" font-size="12.5">
+    <rect x="30" y="80" width="170" height="52" rx="9" style="fill:var(--surface-2);stroke:var(--engineer)"/>
+    <text x="115" y="102" text-anchor="middle" style="fill:var(--engineer)" font-weight="700">1 产出候选</text>
+    <text x="115" y="119" text-anchor="middle" style="fill:var(--ink-2)" font-size="11">记忆/技能/流程/规则</text>
+
+    <rect x="260" y="80" width="170" height="52" rx="9" style="fill:var(--surface-2);stroke:var(--reviewer)"/>
+    <text x="345" y="102" text-anchor="middle" style="fill:var(--reviewer)" font-weight="700">2 按产物核查</text>
+    <text x="345" y="119" text-anchor="middle" style="fill:var(--ink-2)" font-size="11">对齐任务证据</text>
+
+    <rect x="490" y="80" width="170" height="52" rx="9" style="fill:var(--surface-2);stroke:var(--manager)"/>
+    <text x="575" y="102" text-anchor="middle" style="fill:var(--manager)" font-weight="700">3 授权方提交</text>
+    <text x="575" y="119" text-anchor="middle" style="fill:var(--ink-2)" font-size="11">提交/修订/驳回</text>
+
+    <rect x="720" y="80" width="170" height="52" rx="9" style="fill:var(--surface-2);stroke:var(--argus)"/>
+    <text x="805" y="102" text-anchor="middle" style="fill:var(--argus)" font-weight="700">4 后续复用</text>
+    <text x="805" y="119" text-anchor="middle" style="fill:var(--ink-2)" font-size="11">作为下次起点</text>
+
+    <g style="stroke:var(--ink-2)" stroke-width="1.4" fill="none">
+      <line x1="200" y1="106" x2="258" y2="106"/><line x1="430" y1="106" x2="488" y2="106"/><line x1="660" y1="106" x2="718" y2="106"/>
+    </g>
+    <g style="fill:var(--ink-2)"><polygon points="258,106 250,102 250,110"/><polygon points="488,106 480,102 480,110"/><polygon points="718,106 710,102 710,110"/></g>
+    <path d="M805 132 C 805 176, 115 176, 115 134" style="fill:none;stroke:var(--argus)" stroke-width="1.4" stroke-dasharray="4 3"/>
+    <polygon points="115,134 111,144 119,144" style="fill:var(--argus)"/>
+    <text x="460" y="172" text-anchor="middle" style="fill:var(--muted)" font-size="11">下一个更难的任务从更高的起点开始</text>
+  </g>
+</svg>
+<div class="figcap">图 4　固定模型的运行时自进化。留下来的不是模型权重，是审过的记忆、技能、流程、验证规则、路由和任务定义。</div>
+</div>
+
+<p>谁能改、谁能提交，是分开的，这是它设计里很讲究的地方。</p>
+<div class="scroll">
+<table>
+<thead><tr><th>持久状态</th><th>谁产出候选</th><th>谁提交</th></tr></thead>
+<tbody>
+<tr><td class="c">记忆 M</td><td class="c">Engineer 轨迹</td><td class="c"><span class="tagr">Reviewer</span></td></tr>
+<tr><td class="c">技能 S</td><td class="c">Engineer / Scientist</td><td class="c"><span class="tagr">Reviewer</span></td></tr>
+<tr><td class="c">工具与流程 A</td><td class="c">系统配置</td><td class="c">系统配置</td></tr>
+<tr><td class="c">验证 V</td><td class="c"><span class="tagp">Planner</span></td><td class="c"><span class="tagp">Planner</span>，Reviewer 只给反馈</td></tr>
+<tr><td class="c">路由与角色 R</td><td class="c">运行时策略</td><td class="c"><span class="tagm">Manager</span></td></tr>
+<tr><td class="c">任务与评测 Q</td><td class="c"><span class="tagp">Planner</span></td><td class="c">调度器</td></tr>
+</tbody>
+</table>
+</div>
+<p>产出和提交分开，意思是没有哪个角色能自己扩自己的权。这跟前面 Reviewer 的设计是同一条原则，把关的权力和被把关的行为不放在同一个人手里。</p>
+
+<h2>五、可靠性与资源治理</h2>
+<p>长时间跑的系统就算单次模型调用很强，也会因为运行漂移而失败，比如一直原地打转、反复提交同一个失败任务、卡在一个阶段推不动。Argus 把这些当成一等公民来治理。</p>
+<ul>
+  <li><b>回合级进度分类加边界重规划。</b> 一轮里没有产生决定或产物变化的工作会被停下或重新表述，长跑的外部作业和模型推理分开跟踪。</li>
+  <li><b>子任务连败熔断。</b> 同一族任务连续失败若干次，就算模型每次换个说法重提，也会被自动跳过，不再送到 Engineer。</li>
+  <li><b>无进展上报与探针。</b> 连续几个 mission 没有前进就上报操作者；空闲若干轮就派一个探针任务，去验证「卡住」这个判断是不是已经过时。</li>
+  <li><b>预算集中在调用边界核算。</b> 开工前查预算、完工后对账，任何角色都不能自己扩自己的额度。</li>
+</ul>
+<p>这些是让前面那套权力结构在长流程里不失控的兜底。Argus 自己也踩过坑，有过一个活锁 bug，Reviewer 每轮都认证了证据、Manager 却总回 hold，白烧了近 20 美元，之后才补上活锁检测。多角色带来了单体没有的新失败方式，需要专门的熔断去接住。</p>
+
+<h2>六、为 ALE 定制的 vertical</h2>
+<p>ALE 按隐藏参考给完成的交付物打分，agent 退出后才评。Argus 有一个专门的 <code>ale_last_exam</code> vertical，把最常导致直接零分的东西写成八条硬门槛，交给 Reviewer 逐条核。这解释了主页三道题里 Reviewer 到底在核什么。</p>
+<div class="gates">
+  <div class="gate"><b>contract-complete</b>　题面每条要求逐项对到产物</div>
+  <div class="gate"><b>bundle-present</b>　完整交付包在精确路径上</div>
+  <div class="gate"><b>artifacts-parse</b>　能被原生程序或格式检查器解析</div>
+  <div class="gate"><b>workflow-finished</b>　长流程真跑完，不是中途</div>
+  <div class="gate"><b>values-measured</b>　报的值是实测算出，不是猜的</div>
+  <div class="gate"><b>native-evidence-valid</b>　原生程序状态和截图为真</div>
+  <div class="gate"><b>cross-artifact-consistent</b>　跨产物的标识、时间、维度、值一致</div>
+  <div class="gate"><b>final-hard-gate-audit</b>　终检没有缺失、畸形、全空、冲突</div>
+</div>
+<p>ct_geometry 里 Reviewer 从 sinogram 重跑重建核 SSIM，就是 values-measured 和 workflow-finished；wsi 里用 OpenSlide 重读坐标区域，是 native-evidence-valid；abm 里查值是仿真算的不是抄 AFC 标签，是 values-measured。八条门槛不是空话，是针对隐藏评测失分方式的具体清单。</p>
+
+<h2>七、对我的启发</h2>
+<p>我之前在 ale_claw 上只加了 prep 和 verifier 两层。对照 Argus 这套结构，差别不在于「我少加了几个角色」，而在于几条设计原则我没做到位。</p>
+<div class="card">
+<h3>1. 把关要有权力，而且要能触达真正的评分面</h3>
+<p>我的 verifier 是无权力的辅助，只推结果、不能打回，而且它只对公开材料做冻结的机械检查，够不到隐藏参考决定的评分面。Argus 的 Reviewer 判定权威、能强制返工，还能从原始数据重跑到被打分的那个量上。同样是「加验证」，有没有权力和能不能触达评分面，是两回事。</p>
+<h3>2. 权力要有配套才不失控</h3>
+<p>我试过给验证加硬权力，当时判定为死路就放弃了。现在看，Argus 让权力不失控靠的是三样配套，复核开全新会话保证独立、推进必须见到具体证据、加一圈熔断防止卡死。我当时缺的是这套配套，不是「要不要权力」的判断。</p>
+<h3>3. 产出和提交分开，是贯穿全系统的一条原则</h3>
+<p>不只是复核，连自进化里改记忆、改技能都是 Engineer 产出候选、Reviewer 提交。把关的权力和被把关的行为始终不在同一个角色手里。我的 prep 和 verifier 是挂在单体 writer 旁边的辅助，writer 仍然自己决定一切，这条原则没有落进结构。</p>
+<h3>4. 状态是持久、可审计的对象，不是一段对话</h3>
+<p>Argus 的长命对象是 campaign，不是 transcript，崩溃后从提交过的状态接着跑。我的 prep 侦察结果和 verifier 检查结果都是喂给 writer 的一次性文本，没有沉淀成可复用、可审计的持久状态。</p>
+<h3>5. 长流程要把运行漂移当成一等问题</h3>
+<p>我关注的是单轮的准备和验证质量，没有系统地处理原地打转、反复失败、卡阶段这些长流程特有的失败。Argus 有专门的熔断和上报。要做有体系的 agent，这一层绕不过去。</p>
+</div>
+
+<div class="foot">
+内容与数据引自 <code>argus-skill-main/technical_report</code>（sections 03/04/06/07 与附录）、<code>AGENTS.md</code>、<code>argus_skill/verticals/ale_last_exam/</code>。图为按报告内容重绘，非报告原图。三道 ALE 题的逐题轨迹见主页与各 case 目录。2026-07-27。
+</div>
+</div>
+</body>
+</html>
