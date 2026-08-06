@@ -8,7 +8,7 @@ from .base import (
     instantiate_llm_client,
     resolve_llm_client_name,
 )
-from .boyueapi_client import BoyueAPIClient
+from .gateway_client import GatewayClient
 from .gpt_sub2api_client import GPTSub2APIClient
 from .openrouter_newapi_client import OpenRouterNewAPIClient
 from .openai_client import OpenAIClient
@@ -21,7 +21,7 @@ __all__ = [
     "get_llm_client_class",
     "instantiate_llm_client",
     "resolve_llm_client_name",
-    "BoyueAPIClient",
+    "GatewayClient",
     "GPTSub2APIClient",
     "OpenRouterNewAPIClient",
     "OpenAIClient",

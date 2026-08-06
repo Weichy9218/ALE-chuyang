@@ -1,15 +1,22 @@
 """
-Boyue (ALE) gateway client.
+Provider-agnostic OpenAI-compatible gateway client.
 
-``apirx.boyuerichdata.com`` (configured via ``ale_url`` / ``ale_api_key`` in
-.env) is an OpenAI-compatible gateway that exposes the full Responses API route
-and serves the gpt-5.x reasoning models (gpt-5.6-sol, gpt-5.6-luna, ...).
+The gateway (configured via ``gateway`` env vars in .env, see below) is an
+OpenAI-compatible endpoint that exposes the full Responses API route and serves
+the gpt-5.x reasoning models (gpt-5.6-sol, gpt-5.6-luna, ...).
+
+The client is deliberately provider-agnostic: the class, module, and registry
+name carry no vendor name. Switching providers is a localized change of the
+three ``GATEWAY_*_ENV`` string values below (which .env key holds the
+credentials), never a repo-wide rename. Current provider: Yihui, via
+``yihui_url`` / ``yihui_api_key``. It succeeded the retired Boyue gateway; the
+``boyue``/``ale`` registry aliases are kept so older configs still resolve.
 
 Like GPTSub2APIClient, this client inherits the complete Responses API
-implementation from OpenAIClient — the only route that returns reasoning
-summaries when the model performs extended thinking.  The gateway-specific
+implementation from OpenAIClient, the only route that returns reasoning
+summaries when the model performs extended thinking. The gateway-specific
 additions are:
-  - credential resolution from ``ale_api_key`` / ``ale_url`` env vars
+  - credential resolution from the ``GATEWAY_*_ENV`` env vars
   - base-URL normalization (the .env value omits the ``/v1`` suffix the SDK needs)
   - transient-error retry for gateway hiccups (429/5xx/timeouts)
 """
@@ -30,12 +37,14 @@ load_env()
 
 logger = logging.getLogger(__name__)
 
-BOYUE_API_KEY_ENV = "ale_api_key"
-BOYUE_BASE_URL_ENV = "ale_url"
+# Which .env keys hold the gateway credentials. Provider-specific values live
+# here and only here; switching providers means editing these three strings.
+GATEWAY_API_KEY_ENV = "yihui_api_key"
+GATEWAY_BASE_URL_ENV = "yihui_url"
 # By default gateway traffic bypasses the ambient proxy (see _build_sdk_client).
 # Set this truthy to opt back into the http_proxy/all_proxy env from .env, e.g.
-# on a network where apirx.boyuerichdata.com is only reachable through the proxy.
-BOYUE_USE_PROXY_ENV = "ale_use_proxy"
+# on a network where the gateway is only reachable through the proxy.
+GATEWAY_USE_PROXY_ENV = "yihui_use_proxy"
 
 _DEFAULT_MAX_RETRIES = 3
 _RETRYABLE_ERROR_MARKERS = (
@@ -60,9 +69,9 @@ def _is_retryable_gateway_error(exc: Exception) -> bool:
 def _normalize_base_url(base_url: Optional[str]) -> Optional[str]:
     """Ensure the base URL carries the ``/v1`` suffix the OpenAI SDK expects.
 
-    The .env entry is ``https://apirx.boyuerichdata.com/`` (no ``/v1``), but the
-    SDK appends only ``/responses`` etc. to whatever base it is given, so the
-    version segment must already be present.
+    The .env entry may omit ``/v1``, but the SDK appends only ``/responses`` etc.
+    to whatever base it is given, so the version segment must already be present.
+    This is idempotent: a base URL that already ends in ``/v1`` is left alone.
     """
     candidate = str(base_url or "").strip()
     if not candidate:
@@ -78,15 +87,17 @@ def _next_retry_wait_seconds(retry_count: int) -> int:
 
 
 @register_llm_client(
-    "boyue_api",
-    aliases=("boyue", "boyueapi", "BoyueAPI", "ale"),
+    "gateway",
+    aliases=("boyue", "ale", "yihui"),
 )
-class BoyueAPIClient(OpenAIClient):
-    """Gateway client for apirx.boyuerichdata.com using the Responses API.
+class GatewayClient(OpenAIClient):
+    """Provider-agnostic gateway client using the Responses API.
 
     Inherits from OpenAIClient (Responses API) so gpt-5.x reasoning summaries are
     surfaced.  Only credential/base-URL resolution and a small transient-error
-    retry are gateway-specific; everything else is inherited unchanged.
+    retry are gateway-specific; everything else is inherited unchanged. The
+    ``boyue``/``ale``/``yihui`` aliases keep older configs resolving after the
+    provider naming was made generic.
     """
 
     DEFAULT_MODEL = "gpt-5.6-sol"
@@ -107,20 +118,20 @@ class BoyueAPIClient(OpenAIClient):
         resolved_api_key, _ = resolve_client_setting(
             api_key,
             preferred_env=api_key_env,
-            fallback_envs=(BOYUE_API_KEY_ENV,),
+            fallback_envs=(GATEWAY_API_KEY_ENV,),
         )
         resolved_base_url, _ = resolve_client_setting(
             base_url,
             preferred_env=base_url_env,
-            fallback_envs=(BOYUE_BASE_URL_ENV,),
+            fallback_envs=(GATEWAY_BASE_URL_ENV,),
         )
         if not resolved_api_key:
             raise ValueError(
-                f"BoyueAPIClient requires api_key, api_key_env, or {BOYUE_API_KEY_ENV}"
+                f"GatewayClient requires api_key, api_key_env, or {GATEWAY_API_KEY_ENV}"
             )
         if not resolved_base_url:
             raise ValueError(
-                f"BoyueAPIClient requires base_url, base_url_env, or {BOYUE_BASE_URL_ENV}"
+                f"GatewayClient requires base_url, base_url_env, or {GATEWAY_BASE_URL_ENV}"
             )
 
         super().__init__(
@@ -140,14 +151,14 @@ class BoyueAPIClient(OpenAIClient):
         ``load_env`` propagates the local Clash proxy (``http_proxy`` /
         ``all_proxy`` = ``127.0.0.1:7897`` in .env) into the process environment,
         so httpx would otherwise tunnel every gateway call through it.  The
-        apirx.boyuerichdata.com gateway is directly reachable, and that personal
-        proxy is frequently down — routing through it just turns each call into a
+        gateway is directly reachable, and that personal proxy is frequently
+        down — routing through it just turns each call into a
         ``Connection error``.  We therefore build the SDK's httpx client with
         ``trust_env=False`` so gateway traffic bypasses the ambient proxy.
 
-        Set ``ale_use_proxy=1`` to opt back into the ambient proxy env.
+        Set ``yihui_use_proxy=1`` to opt back into the ambient proxy env.
         """
-        use_proxy = str(os.getenv(BOYUE_USE_PROXY_ENV, "")).strip().lower() in {
+        use_proxy = str(os.getenv(GATEWAY_USE_PROXY_ENV, "")).strip().lower() in {
             "1", "true", "yes", "on",
         }
         if use_proxy:
@@ -182,14 +193,14 @@ class BoyueAPIClient(OpenAIClient):
                 retry_count += 1
                 if retry_count >= _DEFAULT_MAX_RETRIES:
                     logger.error(
-                        "BoyueAPIClient call failed after %s attempts: %s",
+                        "GatewayClient call failed after %s attempts: %s",
                         _DEFAULT_MAX_RETRIES,
                         exc,
                     )
                     raise
                 wait_time = _next_retry_wait_seconds(retry_count)
                 logger.warning(
-                    "BoyueAPIClient transient error (attempt %s/%s), retrying in %ss: %s",
+                    "GatewayClient transient error (attempt %s/%s), retrying in %ss: %s",
                     retry_count,
                     _DEFAULT_MAX_RETRIES,
                     wait_time,
